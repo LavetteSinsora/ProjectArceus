@@ -13,7 +13,8 @@ wheels/
 .env
 
 # PyTorch checkpoints (intermediate training snapshots — too large for git)
-JEPA/checkpoints/
+JEPA/checkpoints/*
+!JEPA/checkpoints/step_1055000.pt
 
 # Training logs (generated output)
 *.log
