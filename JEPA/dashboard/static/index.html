@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JEPA Debug Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Menlo','Monaco','Consolas',monospace;font-size:12px;background:#0d1117;color:#c9d1d9;min-width:960px}
+a{color:#388bfd}
+
+/* ── Header ── */
+#hdr{position:sticky;top:0;z-index:200;background:#161b22;border-bottom:1px solid #30363d;
+  padding:10px 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#hdr h1{font-size:14px;font-weight:bold;color:#e6edf3;letter-spacing:.5px;white-space:nowrap}
+#hdr select,#hdr input[type=number]{background:#0d1117;border:1px solid #30363d;color:#c9d1d9;
+  padding:4px 8px;border-radius:4px;font-size:12px}
+#ckpt-select{width:200px}
+#max-steps{width:60px}
+.btn{background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:5px 12px;
+  border-radius:4px;cursor:pointer;font-size:12px;transition:background .15s}
+.btn:hover{background:#30363d}.btn:disabled{opacity:.4;cursor:default}
+.btn-primary{background:#1f6feb;border-color:#1f6feb;color:#fff}
+.btn-primary:hover{background:#388bfd}
+#status-msg{font-size:11px;color:#8b949e;flex:1}
+
+/* ── Loading overlay ── */
+[hidden]{display:none!important}
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+#overlay p{color:#c9d1d9;font-size:14px}
+.spinner{width:36px;height:36px;border:3px solid #30363d;border-top-color:#388bfd;
+  border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Section labels ── */
+.sl{background:#161b22;border-top:2px solid #21262d;border-bottom:1px solid #21262d;
+  padding:8px 18px;font-size:11px;font-weight:bold;letter-spacing:1px;color:#388bfd;
+  display:flex;align-items:center}
+
+/* ── Main grid ── */
+.main-grid{display:grid;grid-template-columns:512px 1fr;gap:0}
+#left-col{display:flex;flex-direction:column;border-right:1px solid #21262d}
+#right-col{overflow-y:auto;max-height:calc(100vh - 42px)}
+.canvas-wrap{position:relative}
+canvas#puzzle{display:block;cursor:crosshair}
+
+/* ── Policy row (below canvas) ── */
+.policy-row{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid #21262d;min-height:130px}
+.policy-left,.policy-right{padding:10px 12px}
+.policy-left{border-right:1px solid #21262d}
+
+/* ── Cards ── */
+.card{border-bottom:1px solid #21262d;padding:10px 14px}
+.card-title{font-size:10px;font-weight:bold;letter-spacing:.8px;color:#388bfd;
+  text-transform:uppercase;margin-bottom:8px}
+
+/* ── Stat grids ── */
+.stat-grid{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;align-items:baseline}
+.sl-lbl,.sl{font-size:11px;color:#8b949e;cursor:default;white-space:nowrap}
+.sv{font-size:11px;color:#e6edf3;font-variant-numeric:tabular-nums}
+.sv.good{color:#3fb950}.sv.warn{color:#d29922}.sv.bad{color:#f85149}
+
+/* ── Playback controls ── */
+.pb-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pb-btn{background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:3px 7px;
+  border-radius:3px;cursor:pointer;font-size:14px;line-height:1}
+.pb-btn:hover{background:#30363d}
+#pb-slider{flex:1;min-width:80px;accent-color:#388bfd}
+#pb-counter{color:#8b949e;font-size:11px;white-space:nowrap}
+#pb-speed{background:#0d1117;border:1px solid #30363d;color:#c9d1d9;
+  padding:2px 4px;border-radius:3px;font-size:11px}
+#ep-summary{margin-top:6px;font-size:11px;color:#8b949e}
+
+/* ── Heatmap bar ── */
+.hm-bar{display:block;border-radius:2px;image-rendering:pixelated}
+
+/* ── Code / vector preview ── */
+.code-line{font-size:10px;color:#a5d6ff;word-break:break-all;margin-top:3px;
+  max-height:48px;overflow-y:auto;line-height:1.4}
+
+/* ── Thumb grid (encoder / policy sections) ── */
+.thumb-grid{display:grid;grid-template-columns:repeat(4,var(--ts,80px));gap:4px;
+  padding:10px 14px}
+.thumb-canvas{display:block;cursor:pointer;border:2px solid transparent;border-radius:2px;
+  transition:border-color .15s;image-rendering:pixelated}
+.thumb-canvas:hover{border-color:#388bfd}
+.thumb-canvas.selected{border-color:#f0c040}
+.thumb-canvas.pol-thumb{cursor:pointer}
+
+/* ── Changed patches comparison ── */
+.cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mini-label{font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;
+  margin-bottom:3px}
+canvas.patch-canvas{display:block;image-rendering:pixelated;border:1px solid #30363d;
+  border-radius:2px}
+
+/* ── Histogram SVG ── */
+.hist-row{display:flex;align-items:center;margin-top:5px}
+
+/* ── Pred-error cells ── */
+.pred-cell{border-radius:2px;cursor:default}
+
+/* ── Sections 2-4 ── */
+.section-body{padding:0 0 4px}
+.enc-header{padding:8px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hint-msg{font-size:11px;color:#8b949e;padding:0 14px 4px}
+.layer-btn{background:#21262d;border:1px solid #30363d;color:#8b949e;padding:3px 9px;
+  border-radius:3px;cursor:pointer;font-size:11px}
+.layer-btn.active{background:#1f6feb;border-color:#1f6feb;color:#fff}
+
+/* ── Overview charts ── */
+.overview-charts{display:grid;grid-template-columns:repeat(4,300px);gap:12px;
+  padding:10px 14px;overflow-x:auto}
+.overview-charts>div>canvas{display:block;margin-top:4px}
+
+/* ── Action history ── */
+#act-history{display:block;cursor:pointer;image-rendering:pixelated}
+
+/* ── Floating tooltip ── */
+#tip{position:fixed;z-index:400;background:#161b22;border:1px solid #388bfd;
+  border-radius:6px;padding:10px 12px;max-width:320px;pointer-events:none;
+  box-shadow:0 4px 16px rgba(0,0,0,.6)}
+#tip .tip-title{font-weight:bold;color:#e6edf3;margin-bottom:8px;font-size:12px}
+#tip .tip-sep{border:none;border-top:1px solid #21262d;margin:6px 0}
+#tip .stat-grid{gap:2px 8px}
+
+/* ── Nav buttons (for cmp panel) ── */
+.nav-btn{background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:2px 7px;
+  border-radius:3px;cursor:pointer;font-size:11px}
+.nav-btn:hover{background:#30363d}
+#cmp-label-text{color:#e6edf3;font-size:11px}
+
+/* ── Policy meta ── */
+.policy-meta{margin-top:4px;font-size:11px;color:#8b949e;display:flex;gap:10px}
+.pol-val{color:#e6edf3}
+</style>
+</head>
+<body>
+
+<!-- ── Sticky header ────────────────────────────────────────────────── -->
+<header id="hdr">
+  <h1>JEPA Debug Dashboard</h1>
+  <select id="ckpt-select" title="Select checkpoint"></select>
+  <label for="max-steps" style="color:#8b949e">max steps</label>
+  <input type="number" id="max-steps" value="200" min="1" max="500">
+  <button class="btn btn-primary" id="run-btn">▶ Run Episode</button>
+  <span id="status-msg">Load a checkpoint to begin.</span>
+</header>
+
+<!-- ── Loading overlay ──────────────────────────────────────────────── -->
+<div id="overlay" hidden>
+  <div class="spinner"></div>
+  <p id="overlay-msg">Running debug episode…</p>
+</div>
+
+<!-- ── Patch hover tooltip ──────────────────────────────────────────── -->
+<div id="tip" hidden>
+  <div class="tip-title" id="tip-title">Patch —</div>
+  <div class="stat-grid" id="tip-stats"></div>
+  <hr class="tip-sep">
+  <div class="mini-label">EMBEDDING (128 dims, 2px/dim)</div>
+  <canvas id="tip-hm" class="hm-bar" width="256" height="12" style="margin:4px 0"></canvas>
+  <div class="code-line" id="tip-vec">—</div>
+  <hr class="tip-sep">
+  <div class="mini-label">VS PREVIOUS TIMESTEP</div>
+  <div class="stat-grid" id="tip-prev-stats"></div>
+  <hr class="tip-sep">
+  <div class="mini-label">VS PREDICTOR</div>
+  <div class="stat-grid" id="tip-pred-stats"></div>
+</div>
+
+<!-- ── Main dashboard content (hidden until episode loads) ──────────── -->
+<div id="content" hidden>
+
+  <!-- ════════════════════════════════════ SECTION 1 ════════════════════ -->
+  <div class="sl">▸ MAIN PANEL</div>
+  <div id="s1" class="main-grid">
+
+    <!-- Left column: canvas + policy + h preview -->
+    <div id="left-col">
+      <div class="canvas-wrap">
+        <canvas id="puzzle" width="512" height="512"></canvas>
+      </div>
+      <div class="policy-row">
+        <!-- Policy: action chart -->
+        <div class="policy-left">
+          <div class="card-title">POLICY</div>
+          <canvas id="action-chart" width="230" height="90"></canvas>
+          <div class="policy-meta">
+            <span>Entropy <span class="pol-val" id="pol-entropy">—</span></span>
+            <span>Sampled <span class="pol-val" id="pol-action">—</span></span>
+          </div>
+        </div>
+        <!-- Reasoning token first3/last3 -->
+        <div class="policy-right">
+          <div class="card-title">REASONING TOKEN h_t</div>
+          <div class="code-line" id="h-preview">—</div>
+        </div>
+      </div>
+      <!-- h_t history stack — full-width below the policy row -->
+      <div style="padding:8px 12px 10px;border-top:1px solid #21262d">
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
+          <span class="mini-label">h_t HISTORY (newest → oldest, each row = 1 step)</span>
+        </div>
+        <div style="display:flex;gap:4px;align-items:flex-start">
+          <canvas id="h-stack-labels" width="28" height="8" style="flex-shrink:0;image-rendering:pixelated"></canvas>
+          <canvas id="h-heatmap" class="hm-bar" width="384" height="8" style="margin-top:0;flex-shrink:0"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column: controls + stat cards -->
+    <div id="right-col">
+
+      <!-- Playback controls -->
+      <div class="card">
+        <div class="pb-row">
+          <button class="pb-btn" id="pb-first" title="Go to first step">⏮</button>
+          <button class="pb-btn" id="pb-back"  title="Previous step">⏴</button>
+          <button class="pb-btn" id="pb-play"  title="Play / Pause">⏯</button>
+          <button class="pb-btn" id="pb-fwd"   title="Next step">⏵</button>
+          <button class="pb-btn" id="pb-last"  title="Go to last step">⏭</button>
+          <input type="range" id="pb-slider" min="0" max="0" value="0">
+          <span id="pb-counter">Step — / —</span>
+          <select id="pb-speed" title="Playback speed">
+            <option value="600">0.5×</option>
+            <option value="300" selected>1×</option>
+            <option value="150">2×</option>
+            <option value="75">4×</option>
+          </select>
+        </div>
+        <div id="ep-summary"></div>
+      </div>
+
+      <!-- Reasoning token stats -->
+      <div class="card">
+        <div class="card-title">REASONING TOKEN h_t</div>
+        <div class="stat-grid">
+          <span class="sl-lbl" title="L2 norm of h_t. Drifts as episode progresses due to the recurrent update.">Norm</span><span class="sv" id="rs-norm">—</span>
+          <span class="sl-lbl" title="Standard deviation of h_t across its 128 dimensions.">Std</span><span class="sv" id="rs-std">—</span>
+          <span class="sl-lbl" title="Activation entropy: -Σv²·log(v²)/log(128). 1=uniform spread, 0=spike on one dim.">Entropy</span><span class="sv" id="rs-ent">—</span>
+          <span class="sl-lbl" title="Cosine similarity between h_t and h_{t-1}. Near 1 = small update this step.">Δ cos-sim</span><span class="sv" id="rs-cos">—</span>
+          <span class="sl-lbl" title="L2 distance between h_t and h_{t-1}. Measures how much the reasoning state changed.">Δ L2</span><span class="sv" id="rs-l2">—</span>
+          <span class="sl-lbl" title="Mean absolute change per dimension: mean(|h_t - h_{t-1}|).">Δ mean|Δ|/dim</span><span class="sv" id="rs-mad">—</span>
+          <span class="sl-lbl" title="Maximum absolute change in any single dimension between h_t and h_{t-1}.">Δ max|Δ|</span><span class="sv" id="rs-mxd">—</span>
+        </div>
+      </div>
+
+      <!-- Patch embedding summary -->
+      <div class="card">
+        <div class="card-title">PATCH EMBEDDING SUMMARY (16 patches × 128 dims)</div>
+        <div class="stat-grid">
+          <span class="sl-lbl" title="Mean cosine similarity between all pairs of the 16 patch embeddings. 0 = orthogonal/diverse (good), 1 = identical direction = representation collapse (bad).">Pairwise cos-sim</span><span class="sv" id="es-cos">—</span>
+          <span class="sl-lbl" title="exp(-Σ p·log(p)) where p = σ²/Σσ² from SVD of the 16×128 matrix. Range [1,16]. Low = patches collapsed to same direction (bad). High = patches span many independent directions (good).">Effective rank</span><span class="sv" id="es-rank">—</span>
+          <span class="sl-lbl" title="Mean of the 128 per-dimension standard deviations across the 16 patches. Near 0 = patches similar in that dim.">Per-dim std (mean)</span><span class="sv" id="es-std">—</span>
+          <span class="sl-lbl" title="Mean L2 distance between patch embeddings at t-1 and t. Measures how much the overall state representation changed.">Mean drift vs t-1</span><span class="sv" id="es-drift">—</span>
+          <span class="sl-lbl" title="Number of dimensions where std across the 16 patches < 0.01. High count = encoder ignoring those dimensions (dead dims).">Dead dims</span><span class="sv" id="es-dead">—</span>
+        </div>
+        <div class="hist-row">
+          <span class="sl-lbl" style="margin-right:8px" title="Distribution of per-dimension standard deviations across the 16 patches. Rightward = more diversity in those dimensions.">Per-dim std dist.</span>
+          <svg id="es-hist" width="200" height="36"></svg>
+        </div>
+      </div>
+
+      <!-- Changed patches comparison -->
+      <div class="card">
+        <div class="card-title">
+          CHANGED PATCHES
+          <span style="float:right;display:flex;align-items:center;gap:5px">
+            <button class="nav-btn" id="cmp-prev">←</button>
+            <span id="cmp-label-text" style="min-width:180px;text-align:center">—</span>
+            <button class="nav-btn" id="cmp-next">→</button>
+          </span>
+        </div>
+        <div id="cmp-body">
+          <div class="cmp-grid">
+            <!-- t-1 column -->
+            <div>
+              <div class="mini-label">t-1 (pixels)</div>
+              <canvas id="cmp-prev-px" class="patch-canvas" width="80" height="80"></canvas>
+              <div class="code-line" id="cmp-prev-vec">—</div>
+              <canvas id="cmp-prev-hm" class="hm-bar" width="256" height="10" style="margin-top:3px"></canvas>
+            </div>
+            <!-- t column -->
+            <div>
+              <div class="mini-label">t (pixels)</div>
+              <canvas id="cmp-curr-px" class="patch-canvas" width="80" height="80"></canvas>
+              <div class="code-line" id="cmp-curr-vec">—</div>
+              <canvas id="cmp-curr-hm" class="hm-bar" width="256" height="10" style="margin-top:3px"></canvas>
+            </div>
+          </div>
+          <div class="stat-grid" style="margin-top:8px">
+            <span class="sl-lbl" title="Cosine similarity between the patch embedding at t-1 and t. 1 = same direction = embedding barely changed despite pixel changes.">Cos-sim (t-1 vs t)</span><span class="sv" id="cs-cos">—</span>
+            <span class="sl-lbl" title="L2 distance between patch embeddings. Max = 2.0 for unit vectors (opposite directions).">L2 dist</span><span class="sv" id="cs-l2">—</span>
+            <span class="sl-lbl" title="Fraction of the 256 pixels (16×16) in this patch that changed their color index.">Pixel Δ fraction</span><span class="sv" id="cs-px">—</span>
+            <span class="sl-lbl" title="Mean absolute difference per embedding dimension: mean(|z_t[i] - z_{t-1}[i]|).">Mean |Δ|/dim</span><span class="sv" id="cs-mad">—</span>
+            <span class="sl-lbl" title="Maximum absolute difference in any single embedding dimension.">Max |Δ|/dim</span><span class="sv" id="cs-mxd">—</span>
+            <span class="sl-lbl" title="Change in activation entropy between t-1 and t. Positive = more spread-out activation at t.">Entropy Δ</span><span class="sv" id="cs-ent">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- JEPA quality -->
+      <div class="card">
+        <div class="card-title">JEPA QUALITY & REWARD</div>
+        <div class="stat-grid">
+          <span class="sl-lbl" title="Weighted MSE between predictor output z_pred and actual next-state encoding z_{t+1} from the target encoder. This is the intrinsic curiosity reward signal.">Weighted JEPA loss</span><span class="sv" id="jq-loss">—</span>
+          <span class="sl-lbl" title="Total reward = intrinsic JEPA prediction error + 50.0 completion bonus if level finished.">Total reward</span><span class="sv" id="jq-reward">—</span>
+        </div>
+        <div class="mini-label" style="margin-top:8px;margin-bottom:4px">
+          PER-PATCH PREDICTION ERROR (green=low, red=high)
+        </div>
+        <div id="pred-error-grid" class="thumb-grid" style="--ts:38px;padding:0;gap:3px"></div>
+      </div>
+
+    </div><!-- /right-col -->
+  </div><!-- /s1 -->
+
+  <!-- ════════════════════════════════════ SECTION 2 ════════════════════ -->
+  <div class="sl">
+    ▸ ENCODER SELF-ATTENTION
+    <span class="enc-header" style="margin-left:auto">
+      <button class="layer-btn" id="enc-l1-btn">Layer 1</button>
+      <button class="layer-btn active" id="enc-l2-btn">Layer 2</button>
+    </span>
+  </div>
+  <div id="s2">
+    <div class="hint-msg" id="enc-hint" style="padding:8px 14px">
+      Click a patch thumbnail to see its self-attention pattern (which other patches it attends to)
+    </div>
+    <div id="enc-thumb-grid" class="thumb-grid" style="--ts:80px"></div>
+  </div>
+
+  <!-- ════════════════════════════════════ SECTION 3 ════════════════════ -->
+  <div class="sl">▸ POLICY CROSS-ATTENTION (reasoning token → patches)</div>
+  <div id="s3">
+    <div class="hint-msg" id="pol-hint" style="padding:8px 14px">
+      Click a patch thumbnail to inspect its embedding stats and attention weight
+    </div>
+    <div id="pol-thumb-grid" class="thumb-grid" style="--ts:80px"></div>
+    <div class="stat-grid" style="max-width:320px;padding:4px 14px 6px">
+      <span class="sl-lbl" title="The patch that the reasoning token's query attends to most strongly.">Highest-weight patch</span><span class="sv" id="pa-top">—</span>
+      <span class="sl-lbl" title="Entropy of the 16-way attention distribution over patches: -Σw·log(w). log₂(16)=4 = uniform (unfocused), 0 = spiked on one patch.">Attention entropy</span><span class="sv" id="pa-ent">—</span>
+    </div>
+    <!-- Per-patch detail shown on click -->
+    <div id="pol-detail" hidden style="padding:6px 14px 12px;border-top:1px solid #21262d">
+      <div class="card-title" id="pol-detail-title" style="margin-bottom:6px">—</div>
+      <div class="stat-grid" id="pol-detail-stats"></div>
+      <div class="mini-label" style="margin-top:6px">EMBEDDING (128 dims, 2px/dim)</div>
+      <canvas id="pol-detail-hm" class="hm-bar" width="256" height="12" style="margin-top:3px"></canvas>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════ SECTION 4 ════════════════════ -->
+  <div class="sl">▸ EPISODE OVERVIEW</div>
+  <div id="s4" style="padding-bottom:20px">
+    <div class="overview-charts">
+      <div><div class="mini-label">JEPA LOSS / STEP</div><canvas id="ov-loss" width="300" height="120"></canvas></div>
+      <div><div class="mini-label">REWARD / STEP</div><canvas id="ov-reward" width="300" height="120"></canvas></div>
+      <div><div class="mini-label">ACTION ENTROPY / STEP</div><canvas id="ov-entropy" width="300" height="120"></canvas></div>
+      <div><div class="mini-label">h DRIFT (L2 vs prev) / STEP</div><canvas id="ov-drift" width="300" height="120"></canvas></div>
+    </div>
+    <div class="mini-label" style="padding:8px 14px 4px">ACTION HISTORY (click to jump to step)</div>
+    <div style="overflow-x:auto;padding:0 14px">
+      <canvas id="act-history" height="24"></canvas>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+'use strict';
+
+// ── Constants ──────────────────────────────────────────────────────────────
+const CANVAS_PX   = 512;
+const PATCH_PX    = 128;   // canvas pixels per patch in main canvas
+const THUMB_PX    = 80;    // thumbnail canvas size
+const THUMB_SCALE = 5;     // 16 × 5 = 80
+
+// Action colours
+const ACTION_COLORS = ['#388bfd','#f85149','#3fb950','#f0c040'];
+const ACTION_LABELS = ['A0','A1','A2','A3'];
+
+// ── State ──────────────────────────────────────────────────────────────────
+const S = {
+  ep: null,         // full episode JSON
+  step: 0,
+  playing: false,
+  timer: null,
+  speed: 300,
+  hovPatch: null,   // hovered patch index 0-15 or null
+  cmpIdx: 0,        // index into changedPatches array
+  encPatch: null,   // selected encoder patch
+  encLayer: 2,      // 1 or 2
+  polPatch: null,   // selected policy cross-attn patch
+  arcColors: null,  // [[R,G,B]×16]
+};
+
+// ── Overview chart handles ─────────────────────────────────────────────────
+let actionChart = null;
+const ovCharts = {};  // {loss, reward, entropy, drift}
+let actHistBase = null;  // ImageData of action history without cursor
+
+// ── Format helpers ─────────────────────────────────────────────────────────
+const fmt  = (v, dp=4) => (v == null) ? '—' : Number(v).toFixed(dp);
+const fmtP = v => (v == null) ? '—' : (v * 100).toFixed(1) + '%';
+const fmtSign = v => (v == null) ? '—' : (v >= 0 ? '+' : '') + Number(v).toFixed(4);
+
+// ── Color helpers ──────────────────────────────────────────────────────────
+function arcRgb(idx) {
+  const c = (S.arcColors || [])[idx] || [100,100,100];
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+// Map embedding value to RGB (blue=neg, grey=zero, red=pos)
+function embRgb(v) {
+  const t = Math.max(-0.4, Math.min(0.4, v));
+  if (t < 0) {
+    const f = -t / 0.4;
+    return [Math.round(170+f*(0-170)), Math.round(170+f*(116-170)), Math.round(170+f*(217-170))];
+  }
+  const f = t / 0.4;
+  return [Math.round(170+f*(255-170)), Math.round(170+f*(65-170)), Math.round(170+f*(54-170))];
+}
+
+// Health colour: green / yellow / red based on thresholds
+function hc(v, greenT, redT, higherBetter=true) {
+  if (v == null) return '';
+  const good = higherBetter ? v >= greenT : v <= greenT;
+  const bad  = higherBetter ? v <= redT   : v >= redT;
+  return good ? 'good' : bad ? 'bad' : 'warn';
+}
+
+// ── Canvas / drawing helpers ───────────────────────────────────────────────
+function drawHeatmapBar(canvas, values, h=12) {
+  // values: array of 128 floats
+  canvas.width  = 256; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, 256, h);
+  const img = ctx.createImageData(256, h);
+  for (let i = 0; i < 128; i++) {
+    const [r,g,b] = embRgb(values[i]);
+    for (let y = 0; y < h; y++) {
+      const base = (y * 256 + i * 2) * 4;
+      img.data[base]   = img.data[base+4]   = r;
+      img.data[base+1] = img.data[base+5]   = g;
+      img.data[base+2] = img.data[base+6]   = b;
+      img.data[base+3] = img.data[base+7]   = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function clearCanvas(c) {
+  c.getContext('2d').clearRect(0, 0, c.width, c.height);
+}
+
+function drawPatchThumb(canvas, frame, patchIdx, overlayRgba=null, brightnessFactor=1.0, weightLabel=null) {
+  const ctx = canvas.getContext('2d');
+  const pr = Math.floor(patchIdx / 4), pc = patchIdx % 4;
+  const img = ctx.createImageData(THUMB_PX, THUMB_PX);
+  const bf = Math.max(0, Math.min(1, brightnessFactor));
+  for (let r = 0; r < 16; r++) {
+    for (let c = 0; c < 16; c++) {
+      const colorIdx = frame[pr*16+r][pc*16+c];
+      const [R,G,B] = (S.arcColors||[])[colorIdx]||[100,100,100];
+      for (let dy = 0; dy < THUMB_SCALE; dy++) {
+        for (let dx = 0; dx < THUMB_SCALE; dx++) {
+          const base = ((r*THUMB_SCALE+dy)*THUMB_PX + (c*THUMB_SCALE+dx))*4;
+          img.data[base]   = R * bf;
+          img.data[base+1] = G * bf;
+          img.data[base+2] = B * bf;
+          img.data[base+3] = 255;
+        }
+      }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  if (overlayRgba) {
+    ctx.fillStyle = overlayRgba;
+    ctx.fillRect(0, 0, THUMB_PX, THUMB_PX);
+  }
+  if (weightLabel !== null) {
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.fillRect(THUMB_PX - 30, THUMB_PX - 16, 30, 15);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(weightLabel, THUMB_PX - 2, THUMB_PX - 2);
+  }
+}
+
+// ── Main canvas rendering ──────────────────────────────────────────────────
+function renderCanvas(t) {
+  const ts  = S.ep.timesteps[t];
+  const ctx = document.getElementById('puzzle').getContext('2d');
+  const img = ctx.createImageData(CANVAS_PX, CANVAS_PX);
+  const frame = ts.frame;
+  const S8 = 8; // scale: 64×8 = 512
+
+  for (let r = 0; r < 64; r++) {
+    for (let c = 0; c < 64; c++) {
+      const [R,G,B] = (S.arcColors||[])[frame[r][c]]||[80,80,80];
+      for (let dy = 0; dy < S8; dy++) {
+        for (let dx = 0; dx < S8; dx++) {
+          const base = ((r*S8+dy)*CANVAS_PX + (c*S8+dx))*4;
+          img.data[base]=R; img.data[base+1]=G; img.data[base+2]=B; img.data[base+3]=255;
+        }
+      }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+
+  // Prediction error overlay (red tint)
+  const errs = ts.per_patch_pred_error;
+  const maxE = Math.max(...errs, 0.001);
+  for (let i = 0; i < 16; i++) {
+    const row = Math.floor(i/4), col = i%4;
+    const alpha = (errs[i]/maxE) * 0.30;
+    ctx.fillStyle = `rgba(255,50,50,${alpha})`;
+    ctx.fillRect(col*PATCH_PX, row*PATCH_PX, PATCH_PX, PATCH_PX);
+  }
+
+  // Patch grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = 1;
+  for (let i = 1; i < 4; i++) {
+    ctx.beginPath(); ctx.moveTo(i*PATCH_PX,0); ctx.lineTo(i*PATCH_PX,CANVAS_PX); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,i*PATCH_PX); ctx.lineTo(CANVAS_PX,i*PATCH_PX); ctx.stroke();
+  }
+
+  // Hover highlight
+  if (S.hovPatch !== null) {
+    const hr = Math.floor(S.hovPatch/4), hc2 = S.hovPatch%4;
+    ctx.strokeStyle = 'rgba(240,192,64,0.9)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(hc2*PATCH_PX+1.5, hr*PATCH_PX+1.5, PATCH_PX-3, PATCH_PX-3);
+  }
+}
+
+// ── Canvas hover / tooltip ─────────────────────────────────────────────────
+function embFirstLast3(arr) {
+  const f = v => Number(v).toFixed(4);
+  return `[${f(arr[0])}, ${f(arr[1])}, ${f(arr[2])}, …, ${f(arr[125])}, ${f(arr[126])}, ${f(arr[127])}]`;
+}
+
+function statRow(label, value, titleText='') {
+  return `<span class="sl-lbl" title="${titleText}">${label}</span><span class="sv">${value}</span>`;
+}
+
+function updateTooltip(e) {
+  const tip = document.getElementById('tip');
+  if (S.hovPatch === null || !S.ep) { tip.hidden = true; return; }
+  const t   = S.step;
+  const ts  = S.ep.timesteps[t];
+  const i   = S.hovPatch;
+  const ps  = ts.per_patch_stats[i];
+  const emb = ts.patch_embeddings[i];
+
+  document.getElementById('tip-title').textContent =
+    `Patch ${i}  (row ${Math.floor(i/4)}, col ${i%4})`;
+
+  // Main stats
+  document.getElementById('tip-stats').innerHTML =
+    statRow('Norm',    fmt(ps.norm),   'L2 norm of the 128-dim embedding. Encoder applies F.normalize so this is always ≈1.0.') +
+    statRow('Mean',    fmt(ps.mean),   'Mean value across 128 dimensions.') +
+    statRow('Std',     fmt(ps.std),    'Standard deviation across 128 dimensions.') +
+    statRow('Min',     fmt(ps.min_val),'') +
+    statRow('Max',     fmt(ps.max_val),'') +
+    statRow('Entropy', fmt(ps.activation_entropy),
+      '-Σv²·log(v²)/log(128). 1=uniform activation, 0=spike on one dimension.');
+
+  // Heatmap + vector
+  drawHeatmapBar(document.getElementById('tip-hm'), emb);
+  document.getElementById('tip-vec').textContent = embFirstLast3(emb);
+
+  // vs previous timestep
+  document.getElementById('tip-prev-stats').innerHTML =
+    statRow('Cos-sim',   fmt(ps.cos_sim_prev),
+      'Cosine similarity between this patch embedding at t-1 and t. 1=same direction, -1=opposite.') +
+    statRow('L2 dist',   fmt(ps.l2_dist_prev),
+      'Euclidean distance between embeddings at t-1 and t. Max=2 for unit vectors.') +
+    statRow('Mean |Δ|/dim', fmt(ps.mean_abs_diff_prev),
+      'Average absolute change per embedding dimension.') +
+    statRow('Max |Δ|/dim',  fmt(ps.max_abs_diff_prev),
+      'Maximum absolute change in any single embedding dimension.');
+
+  // vs predictor
+  document.getElementById('tip-pred-stats').innerHTML =
+    statRow('Pred error (L2)', fmt(ps.pred_error),
+      '||z_pred[i] - z_{t+1}[i]||₂: how surprised the predictor was by this patch’s actual next embedding.') +
+    statRow('Pixel Δ fraction', fmtP(ps.pixel_change_frac),
+      'Fraction of 256 pixels (16×16) in this patch that changed their colour value.');
+
+  // Position near cursor (keep on screen)
+  tip.hidden = false;
+  const tw = 320, th = tip.offsetHeight || 280;
+  let tx = e.clientX + 14, ty = e.clientY + 14;
+  if (tx + tw > window.innerWidth)  tx = e.clientX - tw - 10;
+  if (ty + th > window.innerHeight) ty = e.clientY - th - 10;
+  tip.style.left = tx + 'px';
+  tip.style.top  = ty + 'px';
+}
+
+// ── Right-panel rendering ──────────────────────────────────────────────────
+function renderReasoningStats(t) {
+  const rs = S.ep.timesteps[t].reasoning_stats;
+  setText('rs-norm', fmt(rs.norm));
+  setText('rs-std',  fmt(rs.std));
+  setText('rs-ent',  fmt(rs.activation_entropy));
+  setText('rs-cos',  fmt(rs.cos_sim_prev));
+  setText('rs-l2',   fmt(rs.l2_dist_prev));
+  setText('rs-mad',  fmt(rs.mean_abs_diff_prev));
+  setText('rs-mxd',  fmt(rs.max_abs_diff_prev));
+}
+
+function renderEmbeddingSummary(t) {
+  const es = S.ep.timesteps[t].embedding_summary;
+  const cosEl  = document.getElementById('es-cos');
+  const rankEl = document.getElementById('es-rank');
+  const deadEl = document.getElementById('es-dead');
+
+  cosEl.textContent  = fmt(es.mean_pairwise_cos_sim);
+  rankEl.textContent = fmt(es.effective_rank, 2);
+  setText('es-std',   fmt(es.per_dim_std_mean));
+  setText('es-drift', fmt(es.mean_embedding_drift));
+  deadEl.textContent = es.dead_dim_count != null ? es.dead_dim_count : '—';
+
+  // Health colours
+  cosEl.className  = 'sv ' + hc(es.mean_pairwise_cos_sim, 0.30, 0.70, false);
+  rankEl.className = 'sv ' + hc(es.effective_rank, 8, 4, true);
+  deadEl.className = 'sv ' + hc(es.dead_dim_count, 10, 30, false);
+
+  // Mini histogram
+  renderHistSVG('es-hist', es.per_dim_std_hist_counts, es.per_dim_std_hist_edges);
+}
+
+function renderHistSVG(id, counts, edges) {
+  const svg = document.getElementById(id);
+  if (!counts || !counts.length) { svg.innerHTML=''; return; }
+  const W=200, H=36, n=counts.length;
+  const maxC = Math.max(...counts, 1);
+  const barW = W / n;
+  let html = '';
+  for (let i = 0; i < n; i++) {
+    const bh = Math.max(1, (counts[i]/maxC)*(H-4));
+    const x = i * barW + 1;
+    html += `<rect x="${x.toFixed(1)}" y="${(H-bh).toFixed(1)}" width="${(barW-1).toFixed(1)}" height="${bh.toFixed(1)}" fill="#388bfd" opacity=".7"/>`;
+  }
+  // x-axis labels (first and last edge)
+  if (edges && edges.length >= 2) {
+    html += `<text x="0" y="${H}" font-size="8" fill="#8b949e">${Number(edges[0]).toFixed(2)}</text>`;
+    html += `<text x="${W}" y="${H}" font-size="8" fill="#8b949e" text-anchor="end">${Number(edges[edges.length-1]).toFixed(2)}</text>`;
+  }
+  svg.innerHTML = html;
+}
+
+function renderCmpPanel(t) {
+  const changed = getChangedPatches(t);
+  const lbl = document.getElementById('cmp-label-text');
+
+  if (changed.length === 0) {
+    lbl.textContent = 'No pixel changes this step';
+    clearCanvas(document.getElementById('cmp-prev-px'));
+    clearCanvas(document.getElementById('cmp-curr-px'));
+    clearCanvas(document.getElementById('cmp-prev-hm'));
+    clearCanvas(document.getElementById('cmp-curr-hm'));
+    setText('cmp-prev-vec','—'); setText('cmp-curr-vec','—');
+    ['cs-cos','cs-l2','cs-px','cs-mad','cs-mxd','cs-ent'].forEach(id=>setText(id,'—'));
+    return;
+  }
+
+  if (S.cmpIdx >= changed.length) S.cmpIdx = 0;
+  const pi = changed[S.cmpIdx];
+  const ps = S.ep.timesteps[t].per_patch_stats[pi];
+  lbl.textContent = `Patch ${pi} (r${Math.floor(pi/4)},c${pi%4}) — ${(ps.pixel_change_frac*100).toFixed(1)}% px changed   (${S.cmpIdx+1}/${changed.length})`;
+
+  // Thumbnails
+  const currFrame = S.ep.timesteps[t].frame;
+  drawPatchThumb(document.getElementById('cmp-curr-px'), currFrame, pi);
+  if (t > 0) {
+    drawPatchThumb(document.getElementById('cmp-prev-px'), S.ep.timesteps[t-1].frame, pi);
+  } else {
+    clearCanvas(document.getElementById('cmp-prev-px'));
+  }
+
+  // Embedding vectors
+  const currEmb = S.ep.timesteps[t].patch_embeddings[pi];
+  const prevEmb = t > 0 ? S.ep.timesteps[t-1].patch_embeddings[pi] : null;
+  setText('cmp-curr-vec', embFirstLast3(currEmb));
+  setText('cmp-prev-vec', prevEmb ? embFirstLast3(prevEmb) : '—');
+  drawHeatmapBar(document.getElementById('cmp-curr-hm'), currEmb, 10);
+  if (prevEmb) drawHeatmapBar(document.getElementById('cmp-prev-hm'), prevEmb, 10);
+  else clearCanvas(document.getElementById('cmp-prev-hm'));
+
+  // Stats
+  setText('cs-cos', fmt(ps.cos_sim_prev));
+  setText('cs-l2',  fmt(ps.l2_dist_prev));
+  setText('cs-px',  fmtP(ps.pixel_change_frac));
+  setText('cs-mad', fmt(ps.mean_abs_diff_prev));
+  setText('cs-mxd', fmt(ps.max_abs_diff_prev));
+
+  // Entropy delta
+  const currEnt = ps.activation_entropy;
+  const prevEnt = (t > 0) ? S.ep.timesteps[t-1].per_patch_stats[pi].activation_entropy : null;
+  setText('cs-ent', (prevEnt != null && currEnt != null) ? fmtSign(currEnt - prevEnt) : '—');
+}
+
+function renderJepaQuality(t) {
+  const ts = S.ep.timesteps[t];
+  setText('jq-loss',   fmt(ts.jepa_loss));
+  setText('jq-reward', fmt(ts.reward));
+
+  // 4×4 prediction error grid
+  const errs = ts.per_patch_pred_error;
+  const maxE = Math.max(...errs, 0.001);
+  const grid = document.getElementById('pred-error-grid');
+  grid.innerHTML = '';
+  for (let i = 0; i < 16; i++) {
+    const frac = errs[i] / maxE;
+    const r = Math.round(frac * 230);
+    const g = Math.round((1-frac) * 180);
+    const div = document.createElement('div');
+    div.className = 'pred-cell';
+    div.style.cssText = `width:38px;height:38px;background:rgb(${r},${g},40);` +
+      `border:1px solid #21262d;border-radius:2px`;
+    div.title = `Patch ${i}: pred error = ${errs[i].toFixed(4)}`;
+    grid.appendChild(div);
+  }
+}
+
+// ── Reasoning token stacked history heatmap ───────────────────────────────
+const H_STACK_ROW_H  = 8;    // px per timestep row
+const H_STACK_MAX    = 20;   // max rows to show
+const H_STACK_W      = 384;  // canvas width: 128 dims × 3px each
+const H_STACK_PX_DIM = 3;    // pixels per dimension
+const H_STACK_LBL_W  = 28;   // label canvas width
+
+function drawReasoningStack(currentT) {
+  const hmCanvas  = document.getElementById('h-heatmap');
+  const lblCanvas = document.getElementById('h-stack-labels');
+  if (!hmCanvas || !S.ep) return;
+
+  const nRows  = Math.min(currentT + 1, H_STACK_MAX);
+  const totalH = nRows * H_STACK_ROW_H;
+
+  hmCanvas.width   = H_STACK_W;
+  hmCanvas.height  = totalH;
+  lblCanvas.width  = H_STACK_LBL_W;
+  lblCanvas.height = totalH;
+  hmCanvas.style.height  = totalH + 'px';
+  lblCanvas.style.height = totalH + 'px';
+
+  const ctx  = hmCanvas.getContext('2d');
+  const lctx = lblCanvas.getContext('2d');
+  lctx.clearRect(0, 0, H_STACK_LBL_W, totalH);
+  lctx.font = '7px monospace';
+  lctx.textAlign = 'right';
+  lctx.textBaseline = 'middle';
+
+  for (let row = 0; row < nRows; row++) {
+    const stepIdx = currentT - row;   // row 0 = current, row 1 = t-1, …
+    const h = S.ep.timesteps[stepIdx].reasoning_token;
+    const y = row * H_STACK_ROW_H;
+
+    const img = ctx.createImageData(H_STACK_W, H_STACK_ROW_H);
+    for (let dim = 0; dim < 128; dim++) {
+      const [r, g, b] = embRgb(h[dim]);
+      for (let px = 0; px < H_STACK_PX_DIM; px++) {
+        for (let py = 0; py < H_STACK_ROW_H; py++) {
+          const base = (py * H_STACK_W + dim * H_STACK_PX_DIM + px) * 4;
+          img.data[base]   = r;
+          img.data[base+1] = g;
+          img.data[base+2] = b;
+          img.data[base+3] = 255;
+        }
+      }
+    }
+    ctx.putImageData(img, 0, y);
+
+    // Step label (current row yellow, others dim; label every 5 steps or when few rows)
+    lctx.fillStyle = row === 0 ? '#f0c040' : '#555';
+    if (row === 0 || stepIdx % 5 === 0 || nRows <= 10) {
+      lctx.fillText(`t${stepIdx}`, H_STACK_LBL_W - 2, y + H_STACK_ROW_H / 2);
+    }
+  }
+
+  // Yellow border on the current (top) row
+  ctx.strokeStyle = '#f0c040';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0, 0, H_STACK_W, H_STACK_ROW_H);
+}
+
+// ── Policy section (left panel) ────────────────────────────────────────────
+function renderPolicySection(t) {
+  const ts = S.ep.timesteps[t];
+  const probs = ts.action_probs;
+  const avail = new Set((ts.available_actions || []).map(a => a-1));
+  const taken = ts.action_taken;
+
+  // Action bar chart
+  if (actionChart) {
+    actionChart.data.datasets[0].data = probs;
+    actionChart.data.datasets[0].backgroundColor = [0,1,2,3].map(i => {
+      if (i === taken) return '#f0c040';
+      if (!avail.has(i)) return '#484f58';
+      return ACTION_COLORS[i];
+    });
+    actionChart.data.datasets[0].borderColor = [0,1,2,3].map(i =>
+      i === taken ? '#f0c040' : 'transparent');
+    actionChart.update('none');
+  }
+
+  setText('pol-entropy', fmt(ts.action_entropy));
+  setText('pol-action', `A${taken} ★`);
+
+  // h_t first3/last3
+  const h = ts.reasoning_token;
+  setText('h-preview', `h = [${h.slice(0,3).map(v=>Number(v).toFixed(4)).join(', ')}, …, ${h.slice(-3).map(v=>Number(v).toFixed(4)).join(', ')}]`);
+  drawReasoningStack(t);
+}
+
+// ── Encoder attention section ──────────────────────────────────────────────
+function renderEncoderSection(t) {
+  const ts = S.ep.timesteps[t];
+  const frame = ts.frame;
+  const attn = S.encLayer === 1 ? ts.encoder_attn_block1 : ts.encoder_attn_block2;
+
+  const encWeights = (S.encPatch !== null && attn) ? attn[S.encPatch] : null;
+  const encMaxW = encWeights ? Math.max(...encWeights, 0.001) : 1;
+  for (let i = 0; i < 16; i++) {
+    const c = document.getElementById(`enc-${i}`);
+    if (!c) continue;
+    if (encWeights) {
+      const norm = encWeights[i] / encMaxW;
+      const bf = 0.18 + 0.82 * norm;          // dim low-attention patches to 18% brightness
+      const alpha = norm * 0.82;              // hot orange overlay scales with norm weight
+      const label = (encWeights[i] * 100).toFixed(1) + '%';
+      drawPatchThumb(c, frame, i, `rgba(255,90,0,${alpha.toFixed(2)})`, bf, label);
+    } else {
+      drawPatchThumb(c, frame, i, null, 1.0);
+    }
+    c.className = 'thumb-canvas' + (i === S.encPatch ? ' selected' : '');
+  }
+
+  document.getElementById('enc-hint').textContent = S.encPatch !== null
+    ? `Showing attention FROM Patch ${S.encPatch} (row ${Math.floor(S.encPatch/4)}, col ${S.encPatch%4}) TO each patch (layer ${S.encLayer})`
+    : 'Click a patch thumbnail to see its self-attention pattern';
+}
+
+// ── Policy cross-attention section ─────────────────────────────────────────
+function renderPolicyAttnSection(t) {
+  const ts = S.ep.timesteps[t];
+  const frame = ts.frame;
+  const weights = ts.policy_attn_weights;  // (16,) sum-to-1
+
+  if (!weights) return;
+  const maxW = Math.max(...weights, 0.001);
+
+  for (let i = 0; i < 16; i++) {
+    const c = document.getElementById(`pol-${i}`);
+    if (!c) continue;
+    const norm = weights[i] / maxW;
+    const bf = 0.18 + 0.82 * norm;
+    const alpha = norm * 0.82;
+    const label = (weights[i] * 100).toFixed(1) + '%';
+    drawPatchThumb(c, frame, i, `rgba(240,192,64,${alpha.toFixed(2)})`, bf, label);
+    c.className = 'thumb-canvas pol-thumb' + (i === S.polPatch ? ' selected' : '');
+  }
+
+  // Hint text
+  document.getElementById('pol-hint').textContent = S.polPatch !== null
+    ? `Patch ${S.polPatch} (row ${Math.floor(S.polPatch/4)}, col ${S.polPatch%4}) — attention weight: ${(weights[S.polPatch]*100).toFixed(2)}%`
+    : 'Click a patch thumbnail to inspect its embedding stats and attention weight';
+
+  // Summary stats
+  const topIdx = weights.indexOf(Math.max(...weights));
+  setText('pa-top', `Patch ${topIdx} (r${Math.floor(topIdx/4)},c${topIdx%4}) — w=${weights[topIdx].toFixed(4)}`);
+  const ent = -weights.reduce((acc, w) => acc + (w > 1e-9 ? w * Math.log(w) : 0), 0);
+  setText('pa-ent', fmt(ent));
+
+  // Per-patch detail panel
+  const detail = document.getElementById('pol-detail');
+  if (S.polPatch === null) {
+    detail.hidden = true;
+    return;
+  }
+  detail.hidden = false;
+  const pi = S.polPatch;
+  const ps = ts.per_patch_stats[pi];
+  const emb = ts.patch_embeddings[pi];
+  document.getElementById('pol-detail-title').textContent =
+    `Patch ${pi} (row ${Math.floor(pi/4)}, col ${pi%4}) — attn weight ${(weights[pi]*100).toFixed(2)}%`;
+  document.getElementById('pol-detail-stats').innerHTML =
+    statRow('Norm',              fmt(ps.norm),              'L2 norm of the 128-dim embedding. F.normalize makes this ≈1.') +
+    statRow('Mean',              fmt(ps.mean),              'Mean activation across 128 dims.') +
+    statRow('Std',               fmt(ps.std),               'Standard deviation across 128 dims.') +
+    statRow('Activation entropy',fmt(ps.activation_entropy),'−Σv²·log(v²)/log(128). 1=uniform, 0=one-dim spike.') +
+    statRow('Pred error (L2)',   fmt(ps.pred_error),        '||z_pred[i] − z_{t+1}[i]||₂ — how surprised the predictor was.') +
+    statRow('Pixel Δ fraction',  fmtP(ps.pixel_change_frac),'Fraction of 256 pixels in this patch that changed colour.') +
+    (ps.cos_sim_prev !== null ? statRow('Cos-sim vs t−1', fmt(ps.cos_sim_prev), 'Cosine similarity to same patch at previous timestep.') : '') +
+    (ps.l2_dist_prev  !== null ? statRow('L2 vs t−1',     fmt(ps.l2_dist_prev),  'L2 distance from same patch at previous timestep.')     : '');
+  drawHeatmapBar(document.getElementById('pol-detail-hm'), emb);
+}
+
+// ── Playback controls ──────────────────────────────────────────────────────
+function goToStep(t) {
+  const n = S.ep ? S.ep.episode_steps : 0;
+  S.step = Math.max(0, Math.min(t, n-1));
+  renderStep(S.step);
+}
+
+function renderStep(t) {
+  renderCanvas(t);
+  renderReasoningStats(t);
+  renderEmbeddingSummary(t);
+  renderCmpPanel(t);
+  renderJepaQuality(t);
+  renderPolicySection(t);
+  renderEncoderSection(t);
+  renderPolicyAttnSection(t);
+  updateOverviewCursors(t);
+  updateActionHistoryCursor(t);
+
+  // Slider + counter
+  const slider = document.getElementById('pb-slider');
+  slider.value = t;
+  setText('pb-counter', `Step ${t} / ${S.ep.episode_steps - 1}`);
+}
+
+// ── Playback ───────────────────────────────────────────────────────────────
+function stepForward() {
+  if (!S.ep) return;
+  if (S.step < S.ep.episode_steps - 1) goToStep(S.step + 1);
+  else if (S.playing) stopPlayback();
+}
+
+function startPlayback() {
+  if (!S.ep || S.playing) return;
+  if (S.step >= S.ep.episode_steps - 1) goToStep(0);
+  S.playing = true;
+  document.getElementById('pb-play').style.color = '#f0c040';
+  S.timer = setInterval(stepForward, S.speed);
+}
+
+function stopPlayback() {
+  S.playing = false;
+  document.getElementById('pb-play').style.color = '';
+  if (S.timer) { clearInterval(S.timer); S.timer = null; }
+}
+
+function togglePlayback() {
+  S.playing ? stopPlayback() : startPlayback();
+}
+
+// ── Episode overview charts ────────────────────────────────────────────────
+const CursorPlugin = {
+  id: 'cursor',
+  afterDraw(chart, _, opts) {
+    if (opts.x == null) return;
+    const { left, right, top, bottom } = chart.chartArea;
+    const px = chart.scales.x.getPixelForValue(opts.x);
+    if (px < left || px > right) return;
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(240,192,64,0.85)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(px,top); ctx.lineTo(px,bottom); ctx.stroke();
+    ctx.restore();
+  }
+};
+Chart.register(CursorPlugin);
+
+function makeOverviewChart(id, data, color) {
+  const labels = data.map((_,i)=>i);
+  return new Chart(document.getElementById(id), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{ data, borderColor: color, borderWidth: 1.5,
+        fill: true, backgroundColor: color+'22', pointRadius: 0, tension: 0.3 }]
+    },
+    options: {
+      responsive: false, animation: false,
+      plugins: {
+        legend: { display: false },
+        cursor:  { x: null }
+      },
+      scales: {
+        x: { ticks: { color:'#8b949e', maxTicksLimit:5 }, grid: { color:'#21262d' } },
+        y: { ticks: { color:'#8b949e', maxTicksLimit:4 }, grid: { color:'#21262d' } }
+      },
+      onClick(e, _, chart) {
+        const pts = chart.getElementsAtEventForMode(e,'index',{intersect:false});
+        if (pts.length) goToStep(pts[0].index);
+      }
+    }
+  });
+}
+
+function initOverviewCharts() {
+  const tss = S.ep.timesteps;
+  const loss    = tss.map(t => t.jepa_loss);
+  const reward  = tss.map(t => t.reward);
+  const entropy = tss.map(t => t.action_entropy);
+  const drift   = tss.map(t => t.reasoning_stats.l2_dist_prev ?? 0);
+
+  // Destroy existing charts
+  for (const k of ['loss','reward','entropy','drift']) {
+    if (ovCharts[k]) { ovCharts[k].destroy(); }
+  }
+  ovCharts.loss    = makeOverviewChart('ov-loss',    loss,    '#f85149');
+  ovCharts.reward  = makeOverviewChart('ov-reward',  reward,  '#3fb950');
+  ovCharts.entropy = makeOverviewChart('ov-entropy', entropy, '#388bfd');
+  ovCharts.drift   = makeOverviewChart('ov-drift',   drift,   '#f0c040');
+}
+
+function updateOverviewCursors(t) {
+  for (const ch of Object.values(ovCharts)) {
+    if (!ch) continue;
+    ch.options.plugins.cursor.x = t;
+    ch.update('none');
+  }
+}
+
+// ── Action history strip ───────────────────────────────────────────────────
+function renderActionHistory() {
+  const n = S.ep.episode_steps;
+  const cellW = Math.max(3, Math.min(12, Math.floor(900/n)));
+  const canvas = document.getElementById('act-history');
+  canvas.width  = n * cellW;
+  canvas.height = 24;
+  const ctx = canvas.getContext('2d');
+
+  for (let i = 0; i < n; i++) {
+    const a = S.ep.timesteps[i].action_taken;
+    ctx.fillStyle = ACTION_COLORS[a] || '#8b949e';
+    ctx.fillRect(i*cellW+1, 2, cellW-1, 20);
+  }
+  actHistBase = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  canvas.onclick = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const step = Math.min(Math.floor((e.clientX - rect.left) / cellW), n-1);
+    goToStep(Math.max(0, step));
+  };
+}
+
+function updateActionHistoryCursor(t) {
+  if (!actHistBase) return;
+  const canvas = document.getElementById('act-history');
+  const ctx    = canvas.getContext('2d');
+  const cellW  = canvas.width / S.ep.episode_steps;
+  ctx.putImageData(actHistBase, 0, 0);
+  ctx.strokeStyle = '#f0c040';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(t*cellW+1, 1, cellW-1, 22);
+}
+
+// ── Thumbnail grid setup ───────────────────────────────────────────────────
+function setupThumbnailGrids() {
+  for (const [prefix, gridId, isEnc] of [['enc','enc-thumb-grid',true],['pol','pol-thumb-grid',false]]) {
+    const grid = document.getElementById(gridId);
+    grid.innerHTML = '';
+    for (let i = 0; i < 16; i++) {
+      const canvas = document.createElement('canvas');
+      canvas.id     = `${prefix}-${i}`;
+      canvas.width  = THUMB_PX;
+      canvas.height = THUMB_PX;
+      canvas.className = 'thumb-canvas' + (isEnc ? '' : ' pol-thumb');
+      canvas.title  = `Patch ${i} (row ${Math.floor(i/4)}, col ${i%4})`;
+      if (isEnc) canvas.addEventListener('click', () => handleEncPatchClick(i));
+      else       canvas.addEventListener('click', () => handlePolPatchClick(i));
+      grid.appendChild(canvas);
+    }
+  }
+}
+
+function handleEncPatchClick(i) {
+  S.encPatch = (S.encPatch === i) ? null : i;  // toggle
+  renderEncoderSection(S.step);
+}
+
+function handlePolPatchClick(i) {
+  S.polPatch = (S.polPatch === i) ? null : i;  // toggle
+  renderPolicyAttnSection(S.step);
+}
+
+// ── Action chart init ──────────────────────────────────────────────────────
+function initActionChart() {
+  if (actionChart) { actionChart.destroy(); actionChart = null; }
+  actionChart = new Chart(document.getElementById('action-chart'), {
+    type: 'bar',
+    data: {
+      labels: ACTION_LABELS,
+      datasets: [{ data:[0,0,0,0], backgroundColor: ACTION_COLORS,
+        borderColor: ACTION_COLORS, borderWidth: 2 }]
+    },
+    options: {
+      indexAxis: 'y', responsive: false, animation: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { min:0, max:1, ticks:{color:'#8b949e',font:{size:10}}, grid:{color:'#21262d'} },
+        y: { ticks:{color:'#8b949e',font:{size:11}} }
+      }
+    }
+  });
+}
+
+// ── Episode loading ────────────────────────────────────────────────────────
+async function runEpisode() {
+  const ckpt = document.getElementById('ckpt-select').value;
+  const maxSteps = parseInt(document.getElementById('max-steps').value)||200;
+  if (!ckpt) return;
+
+  setStatus('Running episode…');
+  document.getElementById('overlay').hidden = false;
+  document.getElementById('run-btn').disabled = true;
+  stopPlayback();
+
+  try {
+    const resp = await fetch('/api/run_episode', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({checkpoint: ckpt, max_steps: maxSteps})
+    });
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.detail || resp.statusText);
+    }
+    const data = await resp.json();
+    S.ep        = data;
+    S.step      = 0;
+    S.arcColors = data.arc_colors;
+    S.encPatch  = null;
+    S.polPatch  = null;
+    S.cmpIdx    = 0;
+
+    // Init controls
+    const slider = document.getElementById('pb-slider');
+    slider.max   = data.episode_steps - 1;
+    slider.value = 0;
+
+    // Episode summary
+    const trunc = data.truncated ? ' (truncated)' : '';
+    const comp  = data.level_completed ? ' ✓ level completed' : '';
+    document.getElementById('ep-summary').textContent =
+      `${data.checkpoint} · step ${data.checkpoint_step} · ${data.episode_steps} steps${trunc}${comp}`;
+
+    // Init charts and grids
+    initActionChart();
+    setupThumbnailGrids();
+    initOverviewCharts();
+    renderActionHistory();
+
+    document.getElementById('content').hidden = false;
+    renderStep(0);
+    setStatus(`Loaded: ${ckpt}`);
+  } catch (err) {
+    setStatus(`Error: ${err.message}`);
+  } finally {
+    document.getElementById('overlay').hidden = true;
+    document.getElementById('run-btn').disabled = false;
+  }
+}
+
+async function populateCheckpoints() {
+  try {
+    const resp = await fetch('/api/checkpoints');
+    const data = await resp.json();
+    const sel  = document.getElementById('ckpt-select');
+    if (!data.checkpoints || data.checkpoints.length === 0) {
+      sel.innerHTML = '<option value="">— no checkpoints found —</option>';
+      document.getElementById('run-btn').disabled = true;
+      setStatus('No checkpoints found in JEPA/checkpoints/');
+      return;
+    }
+    sel.innerHTML = data.checkpoints
+      .map((c,i) => `<option value="${c}"${i===0?' selected':''}>${c}</option>`)
+      .join('');
+    setStatus(`${data.checkpoints.length} checkpoint(s) found. Select one and click Run Episode.`);
+  } catch {
+    setStatus('Could not reach /api/checkpoints — is the server running?');
+  }
+}
+
+// ── Utility ────────────────────────────────────────────────────────────────
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function setStatus(msg) {
+  document.getElementById('status-msg').textContent = msg;
+}
+
+function getChangedPatches(t) {
+  if (!S.ep) return [];
+  return S.ep.timesteps[t].per_patch_stats
+    .map((s,i) => i)
+    .filter(i => S.ep.timesteps[t].per_patch_stats[i].pixel_change_frac > 0);
+}
+
+// ── Event listeners ────────────────────────────────────────────────────────
+function setupEventListeners() {
+  document.getElementById('run-btn').addEventListener('click', runEpisode);
+
+  // Playback
+  document.getElementById('pb-first').addEventListener('click', () => { stopPlayback(); goToStep(0); });
+  document.getElementById('pb-last') .addEventListener('click', () => { stopPlayback(); goToStep(S.ep ? S.ep.episode_steps-1 : 0); });
+  document.getElementById('pb-back') .addEventListener('click', () => { stopPlayback(); goToStep(S.step-1); });
+  document.getElementById('pb-fwd')  .addEventListener('click', () => { stopPlayback(); stepForward(); });
+  document.getElementById('pb-play') .addEventListener('click', togglePlayback);
+  document.getElementById('pb-slider').addEventListener('input', e => {
+    stopPlayback(); goToStep(parseInt(e.target.value));
+  });
+  document.getElementById('pb-speed').addEventListener('change', e => {
+    S.speed = parseInt(e.target.value);
+    if (S.playing) { stopPlayback(); startPlayback(); }
+  });
+
+  // Changed patches navigation
+  document.getElementById('cmp-prev').addEventListener('click', () => {
+    const n = getChangedPatches(S.step).length;
+    if (n > 0) { S.cmpIdx = (S.cmpIdx - 1 + n) % n; renderCmpPanel(S.step); }
+  });
+  document.getElementById('cmp-next').addEventListener('click', () => {
+    const n = getChangedPatches(S.step).length;
+    if (n > 0) { S.cmpIdx = (S.cmpIdx + 1) % n; renderCmpPanel(S.step); }
+  });
+
+  // Encoder layer toggle
+  document.getElementById('enc-l1-btn').addEventListener('click', () => {
+    S.encLayer = 1;
+    document.getElementById('enc-l1-btn').classList.add('active');
+    document.getElementById('enc-l2-btn').classList.remove('active');
+    renderEncoderSection(S.step);
+  });
+  document.getElementById('enc-l2-btn').addEventListener('click', () => {
+    S.encLayer = 2;
+    document.getElementById('enc-l2-btn').classList.add('active');
+    document.getElementById('enc-l1-btn').classList.remove('active');
+    renderEncoderSection(S.step);
+  });
+
+  // Canvas hover
+  const puzzle = document.getElementById('puzzle');
+  puzzle.addEventListener('mousemove', e => {
+    if (!S.ep) return;
+    const rect = puzzle.getBoundingClientRect();
+    const x = e.clientX - rect.left, y = e.clientY - rect.top;
+    const col = Math.floor(x / PATCH_PX), row = Math.floor(y / PATCH_PX);
+    if (col >= 0 && col < 4 && row >= 0 && row < 4) {
+      S.hovPatch = row * 4 + col;
+    } else {
+      S.hovPatch = null;
+    }
+    renderCanvas(S.step);   // re-draw with hover highlight
+    updateTooltip(e);
+  });
+  puzzle.addEventListener('mouseleave', () => {
+    S.hovPatch = null;
+    renderCanvas(S.step);
+    document.getElementById('tip').hidden = true;
+  });
+  puzzle.addEventListener('mousemove', updateTooltip);
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    if (!S.ep) return;
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    if (e.key === 'ArrowRight') { stopPlayback(); stepForward(); }
+    if (e.key === 'ArrowLeft')  { stopPlayback(); goToStep(S.step-1); }
+    if (e.key === ' ') { e.preventDefault(); togglePlayback(); }
+  });
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  setupEventListeners();
+  populateCheckpoints();
+});
+</script>
+</body>
+</html>
