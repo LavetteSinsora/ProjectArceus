@@ -1,0 +1,722 @@
+[
+  {
+    "step": 40000,
+    "ckpt": "step_040000.pt",
+    "proj_eff_ranks": [
+      {
+        "block": "round0.cross",
+        "proj": "q_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 103.46640014648438,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.018,
+          0.018,
+          0.017,
+          0.017,
+          0.016
+        ]
+      },
+      {
+        "block": "round0.cross",
+        "proj": "k_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 102.2799072265625,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.021,
+          0.018,
+          0.017,
+          0.017,
+          0.017
+        ]
+      },
+      {
+        "block": "round0.cross",
+        "proj": "v_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 102.75750732421875,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.018,
+          0.018,
+          0.017,
+          0.017,
+          0.017
+        ]
+      },
+      {
+        "block": "round0.cross",
+        "proj": "out_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 103.28067016601562,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.018,
+          0.017,
+          0.017,
+          0.017,
+          0.017
+        ]
+      },
+      {
+        "block": "round0.self",
+        "proj": "q_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 101.31535339355469,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.02,
+          0.019,
+          0.019,
+          0.018,
+          0.018
+        ]
+      },
+      {
+        "block": "round0.self",
+        "proj": "k_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 101.31845092773438,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.023,
+          0.021,
+          0.019,
+          0.019,
+          0.018
+        ]
+      },
+      {
+        "block": "round0.self",
+        "proj": "v_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 103.43611145019531,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.018,
+          0.017,
+          0.017,
+          0.017,
+          0.016
+        ]
+      },
+      {
+        "block": "round0.self",
+        "proj": "out_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 103.55130004882812,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.018,
+          0.018,
+          0.017,
+          0.016,
+          0.016
+        ]
+      },
+      {
+        "block": "round1.cross",
+        "proj": "q_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 103.26698303222656,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.018,
+          0.018,
+          0.017,
+          0.017,
+          0.016
+        ]
+      },
+      {
+        "block": "round1.cross",
+        "proj": "k_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 102.88856506347656,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.019,
+          0.018,
+          0.017,
+          0.017,
+          0.017
+        ]
+      },
+      {
+        "block": "round1.cross",
+        "proj": "v_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 103.01168060302734,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.018,
+          0.017,
+          0.017,
+          0.017,
+          0.017
+        ]
+      },
+      {
+        "block": "round1.cross",
+        "proj": "out_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 103.01983642578125,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.018,
+          0.018,
+          0.017,
+          0.017,
+          0.017
+        ]
+      },
+      {
+        "block": "round1.self",
+        "proj": "q_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 101.82437896728516,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.02,
+          0.02,
+          0.019,
+          0.018,
+          0.017
+        ]
+      },
+      {
+        "block": "round1.self",
+        "proj": "k_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 100.85166931152344,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.024,
+          0.022,
+          0.02,
+          0.018,
+          0.018
+        ]
+      },
+      {
+        "block": "round1.self",
+        "proj": "v_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 103.25093078613281,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.018,
+          0.018,
+          0.017,
+          0.017,
+          0.016
+        ]
+      },
+      {
+        "block": "round1.self",
+        "proj": "out_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 102.83289337158203,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.018,
+          0.018,
+          0.017,
+          0.017,
+          0.017
+        ]
+      }
+    ],
+    "attn_stats": {
+      "round0.cross": {
+        "mean_peakedness": 0.03874175250530243,
+        "max_peakedness": 0.25301510095596313,
+        "mean_max_weight": 0.11818495392799377,
+        "argmax_consistency": 0.5458984375,
+        "batch_avg_entropy": 2.7316346168518066,
+        "attn_matrix_eff_rank": 3.9162557125091553
+      },
+      "round1.cross": {
+        "mean_peakedness": 0.01624307408928871,
+        "max_peakedness": 0.07260012626647949,
+        "mean_max_weight": 0.09421046078205109,
+        "argmax_consistency": 0.3466796875,
+        "batch_avg_entropy": 2.7643728256225586,
+        "attn_matrix_eff_rank": 3.6219863891601562
+      },
+      "round0.self": {
+        "mean_peakedness": 0.08327431231737137,
+        "max_peakedness": 0.5166893601417542,
+        "mean_max_weight": 0.39348673820495605,
+        "argmax_consistency": 0.501953125,
+        "batch_avg_entropy": 1.3517712354660034,
+        "attn_matrix_eff_rank": 3.032374382019043
+      },
+      "round1.self": {
+        "mean_peakedness": 0.10018804669380188,
+        "max_peakedness": 0.6700788140296936,
+        "mean_max_weight": 0.4092339277267456,
+        "argmax_consistency": 0.5380859375,
+        "batch_avg_entropy": 1.3295483589172363,
+        "attn_matrix_eff_rank": 3.103935718536377
+      }
+    },
+    "residual_contribution_ratio": [
+      [
+        "round0.cross attn",
+        0.22638502717018127
+      ],
+      [
+        "round0.cross ffn",
+        0.26035407185554504
+      ],
+      [
+        "round0.self  attn",
+        0.2585154175758362
+      ],
+      [
+        "round0.self  ffn",
+        0.24568921327590942
+      ],
+      [
+        "round1.cross attn",
+        0.11394859850406647
+      ],
+      [
+        "round1.cross ffn",
+        0.24925677478313446
+      ],
+      [
+        "round1.self  attn",
+        0.2380170226097107
+      ],
+      [
+        "round1.self  ffn",
+        0.27014970779418945
+      ]
+    ],
+    "queries_into_cross": {
+      "round0": {
+        "within_state_cossim": 0.2592548318207264,
+        "cross_state_same_idx_cs": 0.2730530947446823,
+        "norm_mean": 11.938114166259766,
+        "norm_std": 0.023600757122039795
+      },
+      "round1": {
+        "within_state_cossim": 0.23046991943071285,
+        "cross_state_same_idx_cs": 0.22507764026522636,
+        "norm_mean": 11.563238143920898,
+        "norm_std": 1.6083498001098633
+      }
+    }
+  },
+  {
+    "step": 80000,
+    "ckpt": "step_080000.pt",
+    "proj_eff_ranks": [
+      {
+        "block": "round0.cross",
+        "proj": "q_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 103.28795623779297,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.018,
+          0.018,
+          0.017,
+          0.017,
+          0.017
+        ]
+      },
+      {
+        "block": "round0.cross",
+        "proj": "k_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 102.16769409179688,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.021,
+          0.019,
+          0.018,
+          0.017,
+          0.017
+        ]
+      },
+      {
+        "block": "round0.cross",
+        "proj": "v_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 102.75858306884766,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.018,
+          0.018,
+          0.017,
+          0.017,
+          0.017
+        ]
+      },
+      {
+        "block": "round0.cross",
+        "proj": "out_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 103.10205078125,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.018,
+          0.017,
+          0.017,
+          0.017,
+          0.017
+        ]
+      },
+      {
+        "block": "round0.self",
+        "proj": "q_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 101.34632873535156,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.02,
+          0.019,
+          0.019,
+          0.018,
+          0.018
+        ]
+      },
+      {
+        "block": "round0.self",
+        "proj": "k_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 100.8957748413086,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.023,
+          0.022,
+          0.02,
+          0.019,
+          0.018
+        ]
+      },
+      {
+        "block": "round0.self",
+        "proj": "v_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 103.45283508300781,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.018,
+          0.017,
+          0.017,
+          0.017,
+          0.016
+        ]
+      },
+      {
+        "block": "round0.self",
+        "proj": "out_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 103.80986022949219,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.018,
+          0.017,
+          0.017,
+          0.016,
+          0.016
+        ]
+      },
+      {
+        "block": "round1.cross",
+        "proj": "q_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 103.12870025634766,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.018,
+          0.018,
+          0.017,
+          0.017,
+          0.017
+        ]
+      },
+      {
+        "block": "round1.cross",
+        "proj": "k_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 102.7083740234375,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.019,
+          0.018,
+          0.018,
+          0.017,
+          0.017
+        ]
+      },
+      {
+        "block": "round1.cross",
+        "proj": "v_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 102.94475555419922,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.018,
+          0.017,
+          0.017,
+          0.017,
+          0.017
+        ]
+      },
+      {
+        "block": "round1.cross",
+        "proj": "out_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 102.95796203613281,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.018,
+          0.018,
+          0.017,
+          0.017,
+          0.017
+        ]
+      },
+      {
+        "block": "round1.self",
+        "proj": "q_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 101.80432891845703,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.02,
+          0.02,
+          0.019,
+          0.018,
+          0.018
+        ]
+      },
+      {
+        "block": "round1.self",
+        "proj": "k_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 100.84565734863281,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.023,
+          0.022,
+          0.019,
+          0.018,
+          0.018
+        ]
+      },
+      {
+        "block": "round1.self",
+        "proj": "v_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 103.65473937988281,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.018,
+          0.017,
+          0.017,
+          0.017,
+          0.016
+        ]
+      },
+      {
+        "block": "round1.self",
+        "proj": "out_proj",
+        "shape": [
+          128,
+          128
+        ],
+        "eff_rank": 103.5750961303711,
+        "max_eff_rank": 128,
+        "top5_ratio": [
+          0.018,
+          0.017,
+          0.017,
+          0.016,
+          0.016
+        ]
+      }
+    ],
+    "attn_stats": {
+      "round0.cross": {
+        "mean_peakedness": 0.21737247705459595,
+        "max_peakedness": 0.34820556640625,
+        "mean_max_weight": 0.2692744731903076,
+        "argmax_consistency": 0.8046875,
+        "batch_avg_entropy": 2.211925983428955,
+        "attn_matrix_eff_rank": 3.909069061279297
+      },
+      "round1.cross": {
+        "mean_peakedness": 0.08146383613348007,
+        "max_peakedness": 0.2822650074958801,
+        "mean_max_weight": 0.19898757338523865,
+        "argmax_consistency": 0.93359375,
+        "batch_avg_entropy": 2.558454751968384,
+        "attn_matrix_eff_rank": 3.535797119140625
+      },
+      "round0.self": {
+        "mean_peakedness": 0.0001621207338757813,
+        "max_peakedness": 0.011061429977416992,
+        "mean_max_weight": 0.25180986523628235,
+        "argmax_consistency": 0.3642578125,
+        "batch_avg_entropy": 1.3862870931625366,
+        "attn_matrix_eff_rank": 1.186851143836975
+      },
+      "round1.self": {
+        "mean_peakedness": 8.20285058580339e-05,
+        "max_peakedness": 0.004381358623504639,
+        "mean_max_weight": 0.2515576481819153,
+        "argmax_consistency": 0.365234375,
+        "batch_avg_entropy": 1.3862903118133545,
+        "attn_matrix_eff_rank": 1.1340105533599854
+      }
+    },
+    "residual_contribution_ratio": [
+      [
+        "round0.cross attn",
+        0.361835241317749
+      ],
+      [
+        "round0.cross ffn",
+        0.6302708983421326
+      ],
+      [
+        "round0.self  attn",
+        0.6933083534240723
+      ],
+      [
+        "round0.self  ffn",
+        0.5521916747093201
+      ],
+      [
+        "round1.cross attn",
+        0.25037097930908203
+      ],
+      [
+        "round1.cross ffn",
+        0.6997085213661194
+      ],
+      [
+        "round1.self  attn",
+        0.6156656742095947
+      ],
+      [
+        "round1.self  ffn",
+        1.8899155855178833
+      ]
+    ],
+    "queries_into_cross": {
+      "round0": {
+        "within_state_cossim": 0.9997954765955607,
+        "cross_state_same_idx_cs": 0.9842328578233719,
+        "norm_mean": 11.517081260681152,
+        "norm_std": 0.003349871141836047
+      },
+      "round1": {
+        "within_state_cossim": 0.9992145001888275,
+        "cross_state_same_idx_cs": 0.9504134953022003,
+        "norm_mean": 5.376039505004883,
+        "norm_std": 0.22643274068832397
+      }
+    }
+  }
+]

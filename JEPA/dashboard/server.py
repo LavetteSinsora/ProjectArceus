@@ -8,28 +8,55 @@ Launch:
 Then open http://localhost:8787
 """
 
+import importlib
+import json
+import os
+import signal
+import subprocess
 import sys
 from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
-# Put JEPA/ on the path so debug_runner can import from it
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Ensure repo root is importable so JEPA package resolves
+_repo_root = Path(__file__).parent.parent.parent  # dashboard → JEPA → Code Repo
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
 
-from dashboard.debug_runner import run_debug_episode
 
-CKPT_DIR = Path(__file__).parent.parent / "checkpoints"
-STATIC_DIR = Path(__file__).parent / "static"
+def _get_run_debug_episode():
+    """Always return the freshest run_debug_episode by reloading the module."""
+    mod_name = "JEPA.dashboard.debug_runner"
+    if mod_name in sys.modules:
+        mod = importlib.reload(sys.modules[mod_name])
+    else:
+        mod = importlib.import_module(mod_name)
+    return mod.run_debug_episode
+
+JEPA_ROOT       = Path(__file__).parent.parent
+EXPERIMENTS_DIR = JEPA_ROOT / "experiments"
+STATIC_DIR      = Path(__file__).parent / "static"
 
 app = FastAPI(title="JEPA Debug Dashboard")
 
+# ── Training process state ────────────────────────────────────────────────────
+_train_proc: subprocess.Popen | None = None
+_train_experiment: str = ""
+_train_run_dir: str = ""
+
 
 class RunEpisodeRequest(BaseModel):
+    experiment: str        # e.g. "exp_001_vit_jepa_baseline"
     checkpoint: str        # filename only, e.g. "step_235000.pt"
     max_steps: int = 200
+
+
+class TrainingStartRequest(BaseModel):
+    experiment: str = "exp_003_0_normalized_latent_jepa"
+    resume_checkpoint: str | None = None   # filename under checkpoints/, or None for fresh
 
 
 @app.get("/")
@@ -37,25 +64,176 @@ def serve_ui():
     return FileResponse(STATIC_DIR / "index.html")
 
 
+@app.get("/static/exp/{experiment}/panel.js")
+def serve_panel_js(experiment: str):
+    path = EXPERIMENTS_DIR / experiment / "panel.js"
+    if not path.exists():
+        # Fall back to a sibling experiment's panel.js if the package declares
+        # `PANEL_EXPERIMENT = "<other_experiment>"` in its __init__.py. This lets
+        # follow-up experiments that share the same architecture (e.g. exp_003_1
+        # extending exp_003_0) reuse the upstream dashboard panels without
+        # duplicating ~1k lines of JS.
+        try:
+            pkg = importlib.import_module(f"JEPA.experiments.{experiment}")
+            alias = getattr(pkg, "PANEL_EXPERIMENT", None)
+        except Exception:
+            alias = None
+        if alias:
+            alias_path = EXPERIMENTS_DIR / alias / "panel.js"
+            if alias_path.exists():
+                return FileResponse(alias_path, media_type="application/javascript")
+        raise HTTPException(status_code=404, detail=f"No panel.js for {experiment}")
+    return FileResponse(path, media_type="application/javascript")
+
+
+@app.get("/api/experiments")
+def list_experiments():
+    """List all experiment directories under JEPA/experiments/."""
+    if not EXPERIMENTS_DIR.exists():
+        return {"experiments": []}
+    exps = sorted(
+        d.name for d in EXPERIMENTS_DIR.iterdir()
+        if d.is_dir() and not d.name.startswith(".") and not d.name.startswith("__")
+    )
+    return {"experiments": exps}
+
+
 @app.get("/api/checkpoints")
-def list_checkpoints():
-    if not CKPT_DIR.exists():
+def list_checkpoints(experiment: str):
+    """List checkpoints for a given experiment (newest first)."""
+    ckpt_dir = EXPERIMENTS_DIR / experiment / "checkpoints"
+    if not ckpt_dir.exists():
         return {"checkpoints": []}
-    ckpts = sorted(CKPT_DIR.glob("step_*.pt"), reverse=True)
+    ckpts = sorted(ckpt_dir.glob("step_*.pt"), reverse=True)
     return {"checkpoints": [p.name for p in ckpts]}
 
 
 @app.post("/api/run_episode")
 def run_episode(req: RunEpisodeRequest):
-    ckpt_path = CKPT_DIR / req.checkpoint
+    ckpt_path = EXPERIMENTS_DIR / req.experiment / "checkpoints" / req.checkpoint
     if not ckpt_path.exists():
-        raise HTTPException(status_code=404, detail=f"Checkpoint not found: {req.checkpoint}")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Checkpoint not found: {req.experiment}/{req.checkpoint}",
+        )
     try:
-        data = run_debug_episode(str(ckpt_path), max_steps=req.max_steps)
+        run_debug_episode = _get_run_debug_episode()
+        data = run_debug_episode(str(ckpt_path), experiment=req.experiment, max_steps=req.max_steps)
         return JSONResponse(content=data)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-if __name__ == "__main__":
+@app.get("/training")
+def serve_training_ui():
+    return FileResponse(STATIC_DIR / "training.html")
+
+
+@app.get("/api/training/runs")
+def list_training_runs(experiment: str = Query("exp_003_0_normalized_latent_jepa")):
+    """List all run directories for an experiment, newest first."""
+    runs_dir = EXPERIMENTS_DIR / experiment / "runs"
+    if not runs_dir.exists():
+        return {"runs": []}
+    runs = []
+    for d in sorted(runs_dir.iterdir(), reverse=True):
+        if not d.is_dir():
+            continue
+        m_path = d / "metrics.jsonl"
+        last_step = None
+        if m_path.exists():
+            # Read last line efficiently
+            try:
+                with open(m_path, "rb") as f:
+                    f.seek(0, 2)
+                    size = f.tell()
+                    f.seek(max(0, size - 512))
+                    tail = f.read().decode("utf-8", errors="replace")
+                last_line = [l for l in tail.splitlines() if l.strip()][-1]
+                last_step = json.loads(last_line).get("step")
+            except Exception:
+                pass
+        runs.append({
+            "name": d.name,
+            "has_metrics": m_path.exists(),
+            "last_step": last_step,
+        })
+    return {"experiment": experiment, "runs": runs}
+
+
+@app.get("/api/training/metrics")
+def get_training_metrics(
+    experiment: str = Query("exp_003_0_normalized_latent_jepa"),
+    run: str = Query(...),
+    since_step: int = Query(0),
+):
+    """Return all metrics records from a run's metrics.jsonl, optionally filtered by step."""
+    m_path = EXPERIMENTS_DIR / experiment / "runs" / run / "metrics.jsonl"
+    if not m_path.exists():
+        raise HTTPException(status_code=404, detail=f"No metrics.jsonl for {experiment}/{run}")
+    records = []
+    try:
+        with open(m_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                rec = json.loads(line)
+                if rec.get("step", 0) > since_step:
+                    records.append(rec)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+    return {"experiment": experiment, "run": run, "records": records}
+
+
+@app.post("/api/training/start")
+def start_training(req: TrainingStartRequest):
+    global _train_proc, _train_experiment, _train_run_dir
+    if _train_proc is not None and _train_proc.poll() is None:
+        raise HTTPException(status_code=409, detail="Training already running")
+    module = f"JEPA.experiments.{req.experiment}.train"
+    cmd = [sys.executable, "-m", module]
+    if req.resume_checkpoint:
+        ckpt_path = EXPERIMENTS_DIR / req.experiment / "checkpoints" / req.resume_checkpoint
+        cmd += ["--resume", str(ckpt_path)]
+    _train_proc = subprocess.Popen(
+        cmd,
+        cwd=str(_repo_root),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+    _train_experiment = req.experiment
+    return {"pid": _train_proc.pid, "experiment": req.experiment, "cmd": " ".join(cmd)}
+
+
+@app.post("/api/training/stop")
+def stop_training():
+    global _train_proc
+    if _train_proc is None or _train_proc.poll() is not None:
+        return {"status": "not_running"}
+    try:
+        os.kill(_train_proc.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
+    _train_proc = None
+    return {"status": "stopped"}
+
+
+@app.get("/api/training/status")
+def training_status():
+    if _train_proc is None:
+        return {"running": False}
+    rc = _train_proc.poll()
+    if rc is not None:
+        return {"running": False, "exit_code": rc, "experiment": _train_experiment}
+    return {"running": True, "pid": _train_proc.pid, "experiment": _train_experiment}
+
+
+def main():
     uvicorn.run(app, host="127.0.0.1", port=8787, reload=False)
+
+
+if __name__ == "__main__":
+    main()

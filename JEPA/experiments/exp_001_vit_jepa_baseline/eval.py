@@ -8,7 +8,7 @@ Loads a checkpoint and reports:
   4. Embedding drift: how much latent representations change per step on average
 
 Run:
-    cd JEPA && uv run python eval.py --checkpoint jepa_checkpoint.pt --episodes 10
+    cd "Code Repo" && uv run python -m JEPA.experiments.exp_001_vit_jepa_baseline.eval --episodes 10
 """
 
 import argparse
@@ -19,20 +19,23 @@ from pathlib import Path
 import numpy as np
 import torch
 
-sys.path.insert(0, str(Path(__file__).parent))
+_repo_root = Path(__file__).parent.parent.parent.parent  # exp_001 → experiments → JEPA → Code Repo
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
 
-from config import Config
-from encoder import Encoder
-from predictor import Predictor
-from action_embed import ActionEmbedding
-from policy import PolicyNetwork
-from env_wrapper import LS20Env
-from train import compute_patch_weights, jepa_loss
+from JEPA.experiments.exp_001_vit_jepa_baseline.config import Config
+from JEPA.experiments.exp_001_vit_jepa_baseline.models.encoder import Encoder
+from JEPA.experiments.exp_001_vit_jepa_baseline.models.predictor import Predictor
+from JEPA.experiments.exp_001_vit_jepa_baseline.models.policy import PolicyNetwork
+from JEPA.shared.action_embed import ActionEmbedding
+from JEPA.shared.env_wrapper import LS20Env
+from JEPA.experiments.exp_001_vit_jepa_baseline.train import compute_patch_weights, jepa_loss_components as jepa_loss
 
 
 def load_checkpoint(path: str, device: torch.device):
     ckpt = torch.load(path, map_location=device, weights_only=False)
-    cfg: Config = ckpt["config"]
+    cfg_raw = ckpt["config"]
+    cfg = Config(**cfg_raw) if isinstance(cfg_raw, dict) else cfg_raw
 
     encoder = Encoder(cfg.d_model, cfg.d_color, cfg.n_heads, cfg.n_blocks, cfg.ffn_dim, cfg.patch_size).to(device)
     target_encoder = copy.deepcopy(encoder)
@@ -74,7 +77,7 @@ def sanity_checks(cfg: Config, encoder, predictor, action_embed, policy, device)
 def run_episodes(cfg, encoder, target_encoder, predictor, action_embed, policy, device, n_episodes):
     from arc_agi import Arcade, OperationMode
     from pathlib import Path as _Path
-    _repo_root = str(_Path(__file__).parent.parent)
+    _repo_root = str(_Path(__file__).parent.parent.parent.parent)
     arc = Arcade(
         operation_mode=OperationMode.OFFLINE,
         environments_dir=str(_Path(_repo_root) / "environment_files"),
@@ -150,7 +153,7 @@ def main():
                           "cuda" if torch.cuda.is_available() else "cpu")
     print(f"[eval] device={device}")
 
-    ckpt_path = Path(__file__).parent / args.checkpoint
+    ckpt_path = Path(__file__).parent / "checkpoints" / args.checkpoint
     cfg, encoder, target_encoder, predictor, action_embed, policy, = load_checkpoint(str(ckpt_path), device)
 
     sanity_checks(cfg, encoder, predictor, action_embed, policy, device)
@@ -163,7 +166,7 @@ def main():
     print("\n── Embedding Health ────────────────────────────────────────────")
     from arc_agi import Arcade, OperationMode
     from pathlib import Path as _Path
-    _repo_root = str(_Path(__file__).parent.parent)
+    _repo_root = str(_Path(__file__).parent.parent.parent.parent)
     arc = Arcade(
         operation_mode=OperationMode.OFFLINE,
         environments_dir=str(_Path(_repo_root) / "environment_files"),

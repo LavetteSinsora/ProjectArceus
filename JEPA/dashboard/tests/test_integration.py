@@ -8,8 +8,9 @@ from pathlib import Path
 
 import pytest
 
-# conftest.py adds JEPA/ to sys.path
-CKPT_DIR = Path(__file__).parent.parent.parent / "checkpoints"
+# conftest.py adds repo root to sys.path
+EXP_NAME = "exp_001_vit_jepa_baseline"
+CKPT_DIR = Path(__file__).parent.parent.parent / "experiments" / EXP_NAME / "checkpoints"
 
 def latest_checkpoint():
     ckpts = sorted(CKPT_DIR.glob("step_*.pt"), reverse=True)
@@ -21,9 +22,9 @@ def episode():
     """Run a 3-step debug episode once for the whole test module."""
     ckpt = latest_checkpoint()
     if ckpt is None:
-        pytest.skip("No checkpoint found in JEPA/checkpoints/")
-    from dashboard.debug_runner import run_debug_episode
-    return run_debug_episode(ckpt, max_steps=3)
+        pytest.skip(f"No checkpoint found in {CKPT_DIR}")
+    from JEPA.dashboard.debug_runner import run_debug_episode
+    return run_debug_episode(ckpt, experiment=EXP_NAME, max_steps=3)
 
 
 # ── Top-level schema ─────────────────────────────────────────────────────────

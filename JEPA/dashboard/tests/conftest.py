@@ -1,11 +1,11 @@
 """
-Shared pytest configuration: put JEPA/ on sys.path so test modules can
-import from debug_runner without installing the package.
+Shared pytest configuration: put repo root on sys.path so the JEPA package
+(and its sub-packages: JEPA.shared, JEPA.experiments, JEPA.dashboard) are
+importable without a package install.
 """
 import sys
 from pathlib import Path
 
-# JEPA/ needs to be on sys.path for "from dashboard.debug_runner import ..."
-# and for "from encoder import Encoder" etc.
-JEPA_DIR = Path(__file__).parent.parent.parent  # Code Repo/JEPA/
-sys.path.insert(0, str(JEPA_DIR))
+# Code Repo/ needs to be on sys.path so "import JEPA" resolves.
+REPO_ROOT = Path(__file__).parent.parent.parent.parent  # tests → dashboard → JEPA → Code Repo
+sys.path.insert(0, str(REPO_ROOT))

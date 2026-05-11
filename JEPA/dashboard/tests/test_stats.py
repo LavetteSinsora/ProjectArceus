@@ -6,8 +6,8 @@ import math
 import numpy as np
 import pytest
 
-# conftest.py adds JEPA/ to sys.path
-from dashboard.debug_runner import (
+# conftest.py adds repo root to sys.path
+from JEPA.dashboard.debug_runner import (
     _activation_entropy,
     _fmt_first_last3,
     _r,

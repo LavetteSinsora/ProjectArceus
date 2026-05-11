@@ -3,6 +3,106 @@ import numpy as np
 import torch
 
 
+# ── LatentBuffer (exp_003+) ───────────────────────────────────────────────────
+
+class LatentBatch(NamedTuple):
+    frames:    torch.Tensor   # (B, 64, 64) uint8 — frame_t, for re-encoding h_t
+    h_queries: torch.Tensor   # (B, n_latents, d_model) float32 — h_{t-1} from rollout
+    actions:   torch.Tensor   # (B,) long
+    h_targets: torch.Tensor   # (B, n_latents, d_model) float32 — h_{t+1} from rollout
+
+
+class LatentBuffer:
+    """
+    Replay buffer for recurrent JEPA training (exp_003+).
+
+    Stores (frame_t, h_query, action_t, h_target) per transition where:
+      frame_t:  raw (64,64) uint8 observation at time t
+      h_query:  h_{t-1} from rollout (recurrent encoding) — used as Perceiver query
+                to re-encode frame_t during training, matching the rollout path exactly
+      action_t: action taken at time t
+      h_target: h_{t+1} from rollout — detached target for flow matching loss
+
+    Training usage:
+      h_t_fresh = encoder(frame_t_batch, h_queries.detach())  # encoder gets gradient
+      loss, _ = predictor.compute_loss(h_t_fresh, h_targets.detach(), a_emb)
+
+    Why store frame_t and h_query (not just h_t):
+      Storing h_t directly would freeze the encoder (stored tensor has no grad_fn).
+      Re-encoding frame_t with stored h_query gives a fresh h_t that has gradient
+      through the encoder parameters while still using the correct recurrent query.
+
+    Memory: 50K × [(64×64×1) + (4×128×4) + 8 + (4×128×4)] bytes ≈ 410 MB
+    """
+
+    def __init__(
+        self,
+        n_latents: int = 4,
+        d_model: int = 128,
+        capacity: int = 50_000,
+        recency_fraction: float = 0.2,
+        recent_window: int = 10_000,
+    ):
+        self.capacity = capacity
+        self.recency_fraction = recency_fraction
+        self.recent_window = min(recent_window, capacity)
+
+        self._frames    = np.zeros((capacity, 64, 64), dtype=np.uint8)
+        self._h_queries = np.zeros((capacity, n_latents, d_model), dtype=np.float32)
+        self._actions   = np.zeros(capacity, dtype=np.int64)
+        self._h_targets = np.zeros((capacity, n_latents, d_model), dtype=np.float32)
+
+        self._pos  = 0
+        self._size = 0
+
+    def add(
+        self,
+        frame: np.ndarray,
+        h_query: np.ndarray,
+        action_idx: int,
+        h_target: np.ndarray,
+    ) -> None:
+        """
+        frame:    (64, 64) uint8
+        h_query:  (n_latents, d_model) float32 — h_{t-1} from rollout
+        action_idx: int 0-indexed
+        h_target: (n_latents, d_model) float32 — h_{t+1} from rollout
+        """
+        self._frames[self._pos]    = frame
+        self._h_queries[self._pos] = h_query
+        self._actions[self._pos]   = action_idx
+        self._h_targets[self._pos] = h_target
+        self._pos  = (self._pos + 1) % self.capacity
+        self._size = min(self._size + 1, self.capacity)
+
+    def sample(self, batch_size: int, device: torch.device) -> LatentBatch:
+        n_recent  = int(batch_size * self.recency_fraction)
+        n_uniform = batch_size - n_recent
+        uniform_idx = np.random.randint(0, self._size, size=n_uniform)
+
+        recent_size = min(self._size, self.recent_window)
+        start = (self._pos - recent_size) % self.capacity
+        if start + recent_size <= self.capacity:
+            recent_pool = np.arange(start, start + recent_size)
+        else:
+            recent_pool = np.concatenate([
+                np.arange(start, self.capacity),
+                np.arange(0, (start + recent_size) % self.capacity),
+            ])
+        recent_idx = recent_pool[np.random.randint(0, len(recent_pool), size=n_recent)]
+        idx = np.concatenate([uniform_idx, recent_idx])
+
+        return LatentBatch(
+            frames=torch.from_numpy(self._frames[idx]).to(device),
+            h_queries=torch.from_numpy(self._h_queries[idx]).to(device),
+            actions=torch.from_numpy(self._actions[idx]).to(device),
+            h_targets=torch.from_numpy(self._h_targets[idx]).to(device),
+        )
+
+    def __len__(self) -> int:
+        return self._size
+
+
 class Batch(NamedTuple):
     frames: torch.Tensor       # (B, 64, 64) uint8
     actions: torch.Tensor      # (B,) long (0-indexed action indices)

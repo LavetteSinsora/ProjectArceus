@@ -15,7 +15,7 @@ a{color:#388bfd}
 #hdr h1{font-size:14px;font-weight:bold;color:#e6edf3;letter-spacing:.5px;white-space:nowrap}
 #hdr select,#hdr input[type=number]{background:#0d1117;border:1px solid #30363d;color:#c9d1d9;
   padding:4px 8px;border-radius:4px;font-size:12px}
-#ckpt-select{width:200px}
+#exp-select{min-width:210px}#ckpt-select{width:200px}
 #max-steps{width:60px}
 .btn{background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:5px 12px;
   border-radius:4px;cursor:pointer;font-size:12px;transition:background .15s}
@@ -99,7 +99,10 @@ canvas.patch-canvas{display:block;image-rendering:pixelated;border:1px solid #30
 .hist-row{display:flex;align-items:center;margin-top:5px}
 
 /* ── Pred-error cells ── */
-.pred-cell{border-radius:2px;cursor:default}
+.pred-cell{border-radius:2px;cursor:crosshair}
+#jepa-tip{position:fixed;z-index:500;background:#1c2128;border:1px solid #388bfd;
+  border-radius:5px;padding:8px 10px;font-size:11px;color:#c9d1d9;pointer-events:none;
+  min-width:190px;line-height:1.7}
 
 /* ── Sections 2-4 ── */
 .section-body{padding:0 0 4px}
@@ -141,6 +144,8 @@ canvas.patch-canvas{display:block;image-rendering:pixelated;border:1px solid #30
 <!-- ── Sticky header ────────────────────────────────────────────────── -->
 <header id="hdr">
   <h1>JEPA Debug Dashboard</h1>
+  <a href="/training" style="font-size:11px;color:#58a6ff;white-space:nowrap;margin-right:4px">Training Monitor →</a>
+  <select id="exp-select" title="Select experiment"></select>
   <select id="ckpt-select" title="Select checkpoint"></select>
   <label for="max-steps" style="color:#8b949e">max steps</label>
   <input type="number" id="max-steps" value="200" min="1" max="500">
@@ -153,6 +158,9 @@ canvas.patch-canvas{display:block;image-rendering:pixelated;border:1px solid #30
   <div class="spinner"></div>
   <p id="overlay-msg">Running debug episode…</p>
 </div>
+
+<!-- ── JEPA cell hover tooltip ───────────────────────────────────────── -->
+<div id="jepa-tip" hidden></div>
 
 <!-- ── Patch hover tooltip ──────────────────────────────────────────── -->
 <div id="tip" hidden>
@@ -193,13 +201,13 @@ canvas.patch-canvas{display:block;image-rendering:pixelated;border:1px solid #30
           </div>
         </div>
         <!-- Reasoning token first3/last3 -->
-        <div class="policy-right">
+        <div class="policy-right" id="lc-reasoning-preview">
           <div class="card-title">REASONING TOKEN h_t</div>
           <div class="code-line" id="h-preview">—</div>
         </div>
       </div>
       <!-- h_t history stack — full-width below the policy row -->
-      <div style="padding:8px 12px 10px;border-top:1px solid #21262d">
+      <div id="lc-ht-history" style="padding:8px 12px 10px;border-top:1px solid #21262d">
         <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
           <span class="mini-label">h_t HISTORY (newest → oldest, each row = 1 step)</span>
         </div>
@@ -301,8 +309,8 @@ canvas.patch-canvas{display:block;image-rendering:pixelated;border:1px solid #30
         </div>
       </div>
 
-      <!-- JEPA quality -->
-      <div class="card">
+      <!-- JEPA quality — shown only for exp_001-compatible episodes -->
+      <div class="card" id="jq-card">
         <div class="card-title">JEPA QUALITY & REWARD</div>
         <div class="stat-grid">
           <span class="sl-lbl" title="Weighted MSE between predictor output z_pred and actual next-state encoding z_{t+1} from the target encoder. This is the intrinsic curiosity reward signal.">Weighted JEPA loss</span><span class="sv" id="jq-loss">—</span>
@@ -314,11 +322,14 @@ canvas.patch-canvas{display:block;image-rendering:pixelated;border:1px solid #30
         <div id="pred-error-grid" class="thumb-grid" style="--ts:38px;padding:0;gap:3px"></div>
       </div>
 
+      <!-- Plugin panel mount point -->
+      <div id="panel-mount" style="border-top:1px solid #21262d"></div>
+
     </div><!-- /right-col -->
   </div><!-- /s1 -->
 
   <!-- ════════════════════════════════════ SECTION 2 ════════════════════ -->
-  <div class="sl">
+  <div id="s2-header" class="sl">
     ▸ ENCODER SELF-ATTENTION
     <span class="enc-header" style="margin-left:auto">
       <button class="layer-btn" id="enc-l1-btn">Layer 1</button>
@@ -333,7 +344,7 @@ canvas.patch-canvas{display:block;image-rendering:pixelated;border:1px solid #30
   </div>
 
   <!-- ════════════════════════════════════ SECTION 3 ════════════════════ -->
-  <div class="sl">▸ POLICY CROSS-ATTENTION (reasoning token → patches)</div>
+  <div id="s3-header" class="sl">▸ POLICY CROSS-ATTENTION (reasoning token → patches)</div>
   <div id="s3">
     <div class="hint-msg" id="pol-hint" style="padding:8px 14px">
       Click a patch thumbnail to inspect its embedding stats and attention weight
@@ -391,12 +402,46 @@ const S = {
   timer: null,
   speed: 300,
   hovPatch: null,   // hovered patch index 0-15 or null
+  lastMouseEv: null,// last mousemove event on the puzzle canvas
   cmpIdx: 0,        // index into changedPatches array
   encPatch: null,   // selected encoder patch
   encLayer: 2,      // 1 or 2
   polPatch: null,   // selected policy cross-attn patch
   arcColors: null,  // [[R,G,B]×16]
 };
+
+// ── Shared utilities namespace exposed to panel.js plugins ────────────────────
+window.JEPA = {
+  arcRgb: function(idx) {
+    const c = (S.arcColors || [])[idx] || [100,100,100];
+    return `rgb(${c[0]},${c[1]},${c[2]})`;
+  },
+  embRgb: function(v) {
+    const t = Math.max(-0.4, Math.min(0.4, v));
+    if (t < 0) {
+      const f = -t / 0.4;
+      return [Math.round(170+f*(0-170)), Math.round(170+f*(116-170)), Math.round(170+f*(217-170))];
+    }
+    const f = t / 0.4;
+    return [Math.round(170+f*(255-170)), Math.round(170+f*(65-170)), Math.round(170+f*(54-170))];
+  },
+  drawHeatmapBar: function(canvas, values, h) {
+    drawHeatmapBar(canvas, values, h);
+  },
+  ARC_COLORS: null,  // set when episode loads
+};
+
+// ── Panel plugin state ─────────────────────────────────────────────────────────
+let _panelMod = null;
+
+async function loadPanel(experimentName) {
+  try {
+    _panelMod = await import(`/static/exp/${experimentName}/panel.js`);
+  } catch(e) {
+    console.warn('No panel.js for', experimentName, e);
+    _panelMod = null;
+  }
+}
 
 // ── Overview chart handles ─────────────────────────────────────────────────
 let actionChart = null;
@@ -514,14 +559,16 @@ function renderCanvas(t) {
   }
   ctx.putImageData(img, 0, 0);
 
-  // Prediction error overlay (red tint)
+  // Prediction error overlay (red tint) — only for experiments with per-patch errors
   const errs = ts.per_patch_pred_error;
-  const maxE = Math.max(...errs, 0.001);
-  for (let i = 0; i < 16; i++) {
-    const row = Math.floor(i/4), col = i%4;
-    const alpha = (errs[i]/maxE) * 0.30;
-    ctx.fillStyle = `rgba(255,50,50,${alpha})`;
-    ctx.fillRect(col*PATCH_PX, row*PATCH_PX, PATCH_PX, PATCH_PX);
+  if (errs && errs.length === 16) {
+    const maxE = Math.max(...errs, 0.001);
+    for (let i = 0; i < 16; i++) {
+      const row = Math.floor(i/4), col = i%4;
+      const alpha = (errs[i]/maxE) * 0.30;
+      ctx.fillStyle = `rgba(255,50,50,${alpha})`;
+      ctx.fillRect(col*PATCH_PX, row*PATCH_PX, PATCH_PX, PATCH_PX);
+    }
   }
 
   // Patch grid lines
@@ -556,6 +603,7 @@ function updateTooltip(e) {
   if (S.hovPatch === null || !S.ep) { tip.hidden = true; return; }
   const t   = S.step;
   const ts  = S.ep.timesteps[t];
+  if (!ts.per_patch_stats || !ts.patch_embeddings) { tip.hidden = true; return; }
   const i   = S.hovPatch;
   const ps  = ts.per_patch_stats[i];
   const emb = ts.patch_embeddings[i];
@@ -608,6 +656,7 @@ function updateTooltip(e) {
 // ── Right-panel rendering ──────────────────────────────────────────────────
 function renderReasoningStats(t) {
   const rs = S.ep.timesteps[t].reasoning_stats;
+  if (!rs) return;  // not available for all experiments
   setText('rs-norm', fmt(rs.norm));
   setText('rs-std',  fmt(rs.std));
   setText('rs-ent',  fmt(rs.activation_entropy));
@@ -619,6 +668,7 @@ function renderReasoningStats(t) {
 
 function renderEmbeddingSummary(t) {
   const es = S.ep.timesteps[t].embedding_summary;
+  if (!es) return;  // not available for all experiments
   const cosEl  = document.getElementById('es-cos');
   const rankEl = document.getElementById('es-rank');
   const deadEl = document.getElementById('es-dead');
@@ -659,6 +709,7 @@ function renderHistSVG(id, counts, edges) {
 }
 
 function renderCmpPanel(t) {
+  if (!S.ep.timesteps[t].per_patch_stats) return;  // not available for all experiments
   const changed = getChangedPatches(t);
   const lbl = document.getElementById('cmp-label-text');
 
@@ -709,15 +760,23 @@ function renderCmpPanel(t) {
   setText('cs-ent', (prevEnt != null && currEnt != null) ? fmtSign(currEnt - prevEnt) : '—');
 }
 
+// Show enough sig-figs for loss values that can be tiny after long training
+function fmtLoss(x) {
+  if (x === null || x === undefined) return '—';
+  if (Math.abs(x) < 1e-7) return '0';
+  if (Math.abs(x) < 1e-3) return x.toExponential(4);
+  return x.toFixed(6);
+}
+
 function renderJepaQuality(t) {
   const ts = S.ep.timesteps[t];
-  setText('jq-loss',   fmt(ts.jepa_loss));
-  setText('jq-reward', fmt(ts.reward));
+  if (ts.jepa_loss === undefined || ts.per_patch_stats === undefined) return;
+  setText('jq-loss',   fmtLoss(ts.jepa_loss));
+  setText('jq-reward', fmtLoss(ts.reward));
 
-  // 4×4 prediction error grid
-  const errs = ts.per_patch_pred_error;
-  const maxE = Math.max(...errs, 0.001);
-  const grid = document.getElementById('pred-error-grid');
+  const errs    = ts.per_patch_pred_error;
+  const maxE    = Math.max(...errs, 0.001);
+  const grid    = document.getElementById('pred-error-grid');
   grid.innerHTML = '';
   for (let i = 0; i < 16; i++) {
     const frac = errs[i] / maxE;
@@ -725,11 +784,52 @@ function renderJepaQuality(t) {
     const g = Math.round((1-frac) * 180);
     const div = document.createElement('div');
     div.className = 'pred-cell';
+    div.dataset.pi = i;   // patch index used by the delegated listener
     div.style.cssText = `width:38px;height:38px;background:rgb(${r},${g},40);` +
       `border:1px solid #21262d;border-radius:2px`;
-    div.title = `Patch ${i}: pred error = ${errs[i].toFixed(4)}`;
     grid.appendChild(div);
   }
+}
+
+// Called once at startup — event delegation so recreating cells never breaks hover
+function initJepaGrid() {
+  const grid = document.getElementById('pred-error-grid');
+  const jTip = document.getElementById('jepa-tip');
+
+  grid.addEventListener('mousemove', ev => {
+    const cell = ev.target.closest('[data-pi]');
+    if (!cell || !S.ep) { jTip.hidden = true; return; }
+
+    const i       = parseInt(cell.dataset.pi);
+    const ts      = S.ep.timesteps[S.step];
+    const errs    = ts.per_patch_pred_error;
+    const weights = ts.patch_weights;
+    if (!errs || !weights) { jTip.hidden = true; return; }
+    const wSq     = errs.map((e, j) => weights[j] * e * e);
+    const wSqSum  = wSq.reduce((a, b) => a + b, 0);
+    const pct     = wSqSum > 0 ? wSq[i] / wSqSum * 100 : 0;
+    const contrib = wSq[i] / 16;
+    const pctCol  = pct > 20 ? '#f85149' : pct > 10 ? '#f0c040' : '#3fb950';
+
+    jTip.innerHTML =
+      `<b style="color:#e6edf3">Patch ${i} &nbsp;<span style="color:#555;font-weight:normal">(row ${Math.floor(i/4)}, col ${i%4})</span></b><br>` +
+      `<span style="color:#8b949e">Pred error (L2)</span> &nbsp;<b>${errs[i].toExponential(4)}</b><br>` +
+      `<span style="color:#8b949e">Patch weight &nbsp;&nbsp;</span> &nbsp;<b>${weights[i].toFixed(4)}</b>` +
+        `<span style="color:#555"> ${weights[i] >= 1.0 ? '(pixels changed)' : '(static)'}</span><br>` +
+      `<span style="color:#8b949e">w × err² &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> &nbsp;<b>${wSq[i].toExponential(4)}</b><br>` +
+      `<span style="color:#8b949e">Loss contrib (÷16)</span> &nbsp;<b>${contrib.toExponential(4)}</b><br>` +
+      `<span style="color:#8b949e">% of total loss&nbsp;&nbsp;</span> &nbsp;<b style="color:${pctCol}">${pct.toFixed(1)}%</b>`;
+
+    jTip.hidden = false;
+    const tw = 240, th = jTip.offsetHeight || 110;
+    let x = ev.clientX + 16, y = ev.clientY + 16;
+    if (x + tw > window.innerWidth)  x = ev.clientX - tw - 8;
+    if (y + th > window.innerHeight) y = ev.clientY - th - 8;
+    jTip.style.left = x + 'px';
+    jTip.style.top  = y + 'px';
+  });
+
+  grid.addEventListener('mouseleave', () => { jTip.hidden = true; });
 }
 
 // ── Reasoning token stacked history heatmap ───────────────────────────────
@@ -743,6 +843,7 @@ function drawReasoningStack(currentT) {
   const hmCanvas  = document.getElementById('h-heatmap');
   const lblCanvas = document.getElementById('h-stack-labels');
   if (!hmCanvas || !S.ep) return;
+  if (!S.ep.timesteps[currentT].reasoning_token) return;
 
   const nRows  = Math.min(currentT + 1, H_STACK_MAX);
   const totalH = nRows * H_STACK_ROW_H;
@@ -802,7 +903,7 @@ function renderPolicySection(t) {
   const taken = ts.action_taken;
 
   // Action bar chart
-  if (actionChart) {
+  if (actionChart && probs) {
     actionChart.data.datasets[0].data = probs;
     actionChart.data.datasets[0].backgroundColor = [0,1,2,3].map(i => {
       if (i === taken) return '#f0c040';
@@ -817,15 +918,18 @@ function renderPolicySection(t) {
   setText('pol-entropy', fmt(ts.action_entropy));
   setText('pol-action', `A${taken} ★`);
 
-  // h_t first3/last3
+  // h_t first3/last3 — only for exp_001 which has reasoning_token
   const h = ts.reasoning_token;
-  setText('h-preview', `h = [${h.slice(0,3).map(v=>Number(v).toFixed(4)).join(', ')}, …, ${h.slice(-3).map(v=>Number(v).toFixed(4)).join(', ')}]`);
-  drawReasoningStack(t);
+  if (h) {
+    setText('h-preview', `h = [${h.slice(0,3).map(v=>Number(v).toFixed(4)).join(', ')}, …, ${h.slice(-3).map(v=>Number(v).toFixed(4)).join(', ')}]`);
+    drawReasoningStack(t);
+  }
 }
 
 // ── Encoder attention section ──────────────────────────────────────────────
 function renderEncoderSection(t) {
   const ts = S.ep.timesteps[t];
+  if (!ts.encoder_attn_block1 && !ts.encoder_attn_block2) return;
   const frame = ts.frame;
   const attn = S.encLayer === 1 ? ts.encoder_attn_block1 : ts.encoder_attn_block2;
 
@@ -854,6 +958,7 @@ function renderEncoderSection(t) {
 // ── Policy cross-attention section ─────────────────────────────────────────
 function renderPolicyAttnSection(t) {
   const ts = S.ep.timesteps[t];
+  if (!ts.policy_attn_weights && !ts.patch_embeddings) return;
   const frame = ts.frame;
   const weights = ts.policy_attn_weights;  // (16,) sum-to-1
 
@@ -925,10 +1030,20 @@ function renderStep(t) {
   updateOverviewCursors(t);
   updateActionHistoryCursor(t);
 
+  // Call plugin panel if loaded
+  if (_panelMod && _panelMod.updateStep) {
+    _panelMod.updateStep(S.ep.timesteps[t], t, document.getElementById('panel-mount'));
+  }
+
   // Slider + counter
   const slider = document.getElementById('pb-slider');
   slider.value = t;
   setText('pb-counter', `Step ${t} / ${S.ep.episode_steps - 1}`);
+
+  // If the mouse is hovering a patch, refresh the tooltip with the new timestep's data
+  if (S.hovPatch !== null && S.lastMouseEv) {
+    updateTooltip(S.lastMouseEv);
+  }
 }
 
 // ── Playback ───────────────────────────────────────────────────────────────
@@ -1004,10 +1119,12 @@ function makeOverviewChart(id, data, color) {
 
 function initOverviewCharts() {
   const tss = S.ep.timesteps;
-  const loss    = tss.map(t => t.jepa_loss);
-  const reward  = tss.map(t => t.reward);
-  const entropy = tss.map(t => t.action_entropy);
-  const drift   = tss.map(t => t.reasoning_stats.l2_dist_prev ?? 0);
+  // Use jepa_loss if available, fall back to flow_loss for exp_003-style experiments
+  const loss    = tss.map(t => t.jepa_loss ?? t.flow_loss ?? 0);
+  const reward  = tss.map(t => t.reward ?? 0);
+  const entropy = tss.map(t => t.action_entropy ?? 0);
+  const drift   = tss.map(t => (t.reasoning_stats && t.reasoning_stats.l2_dist_prev != null)
+    ? t.reasoning_stats.l2_dist_prev : 0);
 
   // Destroy existing charts
   for (const k of ['loss','reward','entropy','drift']) {
@@ -1113,9 +1230,10 @@ function initActionChart() {
 
 // ── Episode loading ────────────────────────────────────────────────────────
 async function runEpisode() {
+  const exp  = document.getElementById('exp-select').value;
   const ckpt = document.getElementById('ckpt-select').value;
   const maxSteps = parseInt(document.getElementById('max-steps').value)||200;
-  if (!ckpt) return;
+  if (!exp || !ckpt) return;
 
   setStatus('Running episode…');
   document.getElementById('overlay').hidden = false;
@@ -1126,7 +1244,7 @@ async function runEpisode() {
     const resp = await fetch('/api/run_episode', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({checkpoint: ckpt, max_steps: maxSteps})
+      body: JSON.stringify({experiment: exp, checkpoint: ckpt, max_steps: maxSteps})
     });
     if (!resp.ok) {
       const err = await resp.json();
@@ -1139,6 +1257,20 @@ async function runEpisode() {
     S.encPatch  = null;
     S.polPatch  = null;
     S.cmpIdx    = 0;
+    applyCapabilities(data.capabilities || {});
+
+    // Expose ARC colors to panel plugins
+    window.JEPA.ARC_COLORS = data.arc_colors;
+
+    // Load experiment-specific panel plugin
+    await loadPanel(data.experiment);
+    const mountEl = document.getElementById('panel-mount');
+    if (_panelMod && _panelMod.render) {
+      mountEl.innerHTML = '';
+      _panelMod.render(data, mountEl);
+    } else {
+      mountEl.innerHTML = '';
+    }
 
     // Init controls
     const slider = document.getElementById('pb-slider');
@@ -1155,6 +1287,7 @@ async function runEpisode() {
     initActionChart();
     setupThumbnailGrids();
     initOverviewCharts();
+    initJepaGrid();
     renderActionHistory();
 
     document.getElementById('content').hidden = false;
@@ -1168,21 +1301,44 @@ async function runEpisode() {
   }
 }
 
-async function populateCheckpoints() {
+async function populateExperiments() {
   try {
-    const resp = await fetch('/api/checkpoints');
+    const resp = await fetch('/api/experiments');
+    const data = await resp.json();
+    const sel  = document.getElementById('exp-select');
+    if (!data.experiments || data.experiments.length === 0) {
+      sel.innerHTML = '<option value="">— no experiments —</option>';
+      setStatus('No experiments found under JEPA/experiments/.');
+      return;
+    }
+    sel.innerHTML = data.experiments
+      .map((e,i) => `<option value="${e}"${i===0?' selected':''}>${e}</option>`)
+      .join('');
+    sel.addEventListener('change', populateCheckpoints);
+    await populateCheckpoints();
+  } catch {
+    setStatus('Could not reach /api/experiments — is the server running?');
+  }
+}
+
+async function populateCheckpoints() {
+  const exp = document.getElementById('exp-select').value;
+  if (!exp) return;
+  try {
+    const resp = await fetch(`/api/checkpoints?experiment=${encodeURIComponent(exp)}`);
     const data = await resp.json();
     const sel  = document.getElementById('ckpt-select');
     if (!data.checkpoints || data.checkpoints.length === 0) {
       sel.innerHTML = '<option value="">— no checkpoints found —</option>';
       document.getElementById('run-btn').disabled = true;
-      setStatus('No checkpoints found in JEPA/checkpoints/');
+      setStatus(`No checkpoints found for ${exp}`);
       return;
     }
     sel.innerHTML = data.checkpoints
       .map((c,i) => `<option value="${c}"${i===0?' selected':''}>${c}</option>`)
       .join('');
-    setStatus(`${data.checkpoints.length} checkpoint(s) found. Select one and click Run Episode.`);
+    document.getElementById('run-btn').disabled = false;
+    setStatus(`${data.checkpoints.length} checkpoint(s) — select one and click Run Episode.`);
   } catch {
     setStatus('Could not reach /api/checkpoints — is the server running?');
   }
@@ -1198,11 +1354,45 @@ function setStatus(msg) {
   document.getElementById('status-msg').textContent = msg;
 }
 
+function applyCapabilities(caps) {
+  // Show/hide architecture-specific sections based on what the experiment supports.
+  // s2 = Encoder Self-Attention (ViT only), s3 = Policy Cross-Attention (cross-attn policy only).
+  // has_policy_attention defaults to the same as has_patch_embeddings (both require ViT-style).
+  const hasPatchEmbed = caps.has_patch_embeddings !== false;
+  const showEncAttn   = caps.has_encoder_attention !== false;
+  // s3 (policy cross-attn) requires 16 patch embeddings AND explicit opt-in
+  const showPolAttn   = hasPatchEmbed && (caps.has_policy_attention !== false);
+  const s2 = document.getElementById('s2');
+  const s3 = document.getElementById('s3');
+  const s2h = document.getElementById('s2-header');
+  const s3h = document.getElementById('s3-header');
+  if (s2)  s2.style.display  = showEncAttn ? '' : 'none';
+  if (s2h) s2h.style.display = showEncAttn ? '' : 'none';
+  if (s3)  s3.style.display  = showPolAttn ? '' : 'none';
+  if (s3h) s3h.style.display = showPolAttn ? '' : 'none';
+
+  // Hide exp_001-specific right-col cards when the experiment uses a plugin panel.
+  // Cards: reasoning token, patch embedding summary, changed patches, JEPA quality.
+  const exp001Cards = ['rs-norm', 'es-cos', 'cs-cos', 'jq-loss'].map(id => {
+    const el = document.getElementById(id);
+    return el ? el.closest('.card') : null;
+  }).filter(Boolean);
+  for (const card of exp001Cards) {
+    card.style.display = hasPatchEmbed ? '' : 'none';
+  }
+
+  // Hide left-col reasoning token preview and h_t history stack for plugin experiments.
+  const lcPreview = document.getElementById('lc-reasoning-preview');
+  const lcHistory = document.getElementById('lc-ht-history');
+  if (lcPreview) lcPreview.style.display = hasPatchEmbed ? '' : 'none';
+  if (lcHistory) lcHistory.style.display = hasPatchEmbed ? '' : 'none';
+}
+
 function getChangedPatches(t) {
   if (!S.ep) return [];
-  return S.ep.timesteps[t].per_patch_stats
-    .map((s,i) => i)
-    .filter(i => S.ep.timesteps[t].per_patch_stats[i].pixel_change_frac > 0);
+  const ps = S.ep.timesteps[t].per_patch_stats;
+  if (!ps) return [];
+  return ps.map((s,i) => i).filter(i => ps[i].pixel_change_frac > 0);
 }
 
 // ── Event listeners ────────────────────────────────────────────────────────
@@ -1259,7 +1449,8 @@ function setupEventListeners() {
     } else {
       S.hovPatch = null;
     }
-    renderCanvas(S.step);   // re-draw with hover highlight
+    S.lastMouseEv = e;      // remember position so step-advance can refresh tooltip
+    renderCanvas(S.step);
     updateTooltip(e);
   });
   puzzle.addEventListener('mouseleave', () => {
@@ -1282,7 +1473,7 @@ function setupEventListeners() {
 // ── Init ───────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
-  populateCheckpoints();
+  populateExperiments();
 });
 </script>
 </body>

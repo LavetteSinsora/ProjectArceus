@@ -11,9 +11,8 @@ Prerequisites:
         export ARC_API_KEY=your_key_here
 
 Usage:
-    cd JEPA && uv run python run_online.py
-    cd JEPA && uv run python run_online.py --checkpoint checkpoints/step_040000.pt
-    cd JEPA && uv run python run_online.py --episodes 3
+    cd "Code Repo" && uv run python -m JEPA.experiments.exp_001_vit_jepa_baseline.run_online
+    cd "Code Repo" && uv run python -m JEPA.experiments.exp_001_vit_jepa_baseline.run_online --episodes 3
 
 Output:
     Prints the scorecard replay URL after each run.
@@ -29,19 +28,21 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-sys.path.insert(0, str(Path(__file__).parent))
+_repo_root = Path(__file__).parent.parent.parent.parent  # exp_001 → experiments → JEPA → Code Repo
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
 
-from config import Config
-from encoder import Encoder
-from policy import PolicyNetwork
-from env_wrapper import LS20Env
+from JEPA.experiments.exp_001_vit_jepa_baseline.config import Config
+from JEPA.experiments.exp_001_vit_jepa_baseline.models.encoder import Encoder
+from JEPA.experiments.exp_001_vit_jepa_baseline.models.policy import PolicyNetwork
+from JEPA.shared.env_wrapper import LS20Env
 
 
 def _load_dotenv():
     """Load ARC_API_KEY from .env file in the repo root if not already set."""
     if os.environ.get("ARC_API_KEY"):
         return
-    env_path = Path(__file__).parent.parent / ".env"
+    env_path = _repo_root / ".env"
     if not env_path.exists():
         return
     for line in env_path.read_text().splitlines():
@@ -120,7 +121,6 @@ def main():
         "cuda" if torch.cuda.is_available() else
         "cpu"
     )
-    cfg = Config()
 
     # ── Checkpoint ─────────────────────────────────────────────────────────
     ckpt_dir = Path(__file__).parent / "checkpoints"
@@ -129,13 +129,15 @@ def main():
     else:
         checkpoints = sorted(ckpt_dir.glob("step_*.pt"))
         if not checkpoints:
-            print("[run_online] No checkpoints found in JEPA/checkpoints/")
+            print("[run_online] No checkpoints found in checkpoints/")
             sys.exit(1)
         ckpt_path = checkpoints[-1]
 
     print(f"[run_online] Checkpoint: {ckpt_path.name}  device={device}")
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
     print(f"[run_online] Checkpoint step: {ckpt.get('step', '?')}")
+    cfg_raw = ckpt.get("config", {})
+    cfg = Config(**cfg_raw) if isinstance(cfg_raw, dict) else cfg_raw
 
     # ── Models ─────────────────────────────────────────────────────────────
     encoder = Encoder(

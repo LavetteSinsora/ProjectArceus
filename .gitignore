@@ -9,12 +9,18 @@ wheels/
 # Virtual environments
 .venv
 
+# Test runner cache
+.pytest_cache/
+
 # Secrets
 .env
 
-# PyTorch checkpoints (intermediate training snapshots — too large for git)
-JEPA/checkpoints/*
-!JEPA/checkpoints/step_1055000.pt
+# Experiment artifacts (large/regenerable — not for git)
+JEPA/experiments/**/checkpoints/
+JEPA/experiments/**/runs/
+
+# Stale top-level checkpoints folder (no longer used)
+JEPA/checkpoints/
 
 # Training logs (generated output)
 *.log

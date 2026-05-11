@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JEPA — Training Monitor</title>
+<style>
+/* ── Reset & base ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#0d1117;color:#c9d1d9;font-family:'Menlo','Monaco','Consolas',monospace;font-size:12px}
+a{color:#58a6ff;text-decoration:none}
+button{cursor:pointer;font-family:inherit;font-size:11px}
+
+/* ── Layout ── */
+#topbar{display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid #21262d;background:#161b22;flex-wrap:wrap}
+#topbar h1{font-size:13px;font-weight:bold;color:#e6edf3;letter-spacing:.5px;white-space:nowrap}
+.nav-link{font-size:11px;color:#58a6ff;padding:2px 0}
+.sep{color:#30363d;user-select:none}
+
+#controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+select,input[type=text]{background:#0d1117;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:3px 7px;font-family:inherit;font-size:11px}
+select:focus,input:focus{outline:1px solid #388bfd;border-color:#388bfd}
+.btn{display:inline-flex;align-items:center;gap:5px;background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:5px;padding:4px 10px;transition:background .15s}
+.btn:hover{background:#30363d}
+.btn.primary{background:#1f6feb;color:#fff;border-color:#388bfd}
+.btn.primary:hover{background:#388bfd}
+.btn.danger{background:#6e2b2b;color:#ffa198;border-color:#f85149}
+.btn.danger:hover{background:#f85149;color:#fff}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+#status-bar{display:flex;align-items:center;gap:12px;padding:5px 16px;border-bottom:1px solid #21262d;font-size:11px;background:#0d1117}
+#status-dot{width:8px;height:8px;border-radius:50%;background:#484f58;flex-shrink:0}
+#status-dot.running{background:#3fb950;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+#status-text{color:#8b949e}
+#run-label{color:#58a6ff;font-weight:bold}
+#last-step{color:#8b949e;margin-left:auto}
+#poll-indicator{color:#484f58;font-size:10px}
+
+#main{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:0;overflow-y:auto;height:calc(100vh - 84px)}
+
+/* ── Component sections ── */
+.component{border-right:1px solid #21262d;border-bottom:1px solid #21262d;padding:10px 14px 14px}
+.component:nth-child(even){border-right:none}
+.comp-title{font-size:10px;font-weight:bold;letter-spacing:.8px;color:#388bfd;text-transform:uppercase;margin-bottom:10px}
+.comp-subtitle{font-size:10px;color:#8b949e;margin-bottom:6px;letter-spacing:.3px}
+
+/* Full-width bottom section */
+.component.full{grid-column:1/-1;border-right:none}
+
+/* ── Chart grid within a component ── */
+.chart-grid{display:flex;flex-direction:column;gap:10px}
+.chart-row{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}
+
+/* ── Individual chart ── */
+.chart-wrap{position:relative;flex:1;min-width:180px}
+.chart-label{font-size:10px;color:#8b949e;margin-bottom:3px;cursor:help;border-bottom:1px dotted #30363d;display:inline-block}
+.chart-label:hover{color:#c9d1d9;border-color:#8b949e}
+canvas.sparkline{display:block;width:100%;height:60px;background:#161b22;border:1px solid #21262d;border-radius:3px}
+.chart-val{font-size:10px;color:#e6edf3;margin-top:2px;font-variant-numeric:tabular-nums;min-height:14px}
+
+/* ── Tooltip ── */
+#tooltip{position:fixed;display:none;z-index:9999;background:#1c2128;border:1px solid #388bfd;border-radius:6px;padding:10px 14px;max-width:360px;box-shadow:0 4px 20px rgba(0,0,0,.6)}
+#tooltip h3{font-size:11px;font-weight:bold;color:#e6edf3;margin-bottom:6px;letter-spacing:.3px}
+#tooltip p{font-size:11px;color:#c9d1d9;line-height:1.55;white-space:pre-wrap}
+#tooltip .example{margin-top:8px;font-size:10px;color:#8b949e;background:#0d1117;border-radius:4px;padding:6px 8px;white-space:pre-wrap;font-family:inherit}
+
+/* ── Per-latent mini grid ── */
+.lat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.lat-item{background:#161b22;border:1px solid #21262d;border-radius:3px;padding:5px 7px}
+.lat-item-label{font-size:9px;color:#8b949e;margin-bottom:3px}
+.lat-item-val{font-size:11px;color:#e6edf3;font-variant-numeric:tabular-nums}
+canvas.lat-spark{display:block;width:100%;height:36px;background:#0d1117;margin-top:4px}
+
+/* ── Empty state ── */
+.empty{color:#484f58;font-size:11px;padding:20px 0}
+</style>
+</head>
+<body>
+
+<!-- ── Top bar ── -->
+<div id="topbar">
+  <h1>JEPA ▸ TRAINING MONITOR</h1>
+  <span class="sep">|</span>
+  <a class="nav-link" href="/">← Debug Dashboard</a>
+  <span class="sep">|</span>
+  <div id="controls">
+    <select id="exp-sel" title="Experiment"></select>
+    <select id="run-sel" title="Run" style="min-width:200px"><option value="">— select run —</option></select>
+    <button class="btn primary" id="btn-live" onclick="loadRuns()">↺ Refresh runs</button>
+    <span class="sep">|</span>
+    <span style="font-size:11px;color:#8b949e">Start training:</span>
+    <select id="ckpt-sel" title="Resume checkpoint (optional)" style="min-width:160px">
+      <option value="">fresh (no checkpoint)</option>
+    </select>
+    <button class="btn primary" id="btn-start" onclick="startTraining()">▶ Start</button>
+    <button class="btn danger" id="btn-stop" style="display:none" onclick="stopTraining()">■ Stop</button>
+  </div>
+</div>
+
+<!-- ── Status bar ── -->
+<div id="status-bar">
+  <span id="status-dot"></span>
+  <span id="status-text">Not running</span>
+  <span id="run-label"></span>
+  <span id="last-step"></span>
+  <span id="poll-indicator">auto-poll: —</span>
+</div>
+
+<!-- ── Main grid ── -->
+<div id="main">
+
+  <!-- ── Encoder: SA blocks ── -->
+  <div class="component" id="comp-enc-sa">
+    <div class="comp-title">ENCODER — SELF-ATTENTION BLOCKS</div>
+    <div class="comp-subtitle">Patch embedding → 2× SA blocks → representation h_patches</div>
+    <div class="chart-grid">
+      <div class="chart-row">
+        <div class="chart-wrap">
+          <div class="chart-label" data-tip="grad_enc_sa">SA gradient norm</div>
+          <canvas class="sparkline" id="sk-grad-sa"></canvas>
+          <div class="chart-val" id="v-grad-sa">—</div>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-label" data-tip="across_state_std">Cross-state std (placeholder)</div>
+          <canvas class="sparkline" id="sk-across-std"></canvas>
+          <div class="chart-val" id="v-across-std">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Encoder: Perceiver ── -->
+  <div class="component" id="comp-enc-perc">
+    <div class="comp-title">ENCODER — PERCEIVER RESAMPLER</div>
+    <div class="comp-subtitle">2 rounds of cross-attn (Q=latents, K/V=patches) + self-attn + output_norm</div>
+    <div class="chart-grid">
+      <div class="chart-row">
+        <div class="chart-wrap">
+          <div class="chart-label" data-tip="grad_enc_perceiver">Perceiver gradient norm</div>
+          <canvas class="sparkline" id="sk-grad-perc"></canvas>
+          <div class="chart-val" id="v-grad-perc">—</div>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-label" data-tip="grad_time_emb">Time embedding grad</div>
+          <canvas class="sparkline" id="sk-grad-time"></canvas>
+          <div class="chart-val" id="v-grad-time">—</div>
+        </div>
+      </div>
+      <div>
+        <div class="comp-subtitle" style="margin-top:6px">Latent vector norms (all ≈ √128 ≈ 11.31 with output_norm)</div>
+        <div class="lat-grid" id="lat-norms"></div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-wrap">
+          <div class="chart-label" data-tip="latent_pairwise_l2">Latent pairwise L2</div>
+          <canvas class="sparkline" id="sk-pairwise"></canvas>
+          <div class="chart-val" id="v-pairwise">—</div>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-label" data-tip="latent_eff_rank">Effective rank</div>
+          <canvas class="sparkline" id="sk-effrank"></canvas>
+          <div class="chart-val" id="v-effrank">—</div>
+        </div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-wrap">
+          <div class="chart-label" data-tip="ht_ht1_cossim">H_T · H_T+1 cos-sim (episode avg)</div>
+          <canvas class="sparkline" id="sk-ht-cossim"></canvas>
+          <div class="chart-val" id="v-ht-cossim">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Predictor ── -->
+  <div class="component" id="comp-pred">
+    <div class="comp-title">PREDICTOR — FLOW MATCHING</div>
+    <div class="comp-subtitle">4 per-latent MLPs; each predicts clean x₁ from (x_τ, τ, action)</div>
+    <div class="chart-grid">
+      <div class="chart-row">
+        <div class="chart-wrap">
+          <div class="chart-label" data-tip="flow_loss">Flow loss (total)</div>
+          <canvas class="sparkline" id="sk-flow-loss"></canvas>
+          <div class="chart-val" id="v-flow-loss">—</div>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-label" data-tip="ode_cossim">ODE step cos-sim</div>
+          <canvas class="sparkline" id="sk-ode"></canvas>
+          <div class="chart-val" id="v-ode">—</div>
+        </div>
+      </div>
+      <div>
+        <div class="comp-subtitle" style="margin-top:4px">Per-latent loss  L0–L3</div>
+        <div class="lat-grid" id="lat-loss"></div>
+      </div>
+      <div>
+        <div class="comp-subtitle" style="margin-top:4px">Per-latent predictor MLP gradient norm</div>
+        <div class="lat-grid" id="lat-pred-grad"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Policy ── -->
+  <div class="component" id="comp-policy">
+    <div class="comp-title">POLICY — REINFORCE</div>
+    <div class="comp-subtitle">1-hidden-layer MLP; trained with REINFORCE + curiosity reward</div>
+    <div class="chart-grid">
+      <div class="chart-row">
+        <div class="chart-wrap">
+          <div class="chart-label" data-tip="pol_loss">Policy loss</div>
+          <canvas class="sparkline" id="sk-pol-loss"></canvas>
+          <div class="chart-val" id="v-pol-loss">—</div>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-label" data-tip="grad_policy">Policy gradient norm</div>
+          <canvas class="sparkline" id="sk-grad-pol"></canvas>
+          <div class="chart-val" id="v-grad-pol">—</div>
+        </div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-wrap">
+          <div class="chart-label" data-tip="entropy">Policy entropy H</div>
+          <canvas class="sparkline" id="sk-entropy"></canvas>
+          <div class="chart-val" id="v-entropy">—</div>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-label" data-tip="mean_reward">Mean curiosity reward</div>
+          <canvas class="sparkline" id="sk-reward"></canvas>
+          <div class="chart-val" id="v-reward">—</div>
+        </div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-wrap">
+          <div class="chart-label" data-tip="completion_rate">Episode completion rate</div>
+          <canvas class="sparkline" id="sk-complete"></canvas>
+          <div class="chart-val" id="v-complete">—</div>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-label" data-tip="fps">Steps / sec (fps)</div>
+          <canvas class="sparkline" id="sk-fps"></canvas>
+          <div class="chart-val" id="v-fps">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- ── Tooltip ── -->
+<div id="tooltip">
+  <h3 id="tip-title"></h3>
+  <p id="tip-body"></p>
+  <div class="example" id="tip-example" style="display:none"></div>
+</div>
+
+<script>
+'use strict';
+
+// ── Tooltip database ─────────────────────────────────────────────────────────
+const TIPS = {
+  grad_enc_sa: {
+    title: 'SA Block Gradient Norm',
+    body: `L2 norm of all gradient tensors across the patch embedding + 2 SA transformer blocks.
+
+Computed after flow loss backward(), before clip:
+  gnorm = sqrt( Σ_p ||p.grad||² )  over all p in {color_embed, patch_proj, sa_blocks, sa_norm}
+
+Healthy range: 0.1 – 2.0
+Warning threshold: > 200 (GRAD_NORM_CRITICAL)`,
+    example: `Example: at step 5000 with B=32 batch:
+  color_embed.grad ~ 0.05  (tiny — only 6 colors)
+  patch_proj.grad  ~ 0.3   (main signal source)
+  sa_block_0.grad  ~ 0.8
+  sa_block_1.grad  ~ 0.6
+  Total SA gnorm ≈ sqrt(0.05²+0.3²+0.8²+0.6²) ≈ 1.03  ✓ healthy`
+  },
+  across_state_std: {
+    title: 'Cross-State Std (placeholder queries)',
+    body: `Measures whether the encoder produces DIFFERENT latent vectors for different input frames.
+
+Method:
+  1. Sample 16 frames from latent buffer
+  2. Encode all 16 with the same placeholder queries (not recurrent)
+  3. h_m.shape = (16, 4, 128)
+  4. across_std = h_m.std(dim=0).mean()
+     = mean std over 16 frames at each of 4×128=512 scalar positions
+
+Near 0 → encoder maps all frames to the same latent = COLLAPSE (bad)
+Healthy: > 0.05`,
+    example: `Example: B=16 frames, n_latents=4, d_model=128
+  Position [latent=0, dim=42]:
+    values across 16 frames = [0.3, -0.1, 0.7, -0.4, ...]
+    std at this position = 0.38
+  Average across all 512 positions = 0.21  ✓ healthy
+
+  Collapsed encoder:
+    All 16 frames → same latent → std = 0.000 at every position  ✗`
+  },
+  grad_enc_perceiver: {
+    title: 'Perceiver Gradient Norm',
+    body: `L2 norm of gradients across ALL Perceiver parameters (both rounds, cross-attn + self-attn).
+
+Each training step runs encoder() twice (for h_t and h_{t+1}), each with 2 rounds.
+Separate per-round weights (exp_003 fix) halve the gradient accumulation vs exp_002's weight-tied design:
+  exp_002: 4× accumulation (2 calls × 2 rounds, same weights)
+  exp_003: 2× accumulation (2 calls × 2 independent rounds)
+
+Perceiver LR is set to 5e-5 (half of SA's 1e-4) to further stabilise updates.
+Healthy range: 0.1 – 5.0  (higher than SA due to cross-attn complexity)`,
+    example: `Example at step 10000:
+  Perceiver has ~500K parameters across 2 rounds
+  Each param has per-step grad σ ≈ 0.001
+  gnorm ≈ sqrt(2 × 500K) × 0.001 ≈ 1.0  ✓
+
+  If gnorm > 10: weight accumulation or LR too high
+  If gnorm → 0: Perceiver frozen (encoder collapsed)`
+  },
+  grad_time_emb: {
+    title: 'Time Embedding Gradient',
+    body: `Gradient norm of the sinusoidal time embedding MLP in the predictor.
+
+The predictor uses τ ∈ [0,1] (the interpolation coefficient in flow matching) as a conditioning signal.
+If the predictor ignores τ, it learns a constant (τ-blind) prediction → ODE trajectory is flat.
+
+Warning if < 1e-4 (TIME_GRAD_WARN).
+
+The time embedding encodes τ as:
+  τ → sin/cos at multiple frequencies → MLP → d_model`,
+    example: `Example:
+  At step 200 (early): grad_time_emb ≈ 0.12  ✓ predictor learning to use τ
+  At step 50K (collapsed): grad_time_emb ≈ 0.00001  ✗ predictor ignoring time`
+  },
+  latent_pairwise_l2: {
+    title: 'Latent Pairwise L2',
+    body: `How distinct are the 4 latent vectors within a single state's representation?
+
+For each batch sample:
+  Compute L2 distance between all C(4,2)=6 pairs of the 4 latent vectors
+  Average across 16 sampled states
+
+If all 4 latents → same vector: pairwise_L2 → 0 = representation collapse
+With output_norm, ||h_i|| ≈ 11.31, so max L2 between two opposite vectors ≈ 22.6
+
+Healthy: > 3.0  (latents point in clearly different directions)`,
+    example: `Example: n_latents=4, d_model=128, all norms ≈ 11.31
+  Collapsed: h_0 ≈ h_1 ≈ h_2 ≈ h_3 → pairwise_L2 ≈ 0.0  ✗
+  Diverse:   cos_sim(h_i,h_j) ≈ 0.5 → L2 ≈ sqrt(2(1-0.5))×11.31 ≈ 11.3  ✓`
+  },
+  latent_eff_rank: {
+    title: 'Effective Rank',
+    body: `How many linearly independent directions do the 4 latent vectors span?
+
+Method (for one batch sample):
+  M = (4, 128) latent matrix
+  σ = SVD singular values of M (4 values)
+  p_i = σ_i / sum(σ)              # normalised to distribution
+  effective_rank = exp(-Σ p_i log(p_i))   # exp(Shannon entropy)
+
+Range [1, 4]:
+  1 = all 4 vectors are collinear (rank-1 subspace) = collapse
+  4 = fully orthogonal rank (each vector contributes unique information)
+
+In exp_002 we hit 1.29 by step 500K → near rank-1 collapse.
+Target for exp_003: eff_rank > 2.5`,
+    example: `Example: singular values = [10, 8, 6, 4]
+  p = [10/28, 8/28, 6/28, 4/28] = [0.357, 0.286, 0.214, 0.143]
+  H = -(0.357×log(0.357) + ... ) = 1.33 nats
+  eff_rank = exp(1.33) ≈ 3.78  ✓ high diversity
+
+  Collapsed: singular values = [28, 0.001, 0.001, 0.001]
+  eff_rank ≈ 1.0  ✗`
+  },
+  flow_loss: {
+    title: 'Flow Matching Loss (total)',
+    body: `Mean MSE between predicted and true target latent vectors across all 4 latents and the batch.
+
+Training objective (velocity formulation):
+  x_0 = h_t         (current latent, has gradient)
+  x_1 = h_{t+1}     (target latent, stop-gradient → detached)
+  τ ~ Uniform[0,1]
+  x_τ = (1-τ)x_0 + τ x_1      (interpolated point)
+  x̂_1 = MLP(x_τ, emb(τ), emb(a))  (predicted clean endpoint)
+  loss = MSE(x_1, x̂_1)
+
+Stop gradient on x_1 prevents the collapse attractor:
+  Without stop grad → encoder can minimize loss by mapping all frames to the same constant
+  With stop grad → encoder must make h_t useful for predictor to reach a FIXED target`,
+    example: `Example: B=32, n_latents=4
+  Total loss = mean over 32×4=128 (latent, sample) pairs
+  At step 1000: loss ≈ 0.8    (predictor just learning)
+  At step 50K:  loss ≈ 0.2    (predictor tracks transitions well)
+  At step 200K: loss ≈ 0.05   (sharp predictions)`
+  },
+  ode_cossim: {
+    title: 'ODE Step Cosine Similarity',
+    body: `Measures whether the ODE trajectory moves (consecutive steps are similar → near 1 = stuck).
+
+The predictor uses N ODE steps (default 4) to iteratively refine h_{t+1}:
+  x_0 → x_{1/4} → x_{2/4} → x_{3/4} → x_1
+
+For the first batch sample, compute cos_sim between consecutive steps:
+  cos_sim(x_k, x_{k+1}) for k in 0..N-1
+
+Mean over all N steps is reported.
+
+Warning if > 0.99 (ODE_COSSIM_WARN): predictor barely moves between ODE steps.
+This indicates the predictor learned h_t ≈ h_{t+1} (trivial identity) or collapsed.`,
+    example: `Example: N=4 steps, d=128 per latent
+  Healthy: each step moves by ~0.3 units → cos_sim ≈ 0.85
+  Collapsed: each step is identity → cos_sim ≈ 0.9999  ✗ (warn fires)`
+  },
+  pol_loss: {
+    title: 'Policy Loss',
+    body: `REINFORCE loss with baseline and entropy bonus.
+
+pol_loss = -mean(advantage × log_prob) - λ_entropy × mean(entropy)
+
+where:
+  log_prob = log π(a_t | h_t)   (policy log-probability of taken action)
+  advantage = (r_t - baseline)  / std(r_t - baseline)
+  baseline = exponential moving average of rewards (α=0.05)
+  λ_entropy = 0.01              (entropy regularization coefficient)
+
+Negative pol_loss → policy improving (lower = better, but not monotone due to baseline)
+Very large pol_loss (positive) → policy assigning low prob to high-reward actions`,
+    example: `Example: B=64 transitions (policy_update_freq=64)
+  rewards = [0.1, 0.3, 0.05, ...]
+  baseline = 0.15 (EMA)
+  advantage[0] = (0.1 - 0.15) / std = -0.5
+  advantage[1] = (0.3 - 0.15) / std = +1.5
+  pol_loss ≈ -(+1.5 × log(0.6)) - 0.01×1.37 ≈ +0.77`
+  },
+  grad_policy: {
+    title: 'Policy Gradient Norm',
+    body: `L2 norm of policy gradients after policy loss backward(), before clip (clip=1.0).
+
+Very low (< 0.001): policy frozen — no learning signal
+Very high (> 5.0):  policy taking large update steps (rare, usually fine due to low clip)
+
+Policy uses a separate Adam optimizer with lr=5e-4 and is never touched by the encoder optimizer.
+The policy network receives h_t.detach() as input, ensuring encoder parameters are never updated by pol_loss.`,
+    example: `Example: policy net has 2 layers, d_model=128, hidden=256
+  ~100K parameters total
+  At step 500K: gnorm ≈ 0.15  ✓ steady learning`
+  },
+  entropy: {
+    title: 'Policy Entropy H',
+    body: `Shannon entropy of the action probability distribution at each step.
+
+H = -Σ_a π(a|h_t) log π(a|h_t)
+
+For n_actions=6 actions, maximum H = log(6) ≈ 1.79 (uniform distribution).
+Near-zero H → policy collapsed to a single deterministic action (agent gets stuck).
+
+Warning if H < 0.30 (ENTROPY_WARN).
+
+The entropy bonus in pol_loss (λ=0.01) encourages exploration and prevents premature convergence.`,
+    example: `Example: n_actions=6
+  Uniform: π = [1/6,...,1/6] → H = 1.79 (max)
+  Slightly biased: π = [0.5, 0.1, 0.1, 0.1, 0.1, 0.1] → H = 1.30
+  Collapsed: π = [0.99, 0.01, ...] → H = 0.08  ✗ (warn fires at H < 0.30)`
+  },
+  mean_reward: {
+    title: 'Mean Curiosity Reward',
+    body: `Average intrinsic curiosity reward over the last LOG_FREQ=200 policy steps.
+
+r_t = min( mean(per_latent_pred_error), REWARD_CAP=50 )
+
+where per_latent_pred_error is the MSE between predictor output and actual h_{t+1} for each latent.
+
+High reward → predictor surprised by transitions (exploring novel states)
+Near-zero reward → predictor fully learned all transitions (or latent collapsed → all predictions trivial)
+
+External completion bonus: +50 added when level_completed.`,
+    example: `Example:
+  per_latent_pred_error = [0.3, 0.5, 0.2, 0.4]
+  mean_pred_error = 0.35
+  r_t = min(0.35, 50) = 0.35
+
+  If collapsed: all h_t ≈ constant → error ≈ 0 → r_t ≈ 0 → policy gets no signal`
+  },
+  completion_rate: {
+    title: 'Episode Completion Rate',
+    body: `Fraction of the last 20 episodes where the level was completed.
+
+episode.level_completed = True when the agent successfully solves the LS20 puzzle before losing all lives.
+
+0.0 = never completed (pure exploration or wrong behavior)
+1.0 = always completes (mastered the level)
+
+Each episode ends when is_end_of_life() fires (energy depleted) or force_flush after MAX_EP_STEPS=300.`,
+    example: `Example: last 20 episodes
+  16 completions → completion_rate = 0.80 = 80%
+  0 completions → completion_rate = 0.00`
+  },
+  ht_ht1_cossim: {
+    title: 'H_T → H_T+1 Cosine Similarity (episode avg)',
+    body: `Per-step cosine similarity between the encoder's latent at time T and time T+1,
+averaged over the episode's steps and over the n_latents latent slots.
+
+  cos_sim_i = dot(h_T[i], h_{T+1}[i]) / (||h_T[i]|| × ||h_{T+1}[i]||)
+  per_step = mean over i in 0..n_latents-1
+  reported = rolling mean over recent steps
+
+Near 1.0 → consecutive frames produce nearly identical latents (latent collapse, or truly static scene)
+Near 0.0 → consecutive frames look completely different (noisy encoder or extreme state change)
+Near -1.0 → encoder flips representation between frames (unstable)
+
+Healthy range: 0.7 – 0.97 (smooth temporal coherence with meaningful change)
+If this stays at 1.0: encoder is ignoring transitions (likely collapse)
+If this drops below 0.5: encoder is too noisy`,
+    example: `Example: n_latents=4, output_norm applied (||h|| ≈ 11.31)
+  Static wall: h_T ≈ h_{T+1} → cos_sim ≈ 1.0  (watch for collapse)
+  Active play: cos_sim ≈ 0.88  ✓ significant but smooth state change
+  Collapsed:   all h → same constant → cos_sim ≈ 1.0 always  ✗
+  Random:      cos_sim ≈ 0.0  ✗ no temporal coherence`
+  },
+  fps: {
+    title: 'Steps per Second (fps)',
+    body: `Training throughput: total steps / total wall-clock time since training start.
+
+One "step" = one environment step (collect transition) + periodic training update.
+
+Typical values (MPS/Apple Silicon):
+  ~40–80 fps: env step + encoder forward (no_grad) + policy
+  Lower during training updates (every update_freq=4 steps): backward pass adds ~10ms
+
+Use this to estimate time to completion:
+  remaining_steps / fps → seconds left`,
+    example: `Example:
+  step=50000, elapsed=1250s → fps = 40 steps/s
+  remaining = 950000 steps
+  ETA ≈ 950000/40 = 23750s ≈ 6.6 hours`
+  },
+};
+
+// ── State ────────────────────────────────────────────────────────────────────
+const S = {
+  experiment: '',
+  run: '',
+  records: [],
+  lastStep: 0,
+  pollInterval: null,
+  chartData: {},   // key → array of {step, val}
+};
+
+const MAX_POINTS = 300;  // keep at most 300 data points per chart
+
+// ── Chart drawing ─────────────────────────────────────────────────────────────
+function drawSparkline(canvas, pts, color = '#388bfd', fillAlpha = 0.15) {
+  const dpr  = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const W    = rect.width || canvas.clientWidth || 200;
+  const H    = rect.height || canvas.clientHeight || 60;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.fillStyle = '#161b22';
+  ctx.fillRect(0, 0, W, H);
+
+  if (!pts || pts.length < 2) return;
+
+  const vals = pts.map(p => p.val).filter(v => v != null && isFinite(v));
+  if (vals.length < 2) return;
+
+  let minV = Math.min(...vals);
+  let maxV = Math.max(...vals);
+  if (minV === maxV) { minV -= 0.5; maxV += 0.5; }
+  const pad = 4;
+
+  const scaleX = i => pad + (i / (pts.length - 1)) * (W - 2 * pad);
+  const scaleY = v => H - pad - ((v - minV) / (maxV - minV)) * (H - 2 * pad);
+
+  // Fill
+  ctx.beginPath();
+  ctx.moveTo(scaleX(0), H);
+  for (let i = 0; i < pts.length; i++) {
+    const v = pts[i].val;
+    if (v == null || !isFinite(v)) continue;
+    ctx.lineTo(scaleX(i), scaleY(v));
+  }
+  ctx.lineTo(scaleX(pts.length - 1), H);
+  ctx.closePath();
+  ctx.fillStyle = color.replace(')', `,${fillAlpha})`).replace('rgb', 'rgba').replace('#388bfd', `rgba(56,139,253,${fillAlpha})`);
+  // Simpler fill approach:
+  const hexToRgba = (hex, a) => {
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${a})`;
+  };
+  ctx.fillStyle = color.startsWith('#') ? hexToRgba(color, fillAlpha) : color;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  let first = true;
+  for (let i = 0; i < pts.length; i++) {
+    const v = pts[i].val;
+    if (v == null || !isFinite(v)) continue;
+    if (first) { ctx.moveTo(scaleX(i), scaleY(v)); first = false; }
+    else        { ctx.lineTo(scaleX(i), scaleY(v)); }
+  }
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle = '#484f58';
+  ctx.font = '9px monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(fmtVal(maxV), W - 2, 11);
+  ctx.fillText(fmtVal(minV), W - 2, H - 2);
+}
+
+function fmtVal(v) {
+  if (v == null || !isFinite(v)) return '—';
+  const abs = Math.abs(v);
+  if (abs === 0) return '0';
+  if (abs >= 1000) return v.toFixed(0);
+  if (abs >= 10)   return v.toFixed(2);
+  if (abs >= 0.1)  return v.toFixed(4);
+  return v.toExponential(2);
+}
+
+// ── Per-latent mini cards ─────────────────────────────────────────────────────
+function buildLatGrid(containerId, prefix, n = 4) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const item = document.createElement('div');
+    item.className = 'lat-item';
+    item.innerHTML = `<div class="lat-item-label">L${i}</div>
+<div class="lat-item-val" id="${prefix}-val-${i}">—</div>
+<canvas class="lat-spark" id="${prefix}-spark-${i}"></canvas>`;
+    el.appendChild(item);
+  }
+}
+
+function updateLatGrid(prefix, arrKey, records, color = '#3fb950') {
+  for (let i = 0; i < 4; i++) {
+    const key = `${arrKey}[${i}]`;
+    const pts = (S.chartData[key] || []);
+    const latest = pts.length ? pts[pts.length - 1].val : null;
+    const valEl = document.getElementById(`${prefix}-val-${i}`);
+    if (valEl) valEl.textContent = latest != null ? fmtVal(latest) : '—';
+    const spark = document.getElementById(`${prefix}-spark-${i}`);
+    if (spark) drawSparkline(spark, pts, color);
+  }
+}
+
+// ── Data ingestion ────────────────────────────────────────────────────────────
+function ingestRecords(records) {
+  for (const rec of records) {
+    const step = rec.step;
+    function push(key, val) {
+      if (!S.chartData[key]) S.chartData[key] = [];
+      S.chartData[key].push({ step, val });
+      if (S.chartData[key].length > MAX_POINTS)
+        S.chartData[key].shift();
+    }
+    push('grad_enc_sa',        rec.grad_enc_sa);
+    push('grad_enc_perceiver', rec.grad_enc_perceiver);
+    push('grad_time_emb',      rec.grad_time_emb);
+    push('across_state_std',   rec.across_state_std);
+    push('latent_pairwise_l2', rec.latent_pairwise_l2);
+    push('latent_eff_rank',    rec.latent_eff_rank);
+    push('flow_loss',          rec.flow_loss);
+    push('ode_cossim',         rec.ode_cossim);
+    push('pol_loss',           rec.pol_loss);
+    push('grad_policy',        rec.grad_policy);
+    push('entropy',            rec.entropy);
+    push('mean_reward',        rec.mean_reward);
+    push('completion_rate',    rec.completion_rate);
+    push('fps',                rec.fps);
+    push('ht_ht1_cossim',     rec.ht_ht1_cossim);
+
+    // Per-latent arrays
+    (rec.latent_norms    || []).forEach((v,i) => push(`latent_norms[${i}]`,    v));
+    (rec.per_lat_loss    || []).forEach((v,i) => push(`per_lat_loss[${i}]`,    v));
+    (rec.grad_pred_mlps  || []).forEach((v,i) => push(`grad_pred_mlps[${i}]`, v));
+    (rec.per_lat_std     || []).forEach((v,i) => push(`per_lat_std[${i}]`,    v));
+  }
+}
+
+function latest(key) {
+  const pts = S.chartData[key];
+  return pts && pts.length ? pts[pts.length - 1].val : null;
+}
+
+function updateAllCharts() {
+  // ── Encoder SA ──
+  drawSparkline(document.getElementById('sk-grad-sa'),    S.chartData['grad_enc_sa']     || []);
+  drawSparkline(document.getElementById('sk-across-std'), S.chartData['across_state_std'] || [], '#f0c040');
+  setText('v-grad-sa',    latest('grad_enc_sa'));
+  setText('v-across-std', latest('across_state_std'));
+
+  // ── Perceiver ──
+  drawSparkline(document.getElementById('sk-grad-perc'), S.chartData['grad_enc_perceiver'] || []);
+  drawSparkline(document.getElementById('sk-grad-time'), S.chartData['grad_time_emb']       || [], '#f85149');
+  drawSparkline(document.getElementById('sk-pairwise'),  S.chartData['latent_pairwise_l2']  || [], '#3fb950');
+  drawSparkline(document.getElementById('sk-effrank'),   S.chartData['latent_eff_rank']      || [], '#3fb950');
+  drawSparkline(document.getElementById('sk-ht-cossim'), S.chartData['ht_ht1_cossim']        || [], '#f0c040');
+  setText('v-grad-perc', latest('grad_enc_perceiver'));
+  setText('v-grad-time', latest('grad_time_emb'));
+  setText('v-pairwise',  latest('latent_pairwise_l2'));
+  setText('v-effrank',   latest('latent_eff_rank'));
+  setText('v-ht-cossim', latest('ht_ht1_cossim'));
+  updateLatGrid('ln', 'latent_norms', S.chartData, '#388bfd');
+
+  // ── Predictor ──
+  drawSparkline(document.getElementById('sk-flow-loss'), S.chartData['flow_loss'] || [], '#f0c040');
+  drawSparkline(document.getElementById('sk-ode'),       S.chartData['ode_cossim'] || [], '#f85149');
+  setText('v-flow-loss', latest('flow_loss'));
+  setText('v-ode',       latest('ode_cossim'));
+  updateLatGrid('pl',  'per_lat_loss',   S.chartData, '#f0c040');
+  updateLatGrid('pg',  'grad_pred_mlps', S.chartData, '#8957e5');
+
+  // ── Policy ──
+  drawSparkline(document.getElementById('sk-pol-loss'),  S.chartData['pol_loss']        || [], '#f0c040');
+  drawSparkline(document.getElementById('sk-grad-pol'),  S.chartData['grad_policy']      || []);
+  drawSparkline(document.getElementById('sk-entropy'),   S.chartData['entropy']          || [], '#3fb950');
+  drawSparkline(document.getElementById('sk-reward'),    S.chartData['mean_reward']      || [], '#f0c040');
+  drawSparkline(document.getElementById('sk-complete'),  S.chartData['completion_rate']  || [], '#3fb950');
+  drawSparkline(document.getElementById('sk-fps'),       S.chartData['fps']              || [], '#8b949e');
+  setText('v-pol-loss', latest('pol_loss'));
+  setText('v-grad-pol', latest('grad_policy'));
+  setText('v-entropy',  latest('entropy'));
+  setText('v-reward',   latest('mean_reward'));
+  setText('v-complete', fmtPct(latest('completion_rate')));
+  setText('v-fps',      fmtVal(latest('fps')));
+}
+
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val != null ? fmtVal(val) : '—';
+}
+function fmtPct(v) { return v != null ? (v * 100).toFixed(1) + '%' : '—'; }
+
+// ── API calls ─────────────────────────────────────────────────────────────────
+async function loadExperiments() {
+  try {
+    const r = await fetch('/api/experiments');
+    const d = await r.json();
+    const sel = document.getElementById('exp-sel');
+    sel.innerHTML = d.experiments.map(e => `<option value="${e}">${e}</option>`).join('');
+    // Prefer exp_003_1, then any 003, then last in list
+    const preferred = d.experiments.find(e => e.includes('003_1'))
+                   || d.experiments.find(e => e.includes('003'))
+                   || d.experiments[d.experiments.length - 1];
+    if (preferred) sel.value = preferred;
+    S.experiment = sel.value;
+    sel.onchange = () => { S.experiment = sel.value; loadRuns(); loadCheckpoints(); };
+    await Promise.all([loadRuns(), loadCheckpoints()]);
+  } catch(e) { console.error('loadExperiments', e); }
+}
+
+async function loadRuns() {
+  if (!S.experiment) return;
+  try {
+    const r = await fetch(`/api/training/runs?experiment=${S.experiment}`);
+    const d = await r.json();
+    const sel = document.getElementById('run-sel');
+    sel.innerHTML = '<option value="">— select run —</option>' +
+      (d.runs || []).map(run =>
+        `<option value="${run.name}">${run.name}  (step ${run.last_step ?? '—'})</option>`
+      ).join('');
+    sel.onchange = () => selectRun(sel.value);
+    // Auto-select most recent run with metrics
+    const latest = (d.runs || []).find(r => r.has_metrics);
+    if (latest) { sel.value = latest.name; selectRun(latest.name); }
+  } catch(e) { console.error('loadRuns', e); }
+}
+
+async function loadCheckpoints() {
+  if (!S.experiment) return;
+  try {
+    const r = await fetch(`/api/checkpoints?experiment=${S.experiment}`);
+    const d = await r.json();
+    const sel = document.getElementById('ckpt-sel');
+    sel.innerHTML = '<option value="">fresh (no checkpoint)</option>' +
+      (d.checkpoints || []).map(c => `<option value="${c}">${c}</option>`).join('');
+  } catch(e) { console.error('loadCheckpoints', e); }
+}
+
+function selectRun(runName) {
+  if (!runName) return;
+  S.run = runName;
+  S.records = [];
+  S.chartData = {};
+  S.lastStep = 0;
+  document.getElementById('run-label').textContent = runName;
+  fetchMetrics(true);
+  startAutoPoll();
+}
+
+async function fetchMetrics(full = false) {
+  if (!S.run) return;
+  const since = full ? 0 : S.lastStep;
+  try {
+    const r = await fetch(`/api/training/metrics?experiment=${S.experiment}&run=${S.run}&since_step=${since}`);
+    if (!r.ok) return;
+    const d = await r.json();
+    const recs = d.records || [];
+    if (recs.length) {
+      ingestRecords(recs);
+      S.lastStep = recs[recs.length - 1].step;
+      document.getElementById('last-step').textContent = `step ${S.lastStep}`;
+    }
+    updateAllCharts();
+    flashPoll();
+  } catch(e) { console.error('fetchMetrics', e); }
+}
+
+function flashPoll() {
+  const el = document.getElementById('poll-indicator');
+  el.style.color = '#3fb950';
+  el.textContent = 'auto-poll: ✓';
+  setTimeout(() => { el.style.color = '#484f58'; el.textContent = 'auto-poll: —'; }, 600);
+}
+
+function startAutoPoll() {
+  if (S.pollInterval) clearInterval(S.pollInterval);
+  S.pollInterval = setInterval(() => fetchMetrics(false), 3000);
+}
+
+async function checkTrainingStatus() {
+  try {
+    const r = await fetch('/api/training/status');
+    const d = await r.json();
+    const dot = document.getElementById('status-dot');
+    const txt = document.getElementById('status-text');
+    const btnStart = document.getElementById('btn-start');
+    const btnStop  = document.getElementById('btn-stop');
+    if (d.running) {
+      dot.className = 'running';
+      txt.textContent = `Training running (PID ${d.pid}) — ${d.experiment}`;
+      btnStart.style.display = 'none';
+      btnStop.style.display  = '';
+    } else {
+      dot.className = '';
+      txt.textContent = d.exit_code != null ? `Stopped (exit ${d.exit_code})` : 'Not running';
+      btnStart.style.display = '';
+      btnStop.style.display  = 'none';
+    }
+  } catch(e) { /* server down */ }
+}
+
+async function startTraining() {
+  const experiment = S.experiment || 'exp_003_1_ema_target';
+  const ckpt = document.getElementById('ckpt-sel').value || null;
+  try {
+    const r = await fetch('/api/training/start', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ experiment, resume_checkpoint: ckpt }),
+    });
+    const d = await r.json();
+    if (!r.ok) { alert(d.detail || 'Failed to start training'); return; }
+    setTimeout(async () => {
+      await checkTrainingStatus();
+      await loadRuns();
+    }, 1500);
+  } catch(e) { alert('Error: ' + e); }
+}
+
+async function stopTraining() {
+  if (!confirm('Stop training?')) return;
+  await fetch('/api/training/stop', { method: 'POST' });
+  setTimeout(checkTrainingStatus, 500);
+}
+
+// ── Tooltip logic ─────────────────────────────────────────────────────────────
+const tip = document.getElementById('tooltip');
+document.querySelectorAll('[data-tip]').forEach(el => {
+  el.addEventListener('mouseenter', (e) => {
+    const key = el.dataset.tip;
+    const info = TIPS[key];
+    if (!info) return;
+    document.getElementById('tip-title').textContent = info.title;
+    document.getElementById('tip-body').textContent  = info.body;
+    const exEl = document.getElementById('tip-example');
+    if (info.example) { exEl.textContent = info.example; exEl.style.display = ''; }
+    else               { exEl.style.display = 'none'; }
+    tip.style.display = 'block';
+    positionTip(e);
+  });
+  el.addEventListener('mousemove', positionTip);
+  el.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+});
+
+function positionTip(e) {
+  const TW = 380, TH = 300;
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + TW > window.innerWidth)  x = e.clientX - TW - 14;
+  if (y + TH > window.innerHeight) y = e.clientY - TH - 14;
+  tip.style.left = x + 'px';
+  tip.style.top  = y + 'px';
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+buildLatGrid('lat-norms',    'ln');
+buildLatGrid('lat-loss',     'pl');
+buildLatGrid('lat-pred-grad','pg');
+
+loadExperiments();
+checkTrainingStatus();
+setInterval(checkTrainingStatus, 5000);
+</script>
+</body>
+</html>

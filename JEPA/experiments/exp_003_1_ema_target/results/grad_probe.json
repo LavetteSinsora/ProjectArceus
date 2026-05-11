@@ -1,0 +1,398 @@
+[
+  {
+    "step": 5000,
+    "ckpt": "step_005000.pt",
+    "activations": {
+      "sa_out_norm": 0.9951350564558135,
+      "sa_out_std": 0.9951388239860535,
+      "h_round0_norm_mean": 9.693912506103516,
+      "h_round1_norm_mean": 14.157331466674805,
+      "h_pre_outnorm_mean": 14.157331466674805,
+      "h_post_outnorm_mean": 11.583172798156738,
+      "latent_cross_state_std": 0.008211370557546616,
+      "latent_within_eff_rank": 1.1985787153244019,
+      "latent_batch_eff_rank": 1.1584309339523315,
+      "latent_pairwise_cossim_within": 0.9994776447614034,
+      "latent_same_idx_cross_state_cossim": [
+        0.9999104142189026,
+        0.999910295009613,
+        0.9999138116836548,
+        0.9999110102653503
+      ],
+      "placeholder_vs_recurrent_path_cossim": -0.12630082666873932,
+      "placeholder_vs_recurrent_path_l2": 17.35689926147461,
+      "predictor_ode_cossim_to_input": 0.8546434640884399,
+      "predictor_ode_l2_step": 6.092746257781982
+    },
+    "global_grads": {
+      "flow_loss": 0.15626904368400574,
+      "per_lat": [
+        0.158657968044281,
+        0.15868031978607178,
+        0.15487271547317505,
+        0.1528652012348175
+      ],
+      "enc_total": 0.31755347376076876,
+      "enc_sa": 0.016702098117304845,
+      "enc_perceiver": 0.31711393633205587,
+      "predictor_total": 0.9089384740167635
+    },
+    "group_grads": {
+      "encoder.color_embed": {
+        "g_norm": 0.0001985551352845505,
+        "n_params": 64,
+        "g_rms": 2.481939191056881e-05
+      },
+      "encoder.patch_proj": {
+        "g_norm": 0.011701459723178634,
+        "n_params": 131200,
+        "g_rms": 3.23052513633492e-05
+      },
+      "encoder.sa_blocks": {
+        "g_norm": 0.01167918228059255,
+        "n_params": 395776,
+        "g_rms": 1.8564690324749404e-05
+      },
+      "encoder.sa_norm": {
+        "g_norm": 0.002364994499327933,
+        "n_params": 256,
+        "g_rms": 0.00014781215620799583
+      },
+      "perceiver.placeholders": {
+        "g_norm": 0.0,
+        "n_params": 512,
+        "g_rms": 0.0
+      },
+      "perceiver.round0.cross": {
+        "g_norm": 0.3094054901611987,
+        "n_params": 198144,
+        "g_rms": 0.0006950844176760675
+      },
+      "perceiver.round0.self": {
+        "g_norm": 0.04147641211517337,
+        "n_params": 197888,
+        "g_rms": 9.323767846107117e-05
+      },
+      "perceiver.round1.cross": {
+        "g_norm": 0.03876516336239694,
+        "n_params": 198144,
+        "g_rms": 8.708656393857478e-05
+      },
+      "perceiver.round1.self": {
+        "g_norm": 0.03502323153709669,
+        "n_params": 197888,
+        "g_rms": 7.87311301579254e-05
+      },
+      "perceiver.output_norm": {
+        "g_norm": 0.01948932719098919,
+        "n_params": 256,
+        "g_rms": 0.0012180829494368244
+      },
+      "predictor.time_embed": {
+        "g_norm": 0.05319334711443649,
+        "n_params": 66048,
+        "g_rms": 0.00020697957120603642
+      },
+      "predictor.mlps": {
+        "g_norm": 0.907380635329345,
+        "n_params": 1640960,
+        "g_rms": 0.0007083379483277903
+      },
+      "action_embed": {
+        "g_norm": 0.0010391023242846131,
+        "n_params": 128,
+        "g_rms": 9.184453748104411e-05
+      }
+    },
+    "loss_decomp": {
+      "n_initial": 0,
+      "n_recurrent": 64,
+      "init_loss": null,
+      "rec_loss": 0.16035348176956177,
+      "init_grad_perceiver": null,
+      "rec_grad_perceiver": 0.09273423785768158,
+      "init_grad_placeholder": null,
+      "rec_grad_placeholder": 0.0,
+      "init_grad_sa_etc": null,
+      "rec_grad_sa_etc": 0.018131293991005406
+    },
+    "ema_relative_param_distance": 0.01689385722275319,
+    "buffer_target_singular_top10": [
+      553.3261108398438,
+      199.9362030029297,
+      169.12582397460938,
+      128.3093719482422,
+      82.83283233642578,
+      76.28949737548828,
+      39.224857330322266,
+      17.518409729003906,
+      9.67425537109375,
+      7.865574836730957
+    ],
+    "buffer_target_eff_rank": 6.373993873596191
+  },
+  {
+    "step": 40000,
+    "ckpt": "step_040000.pt",
+    "activations": {
+      "sa_out_norm": 0.9757270227724258,
+      "sa_out_std": 0.9757307171821594,
+      "h_round0_norm_mean": 9.023214340209961,
+      "h_round1_norm_mean": 19.348731994628906,
+      "h_pre_outnorm_mean": 19.348731994628906,
+      "h_post_outnorm_mean": 11.912663459777832,
+      "latent_cross_state_std": 0.013451223261654377,
+      "latent_within_eff_rank": 1.618162989616394,
+      "latent_batch_eff_rank": 1.1611709594726562,
+      "latent_pairwise_cossim_within": 0.9901522894700369,
+      "latent_same_idx_cross_state_cossim": [
+        0.9998041391372681,
+        0.9998236894607544,
+        0.999618649482727,
+        0.9997588992118835
+      ],
+      "placeholder_vs_recurrent_path_cossim": 0.23424063622951508,
+      "placeholder_vs_recurrent_path_l2": 14.348365783691406,
+      "predictor_ode_cossim_to_input": 0.8765465021133423,
+      "predictor_ode_l2_step": 6.722280502319336
+    },
+    "global_grads": {
+      "flow_loss": 0.07905451953411102,
+      "per_lat": [
+        0.07410489022731781,
+        0.08743451535701752,
+        0.07364499568939209,
+        0.08103366196155548
+      ],
+      "enc_total": 12.852380637533273,
+      "enc_sa": 0.028508638410050403,
+      "enc_perceiver": 12.852349019131724,
+      "predictor_total": 0.24346511453378059
+    },
+    "group_grads": {
+      "encoder.color_embed": {
+        "g_norm": 0.0032053047325462103,
+        "n_params": 64,
+        "g_rms": 0.0004006630915682763
+      },
+      "encoder.patch_proj": {
+        "g_norm": 0.02130245532877396,
+        "n_params": 131200,
+        "g_rms": 5.8811566277443885e-05
+      },
+      "encoder.sa_blocks": {
+        "g_norm": 0.016846247110322343,
+        "n_params": 395776,
+        "g_rms": 2.6778018633807256e-05
+      },
+      "encoder.sa_norm": {
+        "g_norm": 0.00805467819531383,
+        "n_params": 256,
+        "g_rms": 0.0005034173872071144
+      },
+      "perceiver.placeholders": {
+        "g_norm": 0.0074678463861346245,
+        "n_params": 512,
+        "g_rms": 0.00033003530128095283
+      },
+      "perceiver.round0.cross": {
+        "g_norm": 12.848921096646853,
+        "n_params": 198144,
+        "g_rms": 0.02886530821924157
+      },
+      "perceiver.round0.self": {
+        "g_norm": 0.22378392034328606,
+        "n_params": 197888,
+        "g_rms": 0.0005030592605692662
+      },
+      "perceiver.round1.cross": {
+        "g_norm": 0.15585116965192436,
+        "n_params": 198144,
+        "g_rms": 0.0003501221631368034
+      },
+      "perceiver.round1.self": {
+        "g_norm": 0.11669420201174537,
+        "n_params": 197888,
+        "g_rms": 0.0002623249198901186
+      },
+      "perceiver.output_norm": {
+        "g_norm": 0.00773473468999599,
+        "n_params": 256,
+        "g_rms": 0.0004834209181247494
+      },
+      "predictor.time_embed": {
+        "g_norm": 0.020321489335568443,
+        "n_params": 66048,
+        "g_rms": 7.907254153221857e-05
+      },
+      "predictor.mlps": {
+        "g_norm": 0.24261553756124374,
+        "n_params": 1640960,
+        "g_rms": 0.00018939548125379476
+      },
+      "action_embed": {
+        "g_norm": 0.0003943396732211113,
+        "n_params": 128,
+        "g_rms": 3.4855032128191876e-05
+      }
+    },
+    "loss_decomp": {
+      "n_initial": 3,
+      "n_recurrent": 61,
+      "init_loss": 0.17919468879699707,
+      "rec_loss": 0.05684222653508186,
+      "init_grad_perceiver": 0.5861630784943822,
+      "rec_grad_perceiver": 42.04124868708282,
+      "init_grad_placeholder": 0.051150569957844255,
+      "rec_grad_placeholder": 0.0,
+      "init_grad_sa_etc": 0.06441507747052273,
+      "rec_grad_sa_etc": 0.025655681673969286
+    },
+    "ema_relative_param_distance": 0.009985527581665713,
+    "buffer_target_singular_top10": [
+      361.3921203613281,
+      251.3982696533203,
+      217.03155517578125,
+      212.98861694335938,
+      164.3438720703125,
+      155.25454711914062,
+      146.25335693359375,
+      139.3819580078125,
+      127.16427612304688,
+      111.1072006225586
+    ],
+    "buffer_target_eff_rank": 24.53895378112793
+  },
+  {
+    "step": 80000,
+    "ckpt": "step_080000.pt",
+    "activations": {
+      "sa_out_norm": 0.962488107599275,
+      "sa_out_std": 0.9624911546707153,
+      "h_round0_norm_mean": 6.7124433517456055,
+      "h_round1_norm_mean": 27.225223541259766,
+      "h_pre_outnorm_mean": 27.225223541259766,
+      "h_post_outnorm_mean": 11.499733924865723,
+      "latent_cross_state_std": 0.014148877933621407,
+      "latent_within_eff_rank": 1.4029312133789062,
+      "latent_batch_eff_rank": 1.1655007600784302,
+      "latent_pairwise_cossim_within": 0.9970100919405619,
+      "latent_same_idx_cross_state_cossim": [
+        0.9997744560241699,
+        0.9997419118881226,
+        0.9995894432067871,
+        0.9997130036354065
+      ],
+      "placeholder_vs_recurrent_path_cossim": 0.8252581357955933,
+      "placeholder_vs_recurrent_path_l2": 6.573061466217041,
+      "predictor_ode_cossim_to_input": 0.9935439825057983,
+      "predictor_ode_l2_step": 1.8041177988052368
+    },
+    "global_grads": {
+      "flow_loss": 0.014155503362417221,
+      "per_lat": [
+        0.014347683638334274,
+        0.014736609533429146,
+        0.013393271714448929,
+        0.014144450426101685
+      ],
+      "enc_total": 20.445158813178466,
+      "enc_sa": 0.009380972264014312,
+      "enc_perceiver": 20.445156661015062,
+      "predictor_total": 0.09929591579249265
+    },
+    "group_grads": {
+      "encoder.color_embed": {
+        "g_norm": 0.0019761177245527506,
+        "n_params": 64,
+        "g_rms": 0.0002470147155690938
+      },
+      "encoder.patch_proj": {
+        "g_norm": 0.007107129087949577,
+        "n_params": 131200,
+        "g_rms": 1.96212777798301e-05
+      },
+      "encoder.sa_blocks": {
+        "g_norm": 0.00502738722082428,
+        "n_params": 395776,
+        "g_rms": 7.991303214121088e-06
+      },
+      "encoder.sa_norm": {
+        "g_norm": 0.0028830007311875577,
+        "n_params": 256,
+        "g_rms": 0.00018018754569922236
+      },
+      "perceiver.placeholders": {
+        "g_norm": 0.011092307977378368,
+        "n_params": 512,
+        "g_rms": 0.0004902153868633676
+      },
+      "perceiver.round0.cross": {
+        "g_norm": 20.444898226687126,
+        "n_params": 198144,
+        "g_rms": 0.04592979320095277
+      },
+      "perceiver.round0.self": {
+        "g_norm": 0.07242865017722679,
+        "n_params": 197888,
+        "g_rms": 0.00016281734248954453
+      },
+      "perceiver.round1.cross": {
+        "g_norm": 0.052981683651302,
+        "n_params": 198144,
+        "g_rms": 0.00011902420577306603
+      },
+      "perceiver.round1.self": {
+        "g_norm": 0.04854028768968884,
+        "n_params": 197888,
+        "g_rms": 0.00010911705003440802
+      },
+      "perceiver.output_norm": {
+        "g_norm": 0.005935221973118064,
+        "n_params": 256,
+        "g_rms": 0.000370951373319879
+      },
+      "predictor.time_embed": {
+        "g_norm": 0.00825113179174618,
+        "n_params": 66048,
+        "g_rms": 3.210581422045209e-05
+      },
+      "predictor.mlps": {
+        "g_norm": 0.09895250232927426,
+        "n_params": 1640960,
+        "g_rms": 7.724631731464969e-05
+      },
+      "action_embed": {
+        "g_norm": 0.00022078202164266258,
+        "n_params": 128,
+        "g_rms": 1.9514558083450228e-05
+      }
+    },
+    "loss_decomp": {
+      "n_initial": 4,
+      "n_recurrent": 60,
+      "init_loss": 0.11163818836212158,
+      "rec_loss": 0.0022164280526340008,
+      "init_grad_perceiver": 0.8100530819239827,
+      "rec_grad_perceiver": 42.0392689198857,
+      "init_grad_placeholder": 0.10152814816021986,
+      "rec_grad_placeholder": 0.0,
+      "init_grad_sa_etc": 0.060995227294461676,
+      "rec_grad_sa_etc": 0.01051280732028818
+    },
+    "ema_relative_param_distance": 0.0053445943756618205,
+    "buffer_target_singular_top10": [
+      636.5848388671875,
+      39.200801849365234,
+      28.978229522705078,
+      7.862689018249512,
+      6.912315845489502,
+      2.631937026977539,
+      2.1762990951538086,
+      1.3019051551818848,
+      0.9595149159431458,
+      0.7053208351135254
+    ],
+    "buffer_target_eff_rank": 1.9225035905838013
+  }
+]

@@ -9,9 +9,8 @@ Runs the trained policy in OFFLINE mode and reports:
   - Qualitative diagnosis: is the policy near-uniform?
 
 Usage:
-    cd JEPA && uv run python inspect_policy.py
-    cd JEPA && uv run python inspect_policy.py --checkpoint checkpoints/step_040000.pt
-    cd JEPA && uv run python inspect_policy.py --episodes 10
+    cd "Code Repo" && uv run python -m JEPA.experiments.exp_001_vit_jepa_baseline.inspect_policy
+    cd "Code Repo" && uv run python -m JEPA.experiments.exp_001_vit_jepa_baseline.inspect_policy --episodes 10
 
 The action indices map to GameAction.ACTION1-4 (exact direction depends on the game).
 """
@@ -24,12 +23,14 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-sys.path.insert(0, str(Path(__file__).parent))
+_repo_root = Path(__file__).parent.parent.parent.parent  # exp_001 → experiments → JEPA → Code Repo
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
 
-from config import Config
-from encoder import Encoder
-from policy import PolicyNetwork
-from env_wrapper import LS20Env
+from JEPA.experiments.exp_001_vit_jepa_baseline.config import Config
+from JEPA.experiments.exp_001_vit_jepa_baseline.models.encoder import Encoder
+from JEPA.experiments.exp_001_vit_jepa_baseline.models.policy import PolicyNetwork
+from JEPA.shared.env_wrapper import LS20Env
 
 _STEP_COUNTER_ROWS = slice(61, 63)   # rows 61-62 always change; mask for exploration tracking
 
@@ -160,8 +161,6 @@ def main():
         "cuda" if torch.cuda.is_available() else
         "cpu"
     )
-    cfg = Config()
-
     # ── Checkpoint ─────────────────────────────────────────────────────────
     ckpt_dir = Path(__file__).parent / "checkpoints"
     if args.checkpoint:
@@ -169,13 +168,15 @@ def main():
     else:
         checkpoints = sorted(ckpt_dir.glob("step_*.pt"))
         if not checkpoints:
-            print("[inspect] No checkpoints found in JEPA/checkpoints/")
+            print("[inspect] No checkpoints found in checkpoints/")
             return
         ckpt_path = checkpoints[-1]
 
     print(f"[inspect] Loading: {ckpt_path.name}  device={device}")
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
     print(f"[inspect] Checkpoint step: {ckpt.get('step', '?')}")
+    cfg_raw = ckpt.get("config", {})
+    cfg = Config(**cfg_raw) if isinstance(cfg_raw, dict) else cfg_raw
 
     # ── Models ─────────────────────────────────────────────────────────────
     encoder = Encoder(
@@ -188,7 +189,7 @@ def main():
 
     # ── Environment ─────────────────────────────────────────────────────────
     from arc_agi import Arcade, OperationMode
-    repo_root = Path(__file__).parent.parent
+    repo_root = _repo_root
     arc = Arcade(
         operation_mode=OperationMode.OFFLINE,
         environments_dir=str(repo_root / "environment_files"),

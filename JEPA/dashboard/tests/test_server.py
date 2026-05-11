@@ -2,46 +2,70 @@
 Server endpoint tests using FastAPI's TestClient.
 Mocks run_debug_episode so no GPU / arc environment is needed.
 """
-import json
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
-# conftest.py adds JEPA/ to sys.path
+# conftest.py adds repo root to sys.path
 from fastapi.testclient import TestClient
-from dashboard.server import app
+from JEPA.dashboard.server import app, EXPERIMENTS_DIR
 
 client = TestClient(app, raise_server_exceptions=True)
+
+EXP_NAME = "exp_001_vit_jepa_baseline"
+CKPT_DIR = EXPERIMENTS_DIR / EXP_NAME / "checkpoints"
+
+
+# ── /api/experiments ─────────────────────────────────────────────────────────
+
+class TestListExperiments:
+    def test_returns_200(self):
+        resp = client.get('/api/experiments')
+        assert resp.status_code == 200
+
+    def test_response_has_experiments_key(self):
+        data = client.get('/api/experiments').json()
+        assert 'experiments' in data
+
+    def test_experiments_is_a_list(self):
+        data = client.get('/api/experiments').json()
+        assert isinstance(data['experiments'], list)
+
+    def test_exp_001_present(self):
+        data = client.get('/api/experiments').json()
+        assert EXP_NAME in data['experiments']
 
 
 # ── /api/checkpoints ─────────────────────────────────────────────────────────
 
 class TestListCheckpoints:
     def test_returns_200(self):
-        resp = client.get('/api/checkpoints')
+        resp = client.get(f'/api/checkpoints?experiment={EXP_NAME}')
         assert resp.status_code == 200
 
     def test_response_has_checkpoints_key(self):
-        resp = client.get('/api/checkpoints')
-        data = resp.json()
+        data = client.get(f'/api/checkpoints?experiment={EXP_NAME}').json()
         assert 'checkpoints' in data
 
     def test_checkpoints_is_a_list(self):
-        resp = client.get('/api/checkpoints')
-        assert isinstance(resp.json()['checkpoints'], list)
+        data = client.get(f'/api/checkpoints?experiment={EXP_NAME}').json()
+        assert isinstance(data['checkpoints'], list)
 
     def test_checkpoints_are_pt_filenames(self):
-        resp = client.get('/api/checkpoints')
-        for name in resp.json()['checkpoints']:
+        data = client.get(f'/api/checkpoints?experiment={EXP_NAME}').json()
+        for name in data['checkpoints']:
             assert name.endswith('.pt'), f"Expected .pt file, got {name}"
 
     def test_checkpoints_sorted_newest_first(self):
-        resp = client.get('/api/checkpoints')
-        names = resp.json()['checkpoints']
+        data = client.get(f'/api/checkpoints?experiment={EXP_NAME}').json()
+        names = data['checkpoints']
         if len(names) >= 2:
-            # step_235000.pt > step_230000.pt when sorted descending
             assert names[0] >= names[1], "Checkpoints should be newest first"
+
+    def test_unknown_experiment_returns_empty(self):
+        data = client.get('/api/checkpoints?experiment=nonexistent_exp').json()
+        assert data['checkpoints'] == []
 
 
 # ── /api/run_episode ─────────────────────────────────────────────────────────
@@ -84,6 +108,9 @@ def _fake_episode():
     return {
         "checkpoint": "step_235000.pt",
         "checkpoint_step": 235000,
+        "experiment": EXP_NAME,
+        "capabilities": {"has_encoder_attention": True, "has_policy_attention": True,
+                         "has_patch_embeddings": True, "n_patches": 16, "extra": {}},
         "episode_steps": 1,
         "level_completed": False,
         "truncated": False,
@@ -93,46 +120,50 @@ def _fake_episode():
 
 
 class TestRunEpisode:
+    def test_missing_experiment_field_returns_422(self):
+        resp = client.post('/api/run_episode', json={
+            "checkpoint": "step_235000.pt",
+            "max_steps": 5,
+        })
+        assert resp.status_code == 422
+
     def test_missing_checkpoint_returns_404(self):
         resp = client.post('/api/run_episode', json={
+            "experiment": EXP_NAME,
             "checkpoint": "nonexistent_step_999.pt",
             "max_steps": 5,
         })
         assert resp.status_code == 404
 
     def test_invalid_payload_returns_422(self):
-        # Missing required 'checkpoint' field
         resp = client.post('/api/run_episode', json={"max_steps": 5})
         assert resp.status_code == 422
 
     def test_mocked_episode_returns_200(self):
-        """With mocked runner, server should return 200 and valid JSON."""
-        with patch('dashboard.server.run_debug_episode', return_value=_fake_episode()):
-            # We still need the checkpoint file to 'exist' for the path check
-            from dashboard.server import CKPT_DIR
-            fake_path = CKPT_DIR / 'step_235000.pt'
-            if not fake_path.exists():
-                pytest.skip("Real checkpoint not present; skipping mock test that needs path check.")
+        fake_path = CKPT_DIR / 'step_235000.pt'
+        if not fake_path.exists():
+            pytest.skip("Real checkpoint not present; skipping mock test.")
+        with patch('JEPA.dashboard.server.run_debug_episode', return_value=_fake_episode()):
             resp = client.post('/api/run_episode', json={
+                "experiment": EXP_NAME,
                 "checkpoint": "step_235000.pt",
                 "max_steps": 2,
             })
         assert resp.status_code == 200
 
     def test_mocked_episode_schema(self):
-        """Verify top-level keys in the response."""
-        with patch('dashboard.server.run_debug_episode', return_value=_fake_episode()):
-            from dashboard.server import CKPT_DIR
-            fake_path = CKPT_DIR / 'step_235000.pt'
-            if not fake_path.exists():
-                pytest.skip("Real checkpoint not present.")
+        fake_path = CKPT_DIR / 'step_235000.pt'
+        if not fake_path.exists():
+            pytest.skip("Real checkpoint not present.")
+        with patch('JEPA.dashboard.server.run_debug_episode', return_value=_fake_episode()):
             resp = client.post('/api/run_episode', json={
+                "experiment": EXP_NAME,
                 "checkpoint": "step_235000.pt",
                 "max_steps": 2,
             })
         data = resp.json()
         for key in ['checkpoint','checkpoint_step','episode_steps','level_completed',
-                    'truncated','arc_colors','timesteps']:
+                    'truncated','arc_colors','timesteps','capabilities']:
             assert key in data, f"Missing key: {key}"
 
     def test_serve_ui_returns_html(self):

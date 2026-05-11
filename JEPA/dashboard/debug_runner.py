@@ -6,10 +6,13 @@ containing per-timestep data for all dashboard visualizations.
 
 Usage (standalone test):
     cd "Code Repo"
-    uv run python JEPA/dashboard/debug_runner.py JEPA/checkpoints/step_235000.pt
+    uv run python JEPA/dashboard/debug_runner.py \\
+        JEPA/experiments/exp_001_vit_jepa_baseline/checkpoints/step_235000.pt \\
+        exp_001_vit_jepa_baseline
 """
 
 import copy
+import importlib
 import json
 import math
 import sys
@@ -19,16 +22,19 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-# Put JEPA/ on the path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Ensure repo root (Code Repo/) is on sys.path so JEPA package is importable
+_REPO_ROOT = Path(__file__).parent.parent.parent  # dashboard → JEPA → Code Repo
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
-from config import Config
-from encoder import Encoder
-from predictor import Predictor
-from action_embed import ActionEmbedding
-from policy import PolicyNetwork
-from env_wrapper import LS20Env
-from train import compute_patch_weights
+from JEPA.shared.env_wrapper import LS20Env  # noqa: E402
+
+
+def _get_experiment_models(experiment: str):
+    """Dynamically import the experiment's models package and return (module, compute_patch_weights)."""
+    models_mod = importlib.import_module(f"JEPA.experiments.{experiment}.models")
+    train_mod  = importlib.import_module(f"JEPA.experiments.{experiment}.train")
+    return models_mod, train_mod.compute_patch_weights
 
 
 # ── ARC-AGI 16-color palette (indices 0–15) ────────────────────────────────
@@ -55,17 +61,30 @@ ARC_COLORS_RGB = [
 
 # ── Model loading ───────────────────────────────────────────────────────────
 
-def load_checkpoint(path: str, device: torch.device):
-    ckpt = torch.load(path, map_location=device, weights_only=False)
-    cfg: Config = ckpt["config"]
+def load_checkpoint(path: str, experiment: str, device: torch.device):
+    """Load checkpoint and instantiate all models via the experiment's load_models factory."""
+    # Old checkpoints pickle Config as 'config.Config' (from sys.path including JEPA/).
+    # Temporarily add JEPA/ so unpickling finds the shim at JEPA/config.py.
+    _jepa_dir = str(_REPO_ROOT / "JEPA")
+    _inserted = _jepa_dir not in sys.path
+    if _inserted:
+        sys.path.insert(0, _jepa_dir)
+    try:
+        ckpt = torch.load(path, map_location=device, weights_only=False)
+    finally:
+        if _inserted:
+            sys.path.remove(_jepa_dir)
 
-    encoder = Encoder(
-        cfg.d_model, cfg.d_color, cfg.n_heads, cfg.n_blocks, cfg.ffn_dim, cfg.patch_size
-    ).to(device)
-    target_encoder = copy.deepcopy(encoder)
-    predictor = Predictor(cfg.d_model, cfg.d_action).to(device)
-    action_embed = ActionEmbedding(cfg.n_actions, cfg.d_action).to(device)
-    policy = PolicyNetwork(cfg.d_model, cfg.n_actions).to(device)
+    # Config: new checkpoints store a plain dict; old ones store a pickled dataclass object
+    cfg_raw = ckpt["config"]
+    if isinstance(cfg_raw, dict):
+        config_mod = importlib.import_module(f"JEPA.experiments.{experiment}.config")
+        cfg = config_mod.Config(**cfg_raw)
+    else:
+        cfg = cfg_raw
+
+    models_mod, _ = _get_experiment_models(experiment)
+    encoder, target_encoder, predictor, action_embed, policy = models_mod.load_models(cfg, device)
 
     encoder.load_state_dict(ckpt["encoder"])
     target_encoder.load_state_dict(ckpt["target_encoder"])
@@ -230,18 +249,43 @@ def _encode_with_attn(encoder, frame_t: torch.Tensor):
 
 # ── Main episode runner ─────────────────────────────────────────────────────
 
-def run_debug_episode(checkpoint_path: str, max_steps: int = 200) -> dict:
+def run_debug_episode(checkpoint_path: str, experiment: str, max_steps: int = 200) -> dict:
+    # Try experiment-specific runner first; force-reload to pick up any code changes
+    # without requiring a server restart.
+    mod_name = f"JEPA.experiments.{experiment}.debug_runner"
+    try:
+        import sys as _sys
+        if mod_name in _sys.modules:
+            exp_mod = importlib.reload(_sys.modules[mod_name])
+        else:
+            exp_mod = importlib.import_module(mod_name)
+        if hasattr(exp_mod, "run_debug_episode"):
+            return exp_mod.run_debug_episode(checkpoint_path, max_steps)
+    except ModuleNotFoundError:
+        pass
+    # Fall through to existing exp_001-compatible runner below
+
     device = torch.device(
         "mps" if torch.backends.mps.is_available() else
         "cuda" if torch.cuda.is_available() else "cpu"
     )
 
     cfg, encoder, target_encoder, predictor, action_embed, policy = \
-        load_checkpoint(checkpoint_path, device)
+        load_checkpoint(checkpoint_path, experiment, device)
+
+    # Capability flags — what this experiment's architecture can visualize
+    models_mod, compute_patch_weights = _get_experiment_models(experiment)
+    capabilities = getattr(models_mod, "CAPABILITIES", {
+        "has_encoder_attention": False,
+        "has_policy_attention": False,
+        "has_patch_embeddings": True,
+        "n_patches": 16,
+        "extra": {},
+    })
 
     # Set up environment
     from arc_agi import Arcade, OperationMode
-    repo_root = Path(__file__).parent.parent.parent
+    repo_root = _REPO_ROOT
     arc = Arcade(
         operation_mode=OperationMode.OFFLINE,
         environments_dir=str(repo_root / "environment_files"),
@@ -253,6 +297,7 @@ def run_debug_episode(checkpoint_path: str, max_steps: int = 200) -> dict:
     h = policy.initial_state().to(device)
     h_prev_np: np.ndarray | None = None
     z_prev_np: np.ndarray | None = None
+    prev_frame_np: np.ndarray | None = None
 
     timesteps = []
 
@@ -301,8 +346,9 @@ def run_debug_episode(checkpoint_path: str, max_steps: int = 200) -> dict:
             a_emb = action_embed(torch.tensor([action_idx], device=device))
             z_pred = predictor(z_t.unsqueeze(0), a_emb).squeeze(0)
 
-            # Patch weights + JEPA loss
-            w = compute_patch_weights(frame_t, next_t)  # (1,16)
+            # Patch weights + JEPA loss — floor at 0.1 matches training loop
+            pixel_w = compute_patch_weights(frame_t, next_t)   # (1,16) in [0,1]
+            w = 0.1 + 0.9 * pixel_w                            # (1,16) in [0.1,1.0]
             w_np = w.squeeze(0).cpu().numpy()
             err_sq = (z_pred - z_next).pow(2).sum(dim=-1)   # (16,)
             jepa_loss = float((w.squeeze(0) * err_sq).mean().item())
@@ -315,13 +361,15 @@ def run_debug_episode(checkpoint_path: str, max_steps: int = 200) -> dict:
             for i in range(16)
         ]
 
-        # Per-patch stats
+        # Per-patch stats: compare S_{t-1} → S_t so pixel_change_frac is backward-looking,
+        # matching the t-1/t thumbnails and embedding drift stats in the dashboard.
         p = cfg.patch_size
+        _ref = prev_frame_np if prev_frame_np is not None else frame_np
         per_patch_stats = []
         for i in range(16):
             r_i, c_i = divmod(i, 4)
-            patch_curr = frame_np[r_i*p:(r_i+1)*p, c_i*p:(c_i+1)*p]
-            patch_next = next_np[r_i*p:(r_i+1)*p, c_i*p:(c_i+1)*p]
+            patch_curr = _ref[r_i*p:(r_i+1)*p, c_i*p:(c_i+1)*p]     # S_{t-1} (or S_0 at t=0)
+            patch_next = frame_np[r_i*p:(r_i+1)*p, c_i*p:(c_i+1)*p]  # S_t
             z_prev_i = z_prev_np[i] if z_prev_np is not None else None
             per_patch_stats.append(compute_patch_stats(
                 z_t_np[i], z_prev_i, z_pred_np[i], z_next_np[i],
@@ -366,6 +414,7 @@ def run_debug_episode(checkpoint_path: str, max_steps: int = 200) -> dict:
         h_prev_np = h_before_np.copy()
         z_prev_np = z_t_np.copy()
         h = h_new.detach()
+        prev_frame_np = frame_np
         frame_np = next_np
 
         if is_terminal:
@@ -378,6 +427,8 @@ def run_debug_episode(checkpoint_path: str, max_steps: int = 200) -> dict:
     return {
         "checkpoint": ckpt_name,
         "checkpoint_step": ckpt_step,
+        "experiment": experiment,
+        "capabilities": capabilities,
         "episode_steps": len(timesteps),
         "level_completed": bool(env.level_completed),
         "truncated": len(timesteps) >= max_steps and not timesteps[-1]["is_terminal"],
@@ -387,9 +438,10 @@ def run_debug_episode(checkpoint_path: str, max_steps: int = 200) -> dict:
 
 
 if __name__ == "__main__":
-    import sys
-    path = sys.argv[1] if len(sys.argv) > 1 else "JEPA/checkpoints/step_235000.pt"
-    data = run_debug_episode(path, max_steps=10)
+    _ckpt = (sys.argv[1] if len(sys.argv) > 1
+             else "JEPA/experiments/exp_001_vit_jepa_baseline/checkpoints/step_235000.pt")
+    _exp  = sys.argv[2] if len(sys.argv) > 2 else "exp_001_vit_jepa_baseline"
+    data = run_debug_episode(_ckpt, experiment=_exp, max_steps=10)
     print(f"Episode: {data['episode_steps']} steps, "
           f"completed={data['level_completed']}, truncated={data['truncated']}")
     t0 = data["timesteps"][0]

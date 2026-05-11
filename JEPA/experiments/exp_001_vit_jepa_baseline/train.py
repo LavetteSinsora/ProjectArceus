@@ -27,15 +27,16 @@ Stopping conditions:
   SUCCESS:
     - Completion rate >= 30 % over last 20 episodes
 
-Checkpoints saved every CHECKPOINT_FREQ steps into JEPA/checkpoints/.
+Checkpoints saved every CHECKPOINT_FREQ steps into experiments/exp_001_vit_jepa_baseline/checkpoints/.
 
 Run:
-    cd JEPA && uv run python train.py
-    cd JEPA && uv run python train.py --batch-size 128   # larger batch
+    cd "Code Repo" && uv run python -m JEPA.experiments.exp_001_vit_jepa_baseline.train
+    cd "Code Repo" && uv run python -m JEPA.experiments.exp_001_vit_jepa_baseline.train --batch-size 128
 """
 
 import argparse
 import copy
+import dataclasses
 import sys
 import time
 from collections import deque
@@ -46,17 +47,20 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-sys.path.insert(0, str(Path(__file__).parent))
+# Ensure repo root (Code Repo/) is on sys.path so JEPA package is importable
+_repo_root = Path(__file__).parent.parent.parent.parent
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
 
-from config import Config
-from encoder import Encoder
-from predictor import Predictor
-from action_embed import ActionEmbedding
-from policy import PolicyNetwork
-from ema import update_ema, ema_momentum
-from buffer import ReplayBuffer, PolicyBuffer
-from env_wrapper import LS20Env
-from reward_shaping import compute_reward, PLAYER_START_Y
+from JEPA.experiments.exp_001_vit_jepa_baseline.config import Config
+from JEPA.experiments.exp_001_vit_jepa_baseline.models.encoder import Encoder
+from JEPA.experiments.exp_001_vit_jepa_baseline.models.predictor import Predictor
+from JEPA.experiments.exp_001_vit_jepa_baseline.models.policy import PolicyNetwork
+from JEPA.shared.action_embed import ActionEmbedding
+from JEPA.shared.ema import update_ema, ema_momentum
+from JEPA.shared.buffer import ReplayBuffer, PolicyBuffer
+from JEPA.shared.env_wrapper import LS20Env
+from JEPA.experiments.exp_001_vit_jepa_baseline.reward_shaping import compute_reward, PLAYER_START_Y
 
 # ── Constants ────────────────────────────────────────────────────────────────
 CHECKPOINT_FREQ = 5_000        # save a checkpoint every N steps
@@ -437,7 +441,8 @@ def save_checkpoint(step: int, encoder, target_encoder, predictor, action_embed,
         "predictor": predictor.state_dict(),
         "action_embed": action_embed.state_dict(),
         "policy": policy.state_dict(),
-        "config": cfg,
+        "config": dataclasses.asdict(cfg),   # plain dict — no pickle module-path dependency
+        "experiment": "exp_001_vit_jepa_baseline",
         "step": step,
     }, path)
     return path
@@ -538,7 +543,7 @@ def train(cfg: Config, resume_path: str = None) -> None:
 
     # ── Environment ───────────────────────────────────────────────────────────
     from arc_agi import Arcade, OperationMode
-    repo_root = Path(__file__).parent.parent
+    repo_root = Path(__file__).parent.parent.parent.parent  # exp_001 → experiments → JEPA → Code Repo
     arc = Arcade(
         operation_mode=OperationMode.OFFLINE,
         environments_dir=str(repo_root / "environment_files"),
