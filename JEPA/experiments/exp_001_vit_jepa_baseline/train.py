@@ -59,7 +59,7 @@ from JEPA.experiments.exp_001_vit_jepa_baseline.models.policy import PolicyNetwo
 from JEPA.shared.action_embed import ActionEmbedding
 from JEPA.shared.ema import update_ema, ema_momentum
 from JEPA.shared.buffer import ReplayBuffer, PolicyBuffer
-from JEPA.shared.env_wrapper import LS20Env
+from JEPA.shared.env_wrapper import make_env_auto
 from JEPA.experiments.exp_001_vit_jepa_baseline.reward_shaping import compute_reward, PLAYER_START_Y
 
 # ── Constants ────────────────────────────────────────────────────────────────
@@ -542,14 +542,7 @@ def train(cfg: Config, resume_path: str = None) -> None:
     policy_buf = PolicyBuffer(cfg.policy_update_freq)
 
     # ── Environment ───────────────────────────────────────────────────────────
-    from arc_agi import Arcade, OperationMode
-    repo_root = Path(__file__).parent.parent.parent.parent  # exp_001 → experiments → JEPA → Code Repo
-    arc = Arcade(
-        operation_mode=OperationMode.OFFLINE,
-        environments_dir=str(repo_root / "environment_files"),
-    )
-    raw_env = arc.make(cfg.game_id)
-    env = LS20Env(raw_env)
+    env = make_env_auto(cfg.game_id, str(_repo_root / "environment_files"))
 
     # ── State ─────────────────────────────────────────────────────────────────
     health = HealthMonitor(window=LOG_FREQ)
@@ -783,6 +776,8 @@ def _parse_args():
     p.add_argument("--var-reg",       type=float, default=None)
     p.add_argument("--resume", type=str, default=None,
                    help="Path to checkpoint (e.g. checkpoints/step_005000.pt)")
+    p.add_argument("--game-id", type=str, default=None,
+                   help="Override game_id, e.g. ls20s for the simplified env")
     args = p.parse_args()
 
     kw: dict = {}
@@ -791,6 +786,7 @@ def _parse_args():
     if args.policy_lr    is not None: kw["policy_lr"]           = args.policy_lr
     if args.batch_size   is not None: kw["batch_size"]          = args.batch_size
     if args.var_reg      is not None: kw["variance_reg_lambda"] = args.var_reg
+    if args.game_id      is not None: kw["game_id"]             = args.game_id
     return Config(**kw), args.resume
 
 

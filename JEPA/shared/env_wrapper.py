@@ -236,3 +236,37 @@ def make_env(arc_env, game_id: str) -> BaseArcEnv:
             f"Registered games: {sorted(_REGISTRY | _STANDALONE_REGISTRY)}"
         )
     return cls(arc_env)
+
+
+def make_env_auto(game_id: str, environments_dir: str | None = None):
+    """
+    One-call factory that handles both standalone and arcengine-backed games.
+
+    Standalone games (e.g. 'ls20s') are instantiated directly — no arcengine
+    Arcade session is created, and environments_dir is ignored.
+
+    Arcengine-backed games (e.g. 'ls20-9607627b') open an OFFLINE Arcade
+    session pointed at environments_dir before loading the game bundle.
+
+    Usage in training scripts:
+        env = make_env_auto(cfg.game_id, str(repo_root / "environment_files"))
+    """
+    base_id = game_id.split("-")[0]
+
+    standalone_cls = _STANDALONE_REGISTRY.get(base_id)
+    if standalone_cls is not None:
+        return standalone_cls()
+
+    # arcengine-backed — lazy import keeps it out of standalone code paths
+    from arc_agi import Arcade, OperationMode  # noqa: PLC0415
+    arc = Arcade(
+        operation_mode=OperationMode.OFFLINE,
+        environments_dir=environments_dir,
+    )
+    cls = _REGISTRY.get(base_id)
+    if cls is None:
+        raise ValueError(
+            f"No wrapper registered for {base_id!r}. "
+            f"Registered games: {sorted(_REGISTRY | _STANDALONE_REGISTRY)}"
+        )
+    return cls(arc.make(game_id))

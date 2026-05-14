@@ -44,7 +44,7 @@ from JEPA.experiments.exp_003_0_normalized_latent_jepa.reward_shaping import (
     is_end_of_life, count_energy, count_lives,
 )
 from JEPA.shared.buffer import LatentBuffer, PolicyBuffer
-from JEPA.shared.env_wrapper import LS20Env
+from JEPA.shared.env_wrapper import make_env_auto
 
 # ── Run logger ───────────────────────────────────────────────────────────────
 
@@ -435,13 +435,7 @@ def train(cfg: Config, resume_path: str = None, run_dir: Path = None) -> None:
     policy_buf = PolicyBuffer(cfg.policy_update_freq)
 
     # ── Environment ───────────────────────────────────────────────────────────
-    from arc_agi import Arcade, OperationMode
-    arc = Arcade(
-        operation_mode=OperationMode.OFFLINE,
-        environments_dir=str(_repo_root / "environment_files"),
-    )
-    raw_env = arc.make(cfg.game_id)
-    env = LS20Env(raw_env)
+    env = make_env_auto(cfg.game_id, str(_repo_root / "environment_files"))
 
     # ── Metrics writer ────────────────────────────────────────────────────────
     metrics_writer: MetricsWriter | None = None
@@ -682,12 +676,15 @@ def main():
     parser.add_argument("--resume", default=None)
     parser.add_argument("--max-steps", type=int, default=None)
     parser.add_argument("--batch-size", type=int, default=None)
+    parser.add_argument("--game-id", type=str, default=None,
+                        help="Override game_id, e.g. ls20s for the simplified env")
     args = parser.parse_args()
 
     cfg = Config()
     overrides = {}
     if args.max_steps  is not None: overrides["max_steps"]  = args.max_steps
     if args.batch_size is not None: overrides["batch_size"] = args.batch_size
+    if args.game_id    is not None: overrides["game_id"]    = args.game_id
     if overrides:
         cfg = dataclasses.replace(cfg, **overrides)
 
