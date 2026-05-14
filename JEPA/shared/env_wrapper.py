@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import numpy as np
 from arcengine import GameAction, GameState
+from JEPA.shared.simplified_ls20 import SimplifiedLS20Env, LevelDef, LEVEL_1  # noqa: F401
 
 
 class BaseArcEnv:
@@ -207,19 +208,31 @@ _REGISTRY: dict[str, type[BaseArcEnv]] = {
     "g50t": G50tEnv,
 }
 
+# Standalone envs that don't need an underlying arcengine game object.
+# make_env() instantiates these directly without arc_env.
+_STANDALONE_REGISTRY: dict[str, type] = {
+    "ls20s": SimplifiedLS20Env,
+}
+
 
 def make_env(arc_env, game_id: str) -> BaseArcEnv:
     """
     Instantiate the correct wrapper for game_id.
 
     Accepts full IDs ('ls20-9607627b') or short IDs ('ls20').
+    For standalone game_ids (e.g. 'ls20s') arc_env is ignored.
     Raises ValueError if the game has no registered wrapper.
     """
     base_id = game_id.split("-")[0]
+
+    standalone_cls = _STANDALONE_REGISTRY.get(base_id)
+    if standalone_cls is not None:
+        return standalone_cls()
+
     cls = _REGISTRY.get(base_id)
     if cls is None:
         raise ValueError(
             f"No wrapper registered for {base_id!r}. "
-            f"Registered games: {sorted(_REGISTRY)}"
+            f"Registered games: {sorted(_REGISTRY | _STANDALONE_REGISTRY)}"
         )
     return cls(arc_env)
