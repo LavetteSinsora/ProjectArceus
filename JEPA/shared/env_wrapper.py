@@ -208,6 +208,52 @@ _REGISTRY: dict[str, type[BaseArcEnv]] = {
 }
 
 
+# Canonical full game IDs (short prefix → full ID under environment_files/).
+# The dashboard uses this to construct an env from a short env name typed by
+# the user.
+SHORT_TO_FULL_GAME_ID: dict[str, str] = {
+    "ls20": "ls20-9607627b",
+    "tu93": "tu93-0768757b",
+    "re86": "re86-8af5384d",
+    "g50t": "g50t-5849a774",
+}
+
+
+def short_env_name(game_id: str) -> str:
+    """ls20-9607627b → ls20."""
+    return game_id.split("-")[0]
+
+
+def full_game_id(env_name: str) -> str:
+    """ls20 → ls20-9607627b. Raises ValueError if env_name is unknown."""
+    if env_name in SHORT_TO_FULL_GAME_ID:
+        return SHORT_TO_FULL_GAME_ID[env_name]
+    raise ValueError(
+        f"Unknown env_name {env_name!r}. "
+        f"Registered: {sorted(SHORT_TO_FULL_GAME_ID)}"
+    )
+
+
+def resolve_dashboard_env(env_name: str | None, cfg_game_id: str) -> tuple[str, str | None]:
+    """
+    Decide which full game_id to actually run, and produce a warning if the
+    dashboard asked for an env this experiment wasn't trained on.
+
+    Returns (full_game_id, warning_or_None).
+      env_name=None or matches cfg's short prefix → cfg.game_id, no warning.
+      Otherwise                                    → full_game_id(env_name), warning.
+    """
+    cfg_short = short_env_name(cfg_game_id)
+    if env_name is None or env_name == cfg_short:
+        return cfg_game_id, None
+    return (
+        full_game_id(env_name),
+        f"This experiment was trained only on {cfg_short!r}; "
+        f"playing on {env_name!r} uses a policy / action embedding that did "
+        f"not see this game during training. Rollouts are unlikely to be meaningful."
+    )
+
+
 def make_env(arc_env, game_id: str) -> BaseArcEnv:
     """
     Instantiate the correct wrapper for game_id.

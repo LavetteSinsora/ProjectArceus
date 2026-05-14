@@ -52,6 +52,7 @@ class RunEpisodeRequest(BaseModel):
     experiment: str        # e.g. "exp_001_vit_jepa_baseline"
     checkpoint: str        # filename only, e.g. "step_235000.pt"
     max_steps: int = 200
+    env: str | None = None  # short env name (e.g. "ls20", "tu93"); default = experiment's first env
 
 
 class TrainingStartRequest(BaseModel):
@@ -108,6 +109,70 @@ def list_checkpoints(experiment: str):
     return {"checkpoints": [p.name for p in ckpts]}
 
 
+def _experiment_trained_envs(experiment: str) -> tuple[list[str], str]:
+    """
+    Inspect the experiment's Config and return (trained_envs, default_env).
+
+    Resolution order:
+      1. `cfg.env_names` exists and is non-empty   → multi-env (e.g. exp_004).
+      2. `cfg.game_id` exists                       → single-env (exp_001..exp_003_*).
+      3. Fallback                                   → ["ls20"].
+    """
+    try:
+        cfg_mod = importlib.import_module(f"JEPA.experiments.{experiment}.config")
+        cfg = cfg_mod.Config()
+    except Exception:
+        return (["ls20"], "ls20")
+
+    env_names = getattr(cfg, "env_names", None)
+    if env_names:
+        envs = [str(e) for e in env_names]
+        return (envs, envs[0])
+
+    game_id = getattr(cfg, "game_id", None)
+    if game_id:
+        from JEPA.shared.env_wrapper import short_env_name
+        short = short_env_name(game_id)
+        return ([short], short)
+
+    return (["ls20"], "ls20")
+
+
+@app.get("/api/experiment_envs")
+def list_experiment_envs(experiment: str):
+    """
+    Report which envs an experiment was trained on, plus all known envs.
+
+    Response:
+      {
+        "experiment": "<name>",
+        "default": "ls20",
+        "envs": [
+          {"name": "ls20", "trained": true},
+          {"name": "tu93", "trained": false},
+          ...
+        ]
+      }
+
+    UI uses `trained` to flag a cross-env play attempt and show a warning banner.
+    """
+    from JEPA.shared.env_wrapper import SHORT_TO_FULL_GAME_ID
+
+    trained, default = _experiment_trained_envs(experiment)
+    trained_set = set(trained)
+    envs = []
+    # Stable order: trained envs first (in their declared order), then the rest.
+    seen: set = set()
+    for e in trained:
+        envs.append({"name": e, "trained": True})
+        seen.add(e)
+    for e in sorted(SHORT_TO_FULL_GAME_ID):
+        if e in seen:
+            continue
+        envs.append({"name": e, "trained": False})
+    return {"experiment": experiment, "default": default, "envs": envs}
+
+
 @app.post("/api/run_episode")
 def run_episode(req: RunEpisodeRequest):
     ckpt_path = EXPERIMENTS_DIR / req.experiment / "checkpoints" / req.checkpoint
@@ -116,9 +181,18 @@ def run_episode(req: RunEpisodeRequest):
             status_code=404,
             detail=f"Checkpoint not found: {req.experiment}/{req.checkpoint}",
         )
+    # Default the env if not provided.
+    env_name = req.env
+    if env_name is None:
+        _trained, env_name = _experiment_trained_envs(req.experiment)
     try:
         run_debug_episode = _get_run_debug_episode()
-        data = run_debug_episode(str(ckpt_path), experiment=req.experiment, max_steps=req.max_steps)
+        data = run_debug_episode(
+            str(ckpt_path),
+            experiment=req.experiment,
+            env=env_name,
+            max_steps=req.max_steps,
+        )
         return JSONResponse(content=data)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))

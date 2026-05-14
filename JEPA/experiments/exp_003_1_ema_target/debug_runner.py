@@ -22,8 +22,10 @@ if _UPSTREAM in _sys.modules:
 else:
     _mod = importlib.import_module(_UPSTREAM)
 
-def run_debug_episode(checkpoint_path: str, max_steps: int = 200) -> dict:
-    data = _mod.run_debug_episode(checkpoint_path, max_steps=max_steps)
+def run_debug_episode(checkpoint_path: str,
+                      env_name: str | None = None,
+                      max_steps: int = 200) -> dict:
+    data = _mod.run_debug_episode(checkpoint_path, env_name=env_name, max_steps=max_steps)
     data["experiment"] = "exp_003_1_ema_target"
     return data
 

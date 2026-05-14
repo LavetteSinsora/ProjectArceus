@@ -38,7 +38,9 @@ if str(_repo_root) not in sys.path:
 from JEPA.experiments.exp_003_0_normalized_latent_jepa.config import Config
 from JEPA.experiments.exp_003_0_normalized_latent_jepa.models import load_models
 from JEPA.experiments.exp_003_0_normalized_latent_jepa.reward_shaping import is_end_of_life
-from JEPA.shared.env_wrapper import LS20Env
+from JEPA.shared.env_wrapper import (
+    LS20Env, make_env, resolve_dashboard_env, short_env_name,
+)
 
 ARC_COLORS_RGB = [
     (0,   0,   0),    # 0  black
@@ -160,7 +162,9 @@ def _safe_cross_attn(captured, n_latents: int = 4, n_patches: int = 16) -> list:
 
 # ── Main runner ───────────────────────────────────────────────────────────────
 
-def run_debug_episode(checkpoint_path: str, max_steps: int = 200) -> dict:
+def run_debug_episode(checkpoint_path: str,
+                      env_name: str | None = None,
+                      max_steps: int = 200) -> dict:
     device = torch.device(
         "mps" if torch.backends.mps.is_available() else
         "cuda" if torch.cuda.is_available() else "cpu"
@@ -190,8 +194,9 @@ def run_debug_episode(checkpoint_path: str, max_steps: int = 200) -> dict:
         operation_mode=OperationMode.OFFLINE,
         environments_dir=str(_repo_root / "environment_files"),
     )
-    raw_env = arc.make(cfg.game_id)
-    env = LS20Env(raw_env)
+    full_gid, env_warning = resolve_dashboard_env(env_name, cfg.game_id)
+    raw_env = arc.make(full_gid)
+    env = make_env(raw_env, full_gid)
     frame_np = env.reset()
 
     # Perceiver cross-attention hooks on rounds[0/1]
@@ -364,7 +369,12 @@ def run_debug_episode(checkpoint_path: str, max_steps: int = 200) -> dict:
             "action_entropy":  action_entropy,
         })
 
-        eol = is_end_of_life(frame_np, next_np, is_terminal)
+        # Cross-env play: the LS20 life-end heuristic doesn't apply when
+        # running this LS20-trained checkpoint on a different game.
+        if env_warning is not None:
+            eol = bool(is_terminal)
+        else:
+            eol = is_end_of_life(frame_np, next_np, is_terminal)
         h_t = latents.detach()
         z_prev_np = z_t_np.copy()
         prev_frame_np = frame_np
@@ -374,10 +384,11 @@ def run_debug_episode(checkpoint_path: str, max_steps: int = 200) -> dict:
             break
 
     from JEPA.experiments.exp_003_0_normalized_latent_jepa.models import CAPABILITIES
-    return {
+    out = {
         "checkpoint":       ckpt_name,
         "checkpoint_step":  ckpt_step,
         "experiment":       "exp_003_0_normalized_latent_jepa",
+        "env_name":         short_env_name(full_gid),
         "capabilities":     CAPABILITIES,
         "episode_steps":    len(timesteps),
         "level_completed":  bool(env.level_completed),
@@ -385,6 +396,9 @@ def run_debug_episode(checkpoint_path: str, max_steps: int = 200) -> dict:
         "arc_colors":       ARC_COLORS_RGB,
         "timesteps":        timesteps,
     }
+    if env_warning:
+        out["warning"] = env_warning
+    return out
 
 
 if __name__ == "__main__":

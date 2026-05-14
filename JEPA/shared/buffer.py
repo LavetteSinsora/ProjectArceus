@@ -103,6 +103,74 @@ class LatentBuffer:
         return self._size
 
 
+# ── NextFrameLatentBuffer (exp_003_2) ────────────────────────────────────────
+
+class NextFrameLatentBatch(NamedTuple):
+    frames:      torch.Tensor   # (B, 64, 64) uint8     — frame_t
+    h_queries:   torch.Tensor   # (B, n_latents, d_model) float32 — h_{t-1} from rollout
+    actions:     torch.Tensor   # (B,) long
+    next_frames: torch.Tensor   # (B, 64, 64) uint8     — frame_{t+1}
+
+
+class NextFrameLatentBuffer:
+    """
+    Replay buffer for exp_003_2 (action-predictor JEPA, no EMA target).
+
+    Stores (frame_t, h_query=h_{t-1}, action_t, next_frame=frame_{t+1}) per
+    transition. The fourth field is the raw next_frame (uint8) — not a
+    precomputed h_target — so the JEPA training step can re-encode both h_t
+    and h_{t+1} with the *current* encoder weights every step.
+
+    Sampling is purely uniform — there is no recency mix. Re-encoding from the
+    live encoder removes the stale-encoder problem that motivated recency
+    weighting in exp_003_0.
+
+    Memory: 50K × [(64×64) + (4×128×4) + 8 + (64×64)] bytes ≈ 510 MB.
+    """
+
+    def __init__(
+        self,
+        n_latents: int = 4,
+        d_model: int = 128,
+        capacity: int = 50_000,
+    ):
+        self.capacity = capacity
+
+        self._frames      = np.zeros((capacity, 64, 64), dtype=np.uint8)
+        self._h_queries   = np.zeros((capacity, n_latents, d_model), dtype=np.float32)
+        self._actions     = np.zeros(capacity, dtype=np.int64)
+        self._next_frames = np.zeros((capacity, 64, 64), dtype=np.uint8)
+
+        self._pos  = 0
+        self._size = 0
+
+    def add(
+        self,
+        frame: np.ndarray,
+        h_query: np.ndarray,
+        action_idx: int,
+        next_frame: np.ndarray,
+    ) -> None:
+        self._frames[self._pos]      = frame
+        self._h_queries[self._pos]   = h_query
+        self._actions[self._pos]     = action_idx
+        self._next_frames[self._pos] = next_frame
+        self._pos  = (self._pos + 1) % self.capacity
+        self._size = min(self._size + 1, self.capacity)
+
+    def sample(self, batch_size: int, device: torch.device) -> NextFrameLatentBatch:
+        idx = np.random.randint(0, self._size, size=batch_size)
+        return NextFrameLatentBatch(
+            frames=torch.from_numpy(self._frames[idx]).to(device),
+            h_queries=torch.from_numpy(self._h_queries[idx]).to(device),
+            actions=torch.from_numpy(self._actions[idx]).to(device),
+            next_frames=torch.from_numpy(self._next_frames[idx]).to(device),
+        )
+
+    def __len__(self) -> int:
+        return self._size
+
+
 class Batch(NamedTuple):
     frames: torch.Tensor       # (B, 64, 64) uint8
     actions: torch.Tensor      # (B,) long (0-indexed action indices)

@@ -249,18 +249,33 @@ def _encode_with_attn(encoder, frame_t: torch.Tensor):
 
 # ── Main episode runner ─────────────────────────────────────────────────────
 
-def run_debug_episode(checkpoint_path: str, experiment: str, max_steps: int = 200) -> dict:
+def run_debug_episode(checkpoint_path: str, experiment: str,
+                      env_name: str | None = None,
+                      env: str | None = None,
+                      max_steps: int = 200) -> dict:
+    # Accept either `env` or `env_name` (server.py passes `env`).
+    if env_name is None:
+        env_name = env
     # Try experiment-specific runner first; force-reload to pick up any code changes
     # without requiring a server restart.
     mod_name = f"JEPA.experiments.{experiment}.debug_runner"
     try:
+        import inspect as _inspect
         import sys as _sys
         if mod_name in _sys.modules:
             exp_mod = importlib.reload(_sys.modules[mod_name])
         else:
             exp_mod = importlib.import_module(mod_name)
         if hasattr(exp_mod, "run_debug_episode"):
-            return exp_mod.run_debug_episode(checkpoint_path, max_steps)
+            fn = exp_mod.run_debug_episode
+            params = _inspect.signature(fn).parameters
+            # Forward env_name only if the per-experiment runner accepts it.
+            # Older runners (exp_003_X before this revision) keep their original
+            # signature `(checkpoint_path, max_steps)` and silently use their
+            # config's env.
+            if "env_name" in params:
+                return fn(checkpoint_path, env_name=env_name, max_steps=max_steps)
+            return fn(checkpoint_path, max_steps)
     except ModuleNotFoundError:
         pass
     # Fall through to existing exp_001-compatible runner below
@@ -285,13 +300,15 @@ def run_debug_episode(checkpoint_path: str, experiment: str, max_steps: int = 20
 
     # Set up environment
     from arc_agi import Arcade, OperationMode
+    from JEPA.shared.env_wrapper import make_env, resolve_dashboard_env
     repo_root = _REPO_ROOT
     arc = Arcade(
         operation_mode=OperationMode.OFFLINE,
         environments_dir=str(repo_root / "environment_files"),
     )
-    raw_env = arc.make(cfg.game_id)
-    env = LS20Env(raw_env)
+    full_gid, env_warning = resolve_dashboard_env(env_name, cfg.game_id)
+    raw_env = arc.make(full_gid)
+    env = make_env(raw_env, full_gid)
 
     frame_np = env.reset()
     h = policy.initial_state().to(device)
@@ -424,10 +441,12 @@ def run_debug_episode(checkpoint_path: str, experiment: str, max_steps: int = 20
     ckpt_step = int(ckpt_name.replace("step_", "").replace(".pt", "").split("_")[0]) \
         if ckpt_name.startswith("step_") else 0
 
-    return {
+    from JEPA.shared.env_wrapper import short_env_name
+    out = {
         "checkpoint": ckpt_name,
         "checkpoint_step": ckpt_step,
         "experiment": experiment,
+        "env_name": short_env_name(full_gid),
         "capabilities": capabilities,
         "episode_steps": len(timesteps),
         "level_completed": bool(env.level_completed),
@@ -435,6 +454,9 @@ def run_debug_episode(checkpoint_path: str, experiment: str, max_steps: int = 20
         "arc_colors": ARC_COLORS_RGB,
         "timesteps": timesteps,
     }
+    if env_warning:
+        out["warning"] = env_warning
+    return out
 
 
 if __name__ == "__main__":

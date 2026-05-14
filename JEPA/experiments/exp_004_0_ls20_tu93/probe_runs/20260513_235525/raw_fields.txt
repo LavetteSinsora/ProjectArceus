@@ -1,0 +1,31 @@
+vars(raw) keys:
+  'game_id': str = 'tu93-0768757b'
+  'state': GameState = <GameState.NOT_FINISHED: 'NOT_FINISHED'>
+  'levels_completed': int = 0
+  'win_levels': int = 9
+  'action_input': ActionInput = ActionInput(id=<GameAction.RESET: 0>, data={}, reasoning=None)
+  'guid': str = '0c2634fb-0b38-455d-ab45-bc4e6d262cbd'
+  'full_reset': bool = True
+  'available_actions': list = [1, 2, 3, 4]
+
+dir(raw):
+  action_input: ActionInput = ActionInput(id=<GameAction.RESET: 0>, data={}, reasoning=None)
+  available_actions: list = [1, 2, 3, 4]
+  frame: list = [array([[5, 5, 5, ..., 5, 5, 5],
+       [5, 5, 5, ..., 5, 5, 5],
+       [5, 5, 5, ..., 5, 5, 5],
+       ...,
+       [5, 5, 5, ..., 5, 5, 5],
+       [5, 5, 5, ..., 5, 5, 5],
+       [6, 6, 6, ..., 6, 6, 6]], shape=(64, 64), dtype=int8)]
+  full_reset: bool = True
+  game_id: str = 'tu93-0768757b'
+  guid: str = '0c2634fb-0b38-455d-ab45-bc4e6d262cbd'
+  levels_completed: int = 0
+  model_computed_fields: dict = {}
+  model_config: dict = {}
+  model_extra: NoneType = None
+  model_fields: dict = {'game_id': FieldInfo(annotation=str, required=False, default=''), 'state': FieldInfo(annotation=GameState, required=False, default=<GameState.NOT_PLAYED: 'NOT_PLAYED'>), 'levels_completed': FieldInfo(annotation=int, required=False, default=0), 'win_levels': FieldInfo(annotation=int, required=False, default=0), 'action_input': FieldInfo(annotation=ActionInput, required=False, default_factory=ActionInput), 'guid': FieldInfo(annotation=Union[str, NoneType], required=False, default=None), 'full_reset': FieldInfo(annotation=bool, required=False, default=False), 'available_actions': FieldInfo(annotation=list[int], required=False, default_factory=list)}
+  model_fields_set: set = {'state', 'full_reset', 'available_actions', 'guid', 'action_input', 'game_id', 'win_levels', 'levels_completed'}
+  state: GameState = <GameState.NOT_FINISHED: 'NOT_FINISHED'>
+  win_levels: int = 9

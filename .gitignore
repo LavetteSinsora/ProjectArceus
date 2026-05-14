@@ -24,3 +24,6 @@ JEPA/checkpoints/
 
 # Training logs (generated output)
 *.log
+
+# macOS metadata
+.DS_Store

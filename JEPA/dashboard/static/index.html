@@ -16,6 +16,11 @@ a{color:#388bfd}
 #hdr select,#hdr input[type=number]{background:#0d1117;border:1px solid #30363d;color:#c9d1d9;
   padding:4px 8px;border-radius:4px;font-size:12px}
 #exp-select{min-width:210px}#ckpt-select{width:200px}
+#env-select{width:140px}
+#env-select option.untrained{color:#f0883e}
+#env-warning{background:#3a2e1a;border:1px solid #a17a30;color:#f0d18b;
+  padding:6px 14px;font-size:12px;line-height:1.4;display:none}
+#env-warning.show{display:block}
 #max-steps{width:60px}
 .btn{background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:5px 12px;
   border-radius:4px;cursor:pointer;font-size:12px;transition:background .15s}
@@ -146,12 +151,14 @@ canvas.patch-canvas{display:block;image-rendering:pixelated;border:1px solid #30
   <h1>JEPA Debug Dashboard</h1>
   <a href="/training" style="font-size:11px;color:#58a6ff;white-space:nowrap;margin-right:4px">Training Monitor →</a>
   <select id="exp-select" title="Select experiment"></select>
+  <select id="env-select" title="Select environment"></select>
   <select id="ckpt-select" title="Select checkpoint"></select>
   <label for="max-steps" style="color:#8b949e">max steps</label>
   <input type="number" id="max-steps" value="200" min="1" max="500">
   <button class="btn btn-primary" id="run-btn">▶ Run Episode</button>
   <span id="status-msg">Load a checkpoint to begin.</span>
 </header>
+<div id="env-warning"></div>
 
 <!-- ── Loading overlay ──────────────────────────────────────────────── -->
 <div id="overlay" hidden>
@@ -1231,6 +1238,7 @@ function initActionChart() {
 // ── Episode loading ────────────────────────────────────────────────────────
 async function runEpisode() {
   const exp  = document.getElementById('exp-select').value;
+  const env  = document.getElementById('env-select').value || null;
   const ckpt = document.getElementById('ckpt-select').value;
   const maxSteps = parseInt(document.getElementById('max-steps').value)||200;
   if (!exp || !ckpt) return;
@@ -1244,7 +1252,7 @@ async function runEpisode() {
     const resp = await fetch('/api/run_episode', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({experiment: exp, checkpoint: ckpt, max_steps: maxSteps})
+      body: JSON.stringify({experiment: exp, checkpoint: ckpt, env: env, max_steps: maxSteps})
     });
     if (!resp.ok) {
       const err = await resp.json();
@@ -1258,6 +1266,16 @@ async function runEpisode() {
     S.polPatch  = null;
     S.cmpIdx    = 0;
     applyCapabilities(data.capabilities || {});
+
+    // Cross-env play warning banner (set by server when env != cfg.game_id).
+    const warnEl = document.getElementById('env-warning');
+    if (data.warning) {
+      warnEl.textContent = '⚠ ' + data.warning;
+      warnEl.classList.add('show');
+    } else {
+      warnEl.textContent = '';
+      warnEl.classList.remove('show');
+    }
 
     // Expose ARC colors to panel plugins
     window.JEPA.ARC_COLORS = data.arc_colors;
@@ -1314,10 +1332,63 @@ async function populateExperiments() {
     sel.innerHTML = data.experiments
       .map((e,i) => `<option value="${e}"${i===0?' selected':''}>${e}</option>`)
       .join('');
-    sel.addEventListener('change', populateCheckpoints);
-    await populateCheckpoints();
+    sel.addEventListener('change', onExperimentChange);
+    document.getElementById('env-select').addEventListener('change', onEnvChange);
+    await onExperimentChange();
   } catch {
     setStatus('Could not reach /api/experiments — is the server running?');
+  }
+}
+
+async function onExperimentChange() {
+  await populateEnvs();
+  await populateCheckpoints();
+}
+
+function onEnvChange() {
+  // Re-evaluate the small inline warning text (the post-episode banner is set
+  // by runEpisode from the server response). We only do the pre-flight hint
+  // here so the user knows BEFORE clicking Run that the pair is cross-env.
+  const envSel = document.getElementById('env-select');
+  const opt = envSel.options[envSel.selectedIndex];
+  const trained = opt && opt.dataset.trained === 'true';
+  const warnEl = document.getElementById('env-warning');
+  if (envSel.value && !trained) {
+    warnEl.textContent = `⚠ ${envSel.value} is NOT in this experiment's training set — `
+      + `the rollout will use an untrained policy / action embedding and is unlikely to be meaningful.`;
+    warnEl.classList.add('show');
+  } else {
+    // Don't clear a post-run banner; only clear the pre-flight hint.
+    if (!S.ep || !S.ep.warning) {
+      warnEl.textContent = '';
+      warnEl.classList.remove('show');
+    }
+  }
+}
+
+async function populateEnvs() {
+  const exp = document.getElementById('exp-select').value;
+  const sel = document.getElementById('env-select');
+  if (!exp) {
+    sel.innerHTML = '';
+    return;
+  }
+  try {
+    const resp = await fetch(`/api/experiment_envs?experiment=${encodeURIComponent(exp)}`);
+    if (!resp.ok) { sel.innerHTML = ''; return; }
+    const data = await resp.json();
+    const envs = data.envs || [];
+    const defaultEnv = data.default || (envs[0] && envs[0].name);
+    sel.innerHTML = envs.map(e => {
+      const sel_attr = (e.name === defaultEnv) ? ' selected' : '';
+      const cls = e.trained ? '' : ' class="untrained"';
+      const label = e.trained ? e.name : `${e.name} (not trained)`;
+      return `<option value="${e.name}" data-trained="${e.trained}"${cls}${sel_attr}>${label}</option>`;
+    }).join('');
+    // Pre-flight warning (in case the default happens to be untrained — shouldn't, but be safe).
+    onEnvChange();
+  } catch {
+    sel.innerHTML = '';
   }
 }
 

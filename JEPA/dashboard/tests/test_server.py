@@ -143,7 +143,9 @@ class TestRunEpisode:
         fake_path = CKPT_DIR / 'step_235000.pt'
         if not fake_path.exists():
             pytest.skip("Real checkpoint not present; skipping mock test.")
-        with patch('JEPA.dashboard.server.run_debug_episode', return_value=_fake_episode()):
+        # The endpoint resolves run_debug_episode lazily via _get_run_debug_episode().
+        with patch('JEPA.dashboard.server._get_run_debug_episode',
+                   return_value=lambda *a, **kw: _fake_episode()):
             resp = client.post('/api/run_episode', json={
                 "experiment": EXP_NAME,
                 "checkpoint": "step_235000.pt",
@@ -155,7 +157,8 @@ class TestRunEpisode:
         fake_path = CKPT_DIR / 'step_235000.pt'
         if not fake_path.exists():
             pytest.skip("Real checkpoint not present.")
-        with patch('JEPA.dashboard.server.run_debug_episode', return_value=_fake_episode()):
+        with patch('JEPA.dashboard.server._get_run_debug_episode',
+                   return_value=lambda *a, **kw: _fake_episode()):
             resp = client.post('/api/run_episode', json={
                 "experiment": EXP_NAME,
                 "checkpoint": "step_235000.pt",

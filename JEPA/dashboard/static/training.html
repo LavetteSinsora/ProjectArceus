@@ -11,12 +11,11 @@ html,body{height:100%;background:#0d1117;color:#c9d1d9;font-family:'Menlo','Mona
 a{color:#58a6ff;text-decoration:none}
 button{cursor:pointer;font-family:inherit;font-size:11px}
 
-/* ── Layout ── */
+/* ── Top chrome ── */
 #topbar{display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid #21262d;background:#161b22;flex-wrap:wrap}
 #topbar h1{font-size:13px;font-weight:bold;color:#e6edf3;letter-spacing:.5px;white-space:nowrap}
 .nav-link{font-size:11px;color:#58a6ff;padding:2px 0}
 .sep{color:#30363d;user-select:none}
-
 #controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 select,input[type=text]{background:#0d1117;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:3px 7px;font-family:inherit;font-size:11px}
 select:focus,input:focus{outline:1px solid #388bfd;border-color:#388bfd}
@@ -37,43 +36,108 @@ select:focus,input:focus{outline:1px solid #388bfd;border-color:#388bfd}
 #last-step{color:#8b949e;margin-left:auto}
 #poll-indicator{color:#484f58;font-size:10px}
 
-#main{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:0;overflow-y:auto;height:calc(100vh - 84px)}
+/* ── Main scroll region ── */
+#main{overflow-y:auto;height:calc(100vh - 84px);background:#0d1117}
 
-/* ── Component sections ── */
-.component{border-right:1px solid #21262d;border-bottom:1px solid #21262d;padding:10px 14px 14px}
-.component:nth-child(even){border-right:none}
-.comp-title{font-size:10px;font-weight:bold;letter-spacing:.8px;color:#388bfd;text-transform:uppercase;margin-bottom:10px}
-.comp-subtitle{font-size:10px;color:#8b949e;margin-bottom:6px;letter-spacing:.3px}
+/* ── Hero strip ── */
+#hero{position:sticky;top:0;z-index:50;background:#0d1117;border-bottom:1px solid #21262d;padding:10px 14px 12px;box-shadow:0 4px 12px rgba(0,0,0,.5)}
+#hero .hero-title{font-size:9px;font-weight:bold;letter-spacing:.8px;color:#8b949e;text-transform:uppercase;margin-bottom:6px}
+.hero-grid{display:grid;grid-template-columns:repeat(6,minmax(160px,1fr));gap:10px}
+.hero-cell{background:#161b22;border:1px solid #21262d;border-radius:4px;padding:7px 9px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.hero-cell .hero-label{font-size:9.5px;color:#8b949e;letter-spacing:.3px;cursor:help;border-bottom:1px dotted #30363d;display:inline-block;width:fit-content}
+.hero-cell .hero-label:hover{color:#c9d1d9}
+.hero-cell canvas{display:block;width:100%;height:50px;background:#0d1117;border-radius:2px}
+.hero-cell .hero-val{font-size:13px;color:#e6edf3;font-weight:bold;font-variant-numeric:tabular-nums;letter-spacing:.3px}
+.hero-cell .hero-sub{font-size:9px;color:#8b949e;font-variant-numeric:tabular-nums;line-height:1.3}
 
-/* Full-width bottom section */
-.component.full{grid-column:1/-1;border-right:none}
+/* ── Sections ── */
+details.section{border-bottom:1px solid #21262d;background:#0d1117}
+details.section[open]{background:#0d1117}
+details.section > summary{list-style:none;cursor:pointer;padding:9px 16px;display:flex;align-items:center;gap:10px;background:#161b22;border-top:1px solid #21262d;transition:background .15s;user-select:none}
+details.section > summary:hover{background:#1c2128}
+details.section > summary::-webkit-details-marker{display:none}
+.sec-caret{color:#388bfd;font-size:10px;width:10px;text-align:center;transition:transform .2s}
+details.section[open] > summary .sec-caret{transform:rotate(90deg)}
+.sec-title{font-size:11px;font-weight:bold;letter-spacing:.8px;color:#e6edf3;text-transform:uppercase}
+.sec-tag{font-size:9px;color:#8b949e;text-transform:lowercase;letter-spacing:.3px}
+.sec-inline{margin-left:auto;font-size:10px;color:#8b949e;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%;padding-left:12px}
+.sec-inline b{color:#c9d1d9;font-weight:normal}
+.sec-body{padding:12px 16px 16px}
 
-/* ── Chart grid within a component ── */
-.chart-grid{display:flex;flex-direction:column;gap:10px}
-.chart-row{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}
+/* ── Sub-section heading inside an expanded section ── */
+.subsec{margin-top:14px}
+.subsec:first-child{margin-top:0}
+.subsec-title{font-size:9.5px;font-weight:bold;letter-spacing:.7px;color:#388bfd;text-transform:uppercase;margin-bottom:7px;padding-bottom:3px;border-bottom:1px solid #21262d}
 
-/* ── Individual chart ── */
-.chart-wrap{position:relative;flex:1;min-width:180px}
-.chart-label{font-size:10px;color:#8b949e;margin-bottom:3px;cursor:help;border-bottom:1px dotted #30363d;display:inline-block}
+/* ── Chart grids ── */
+.chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.chart-wrap{position:relative;background:#161b22;border:1px solid #21262d;border-radius:3px;padding:7px 9px;min-width:0}
+.chart-label{font-size:9.5px;color:#8b949e;margin-bottom:3px;cursor:help;border-bottom:1px dotted #30363d;display:inline-block;letter-spacing:.2px}
 .chart-label:hover{color:#c9d1d9;border-color:#8b949e}
-canvas.sparkline{display:block;width:100%;height:60px;background:#161b22;border:1px solid #21262d;border-radius:3px}
-.chart-val{font-size:10px;color:#e6edf3;margin-top:2px;font-variant-numeric:tabular-nums;min-height:14px}
+.chart-eval-badge{display:inline-block;font-size:8px;color:#f0c040;background:#3a2e0d;border:1px solid #5c4710;border-radius:3px;padding:0 4px;margin-left:6px;letter-spacing:.4px;vertical-align:1px}
+.chart-warn-badge{display:inline-block;font-size:8px;color:#f85149;background:#3a1414;border:1px solid #5c1f1f;border-radius:3px;padding:0 4px;margin-left:6px;letter-spacing:.4px;vertical-align:1px}
+canvas.sparkline{display:block;width:100%;height:64px;background:#0d1117;border-radius:2px}
+canvas.sparkline.tall{height:84px}
+.chart-val{font-size:10.5px;color:#e6edf3;margin-top:3px;font-variant-numeric:tabular-nums;min-height:14px;letter-spacing:.2px}
+.chart-legend{font-size:9px;color:#8b949e;margin-top:2px;display:flex;gap:10px;flex-wrap:wrap}
+.chart-legend .lg{display:inline-flex;align-items:center;gap:4px}
+.chart-legend .lg .sw{display:inline-block;width:8px;height:2px;background:#388bfd;border-radius:1px}
 
-/* ── Tooltip ── */
-#tooltip{position:fixed;display:none;z-index:9999;background:#1c2128;border:1px solid #388bfd;border-radius:6px;padding:10px 14px;max-width:360px;box-shadow:0 4px 20px rgba(0,0,0,.6)}
+/* ── Live text decomposition block (Section B) ── */
+.decomp-block{background:#0d1117;border:1px solid #21262d;border-radius:3px;padding:10px 14px;font-family:'Menlo','Monaco','Consolas',monospace;font-size:11px;color:#c9d1d9;white-space:pre;line-height:1.55;overflow-x:auto}
+.decomp-block .hl{color:#e6edf3;font-weight:bold}
+.decomp-block .lambda{color:#388bfd}
+.decomp-block .latent{color:#3fb950}
+.decomp-block .action{color:#f0c040}
+.decomp-block .dim{color:#8b949e}
+
+/* ── Per-latent / per-action mini grid ── */
+.lat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.lat-item{background:#0d1117;border:1px solid #21262d;border-radius:3px;padding:5px 7px}
+.lat-item-label{font-size:9px;color:#8b949e;margin-bottom:2px;font-variant-numeric:tabular-nums}
+.lat-item-val{font-size:11px;color:#e6edf3;font-variant-numeric:tabular-nums;font-weight:bold}
+.lat-item-sub{font-size:8.5px;color:#8b949e;font-variant-numeric:tabular-nums;margin-top:1px}
+canvas.lat-spark{display:block;width:100%;height:30px;background:#161b22;margin-top:3px;border-radius:2px}
+
+/* ── Sub-tab bar (gradients) ── */
+.subtab-bar{display:flex;gap:4px;margin-bottom:10px;border-bottom:1px solid #21262d;padding-bottom:6px}
+.subtab-btn{background:#161b22;color:#8b949e;border:1px solid #21262d;border-radius:4px;padding:3px 10px;font-size:10px;letter-spacing:.4px;font-family:inherit}
+.subtab-btn.active{background:#1f6feb;color:#fff;border-color:#388bfd}
+.subtab-panel{display:none}
+.subtab-panel.active{display:block}
+.subtab-empty{color:#484f58;font-size:11px;font-style:italic;padding:14px 0;text-align:center}
+
+/* ── Hover crosshair tooltip (data-value popup) ── */
+#chart-tip{position:fixed;display:none;z-index:9998;background:#1c2128;border:1px solid #388bfd;border-radius:4px;padding:5px 8px;font-size:10.5px;color:#e6edf3;font-family:'Menlo','Monaco','Consolas',monospace;pointer-events:none;box-shadow:0 2px 10px rgba(0,0,0,.6);font-variant-numeric:tabular-nums;white-space:nowrap}
+#chart-tip .k{color:#8b949e}
+#chart-tip .v{color:#e6edf3;font-weight:bold}
+#chart-tip .row{display:flex;gap:6px;line-height:1.4}
+#chart-tip .row.step{color:#388bfd;border-bottom:1px solid #21262d;padding-bottom:2px;margin-bottom:2px}
+canvas.sparkline,canvas.lat-spark,.hero-cell canvas{cursor:crosshair}
+canvas.dragging{cursor:grabbing}
+
+/* ── View controls (zoom/pan status in topbar) ── */
+.view-bar{display:flex;align-items:center;gap:8px;font-size:10.5px;color:#8b949e;padding:0 4px;border-left:1px solid #30363d;margin-left:4px;padding-left:10px}
+.view-bar #view-range{color:#c9d1d9;font-variant-numeric:tabular-nums}
+.view-bar .ck-count{color:#3fb950}
+#btn-reset{background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 8px;font-size:10px;font-family:inherit}
+#btn-reset:hover{background:#30363d;color:#fff}
+#btn-reset:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── Help tooltip (existing) ── */
+#tooltip{position:fixed;display:none;z-index:9999;background:#1c2128;border:1px solid #388bfd;border-radius:6px;padding:10px 14px;max-width:380px;box-shadow:0 4px 20px rgba(0,0,0,.6);pointer-events:none}
 #tooltip h3{font-size:11px;font-weight:bold;color:#e6edf3;margin-bottom:6px;letter-spacing:.3px}
 #tooltip p{font-size:11px;color:#c9d1d9;line-height:1.55;white-space:pre-wrap}
 #tooltip .example{margin-top:8px;font-size:10px;color:#8b949e;background:#0d1117;border-radius:4px;padding:6px 8px;white-space:pre-wrap;font-family:inherit}
 
-/* ── Per-latent mini grid ── */
-.lat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.lat-item{background:#161b22;border:1px solid #21262d;border-radius:3px;padding:5px 7px}
-.lat-item-label{font-size:9px;color:#8b949e;margin-bottom:3px}
-.lat-item-val{font-size:11px;color:#e6edf3;font-variant-numeric:tabular-nums}
-canvas.lat-spark{display:block;width:100%;height:36px;background:#0d1117;margin-top:4px}
-
 /* ── Empty state ── */
-.empty{color:#484f58;font-size:11px;padding:20px 0}
+.empty{color:#484f58;font-size:11px;padding:14px 0;font-style:italic;text-align:center}
+
+/* ── Meta strip (Section H) ── */
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.meta-cell{background:#161b22;border:1px solid #21262d;border-radius:3px;padding:6px 9px}
+.meta-cell .k{font-size:9px;color:#8b949e;letter-spacing:.3px}
+.meta-cell .v{font-size:12px;color:#e6edf3;font-variant-numeric:tabular-nums;margin-top:2px}
 </style>
 </head>
 <body>
@@ -105,145 +169,427 @@ canvas.lat-spark{display:block;width:100%;height:36px;background:#0d1117;margin-
   <span id="run-label"></span>
   <span id="last-step"></span>
   <span id="poll-indicator">auto-poll: —</span>
+  <span class="view-bar">
+    view <span id="view-range">all</span>
+    <span class="ck-count" id="ck-count" title="checkpoints loaded">·</span>
+    <button id="btn-reset" onclick="resetView()" disabled>↺ reset zoom</button>
+    <span style="color:#484f58;font-size:9px">drag=pan · wheel=zoom · dbl=fit</span>
+  </span>
 </div>
 
-<!-- ── Main grid ── -->
+<!-- ── Hover crosshair tooltip ── -->
+<div id="chart-tip"></div>
+
 <div id="main">
 
-  <!-- ── Encoder: SA blocks ── -->
-  <div class="component" id="comp-enc-sa">
-    <div class="comp-title">ENCODER — SELF-ATTENTION BLOCKS</div>
-    <div class="comp-subtitle">Patch embedding → 2× SA blocks → representation h_patches</div>
-    <div class="chart-grid">
-      <div class="chart-row">
-        <div class="chart-wrap">
-          <div class="chart-label" data-tip="grad_enc_sa">SA gradient norm</div>
-          <canvas class="sparkline" id="sk-grad-sa"></canvas>
-          <div class="chart-val" id="v-grad-sa">—</div>
-        </div>
-        <div class="chart-wrap">
-          <div class="chart-label" data-tip="across_state_std">Cross-state std (placeholder)</div>
-          <canvas class="sparkline" id="sk-across-std"></canvas>
-          <div class="chart-val" id="v-across-std">—</div>
-        </div>
+  <!-- ── HERO STRIP (sticky) ──────────────────────────────────────────────── -->
+  <div id="hero">
+    <div class="hero-title">Headline metrics · always visible</div>
+    <div class="hero-grid">
+      <div class="hero-cell">
+        <span class="hero-label" data-tip="latent_eff_rank">[1] Effective rank</span>
+        <canvas id="hero-effrank"></canvas>
+        <div class="hero-val" id="hv-effrank">—</div>
+        <div class="hero-sub">range [1,4] · red&lt;2 = collapse</div>
+      </div>
+      <div class="hero-cell">
+        <span class="hero-label" data-tip="L_decomp">[2] Loss · λ_state·L_s + λ_action·L_a</span>
+        <canvas id="hero-loss"></canvas>
+        <div class="hero-val" id="hv-loss">—</div>
+        <div class="hero-sub" id="hv-loss-sub">L_state — · L_action —</div>
+      </div>
+      <div class="hero-cell">
+        <span class="hero-label" data-tip="action_pred_entropy">[3] Action-pred entropy</span>
+        <canvas id="hero-apent"></canvas>
+        <div class="hero-val" id="hv-apent">—</div>
+        <div class="hero-sub">H_max = ln(4) ≈ 1.386</div>
+      </div>
+      <div class="hero-cell">
+        <span class="hero-label" data-tip="ht_htp1_cossim_rollout">[4] H_t · H_t+1 cos-sim</span>
+        <canvas id="hero-htcos"></canvas>
+        <div class="hero-val" id="hv-htcos">—</div>
+        <div class="hero-sub">≥0.99 = collapse · rollout solid, eval dashed</div>
+      </div>
+      <div class="hero-cell">
+        <span class="hero-label" data-tip="reward_total">[5] Mean curiosity reward</span>
+        <canvas id="hero-reward"></canvas>
+        <div class="hero-val" id="hv-reward">—</div>
+        <div class="hero-sub">clamp cap = 50</div>
+      </div>
+      <div class="hero-cell">
+        <span class="hero-label" data-tip="completion_rate">[6] Completion rate</span>
+        <canvas id="hero-complete"></canvas>
+        <div class="hero-val" id="hv-complete">—</div>
+        <div class="hero-sub">last-20-episodes window</div>
       </div>
     </div>
   </div>
 
-  <!-- ── Encoder: Perceiver ── -->
-  <div class="component" id="comp-enc-perc">
-    <div class="comp-title">ENCODER — PERCEIVER RESAMPLER</div>
-    <div class="comp-subtitle">2 rounds of cross-attn (Q=latents, K/V=patches) + self-attn + output_norm</div>
-    <div class="chart-grid">
-      <div class="chart-row">
-        <div class="chart-wrap">
-          <div class="chart-label" data-tip="grad_enc_perceiver">Perceiver gradient norm</div>
-          <canvas class="sparkline" id="sk-grad-perc"></canvas>
-          <div class="chart-val" id="v-grad-perc">—</div>
-        </div>
-        <div class="chart-wrap">
-          <div class="chart-label" data-tip="grad_time_emb">Time embedding grad</div>
-          <canvas class="sparkline" id="sk-grad-time"></canvas>
-          <div class="chart-val" id="v-grad-time">—</div>
+  <!-- ── SECTION A · REPRESENTATION HEALTH ────────────────────────────────── -->
+  <details class="section" id="sec-A" open>
+    <summary>
+      <span class="sec-caret">▶</span>
+      <span class="sec-title">A · Representation Health</span>
+      <span class="sec-tag">— sec1, sec3 — collapse signals</span>
+      <span class="sec-inline" id="inline-A">eff_rank <b id="il-effrank">—</b> · cos_buf <b id="il-cossim">—</b> · norms <b id="il-norms">—</b></span>
+    </summary>
+    <div class="sec-body">
+      <!-- A.1 Collapse signals -->
+      <div class="subsec">
+        <div class="subsec-title">A.1 — Collapse signals</div>
+        <div class="chart-grid">
+          <div class="chart-wrap">
+            <span class="chart-label" data-tip="latent_eff_rank">Effective rank (range [1,4])</span>
+            <canvas class="sparkline" id="sk-effrank-full"></canvas>
+            <div class="chart-val" id="v-effrank-full">—</div>
+          </div>
+          <div class="chart-wrap">
+            <span class="chart-label" data-tip="latent_pairwise_cossim_buf">Latent pairwise cossim · rollout buf</span>
+            <canvas class="sparkline" id="sk-cossim-buf"></canvas>
+            <div class="chart-val" id="v-cossim-buf">—</div>
+          </div>
+          <div class="chart-wrap">
+            <span class="chart-label" data-tip="latent_pairwise_l2_buf">Latent pairwise L2 · companion</span>
+            <canvas class="sparkline" id="sk-l2-buf"></canvas>
+            <div class="chart-val" id="v-l2-buf">—</div>
+          </div>
+          <div class="chart-wrap">
+            <span class="chart-label" data-tip="latent_pairwise_cossim_eval">Latent pairwise cossim @ t=1/10/20<span class="chart-eval-badge">eval</span></span>
+            <canvas class="sparkline" id="sk-cossim-eval"></canvas>
+            <div class="chart-val" id="v-cossim-eval">—</div>
+            <div class="chart-legend">
+              <span class="lg"><span class="sw" style="background:#3fb950"></span>t=1</span>
+              <span class="lg"><span class="sw" style="background:#f0c040"></span>t=10</span>
+              <span class="lg"><span class="sw" style="background:#f85149"></span>t=20</span>
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <span class="chart-label" data-tip="round0_postSA_pairwise_cossim_t1">Round-0 post-SA pairwise cossim @ t=1<span class="chart-eval-badge">eval</span></span>
+            <canvas class="sparkline" id="sk-r0sa-t1"></canvas>
+            <div class="chart-val" id="v-r0sa-t1">—</div>
+          </div>
         </div>
       </div>
-      <div>
-        <div class="comp-subtitle" style="margin-top:6px">Latent vector norms (all ≈ √128 ≈ 11.31 with output_norm)</div>
-        <div class="lat-grid" id="lat-norms"></div>
-      </div>
-      <div class="chart-row">
-        <div class="chart-wrap">
-          <div class="chart-label" data-tip="latent_pairwise_l2">Latent pairwise L2</div>
-          <canvas class="sparkline" id="sk-pairwise"></canvas>
-          <div class="chart-val" id="v-pairwise">—</div>
-        </div>
-        <div class="chart-wrap">
-          <div class="chart-label" data-tip="latent_eff_rank">Effective rank</div>
-          <canvas class="sparkline" id="sk-effrank"></canvas>
-          <div class="chart-val" id="v-effrank">—</div>
-        </div>
-      </div>
-      <div class="chart-row">
-        <div class="chart-wrap">
-          <div class="chart-label" data-tip="ht_ht1_cossim">H_T · H_T+1 cos-sim (episode avg)</div>
-          <canvas class="sparkline" id="sk-ht-cossim"></canvas>
-          <div class="chart-val" id="v-ht-cossim">—</div>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- ── Predictor ── -->
-  <div class="component" id="comp-pred">
-    <div class="comp-title">PREDICTOR — FLOW MATCHING</div>
-    <div class="comp-subtitle">4 per-latent MLPs; each predicts clean x₁ from (x_τ, τ, action)</div>
-    <div class="chart-grid">
-      <div class="chart-row">
-        <div class="chart-wrap">
-          <div class="chart-label" data-tip="flow_loss">Flow loss (total)</div>
-          <canvas class="sparkline" id="sk-flow-loss"></canvas>
-          <div class="chart-val" id="v-flow-loss">—</div>
+      <!-- A.2 Temporal evolution -->
+      <div class="subsec">
+        <div class="subsec-title">A.2 — Temporal evolution</div>
+        <div class="chart-grid">
+          <div class="chart-wrap">
+            <span class="chart-label" data-tip="ht_htp1_cossim_rollout">H_t · H_t+1 cossim · rollout + eval</span>
+            <canvas class="sparkline" id="sk-htcos-pair"></canvas>
+            <div class="chart-val" id="v-htcos-pair">—</div>
+            <div class="chart-legend">
+              <span class="lg"><span class="sw" style="background:#388bfd"></span>rollout</span>
+              <span class="lg"><span class="sw" style="background:#f0c040"></span>eval</span>
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <span class="chart-label" data-tip="H1_HT_cossim">H_1 · H_T cossim<span class="chart-eval-badge">eval</span></span>
+            <canvas class="sparkline" id="sk-h1ht"></canvas>
+            <div class="chart-val" id="v-h1ht">—</div>
+            <div class="chart-legend"><span class="lg" id="v-h1ht-Tep">T_episode = —</span></div>
+          </div>
         </div>
-        <div class="chart-wrap">
-          <div class="chart-label" data-tip="ode_cossim">ODE step cos-sim</div>
-          <canvas class="sparkline" id="sk-ode"></canvas>
-          <div class="chart-val" id="v-ode">—</div>
-        </div>
       </div>
-      <div>
-        <div class="comp-subtitle" style="margin-top:4px">Per-latent loss  L0–L3</div>
-        <div class="lat-grid" id="lat-loss"></div>
-      </div>
-      <div>
-        <div class="comp-subtitle" style="margin-top:4px">Per-latent predictor MLP gradient norm</div>
-        <div class="lat-grid" id="lat-pred-grad"></div>
-      </div>
-    </div>
-  </div>
 
-  <!-- ── Policy ── -->
-  <div class="component" id="comp-policy">
-    <div class="comp-title">POLICY — REINFORCE</div>
-    <div class="comp-subtitle">1-hidden-layer MLP; trained with REINFORCE + curiosity reward</div>
-    <div class="chart-grid">
-      <div class="chart-row">
-        <div class="chart-wrap">
-          <div class="chart-label" data-tip="pol_loss">Policy loss</div>
-          <canvas class="sparkline" id="sk-pol-loss"></canvas>
-          <div class="chart-val" id="v-pol-loss">—</div>
+      <!-- A.3 Placeholders & latent geometry -->
+      <div class="subsec">
+        <div class="subsec-title">A.3 — Placeholders & latent geometry</div>
+        <div class="chart-grid">
+          <div class="chart-wrap">
+            <span class="chart-label" data-tip="placeholder_pairwise_cossim">Placeholder pairwise cossim</span>
+            <canvas class="sparkline" id="sk-ph-cossim"></canvas>
+            <div class="chart-val" id="v-ph-cossim">—</div>
+          </div>
+          <div class="chart-wrap">
+            <span class="chart-label" data-tip="placeholder_drift_from_init_mean">Placeholder drift-from-init · mean</span>
+            <canvas class="sparkline" id="sk-ph-drift-mean"></canvas>
+            <div class="chart-val" id="v-ph-drift-mean">—</div>
+          </div>
+          <div class="chart-wrap">
+            <span class="chart-label" data-tip="latent_self_attn_row_jsd">Latent SA row JSD · r0 & r1</span>
+            <canvas class="sparkline" id="sk-sa-jsd"></canvas>
+            <div class="chart-val" id="v-sa-jsd">—</div>
+            <div class="chart-legend">
+              <span class="lg"><span class="sw" style="background:#388bfd"></span>r0</span>
+              <span class="lg"><span class="sw" style="background:#f85149"></span>r1</span>
+            </div>
+          </div>
         </div>
-        <div class="chart-wrap">
-          <div class="chart-label" data-tip="grad_policy">Policy gradient norm</div>
-          <canvas class="sparkline" id="sk-grad-pol"></canvas>
-          <div class="chart-val" id="v-grad-pol">—</div>
+        <div class="subsec">
+          <div class="subsec-title" style="border-bottom:none;margin-bottom:5px">Placeholder drift-from-init · per token</div>
+          <div class="lat-grid" id="grid-ph-drift"></div>
         </div>
-      </div>
-      <div class="chart-row">
-        <div class="chart-wrap">
-          <div class="chart-label" data-tip="entropy">Policy entropy H</div>
-          <canvas class="sparkline" id="sk-entropy"></canvas>
-          <div class="chart-val" id="v-entropy">—</div>
-        </div>
-        <div class="chart-wrap">
-          <div class="chart-label" data-tip="mean_reward">Mean curiosity reward</div>
-          <canvas class="sparkline" id="sk-reward"></canvas>
-          <div class="chart-val" id="v-reward">—</div>
-        </div>
-      </div>
-      <div class="chart-row">
-        <div class="chart-wrap">
-          <div class="chart-label" data-tip="completion_rate">Episode completion rate</div>
-          <canvas class="sparkline" id="sk-complete"></canvas>
-          <div class="chart-val" id="v-complete">—</div>
-        </div>
-        <div class="chart-wrap">
-          <div class="chart-label" data-tip="fps">Steps / sec (fps)</div>
-          <canvas class="sparkline" id="sk-fps"></canvas>
-          <div class="chart-val" id="v-fps">—</div>
+        <div class="subsec">
+          <div class="subsec-title" style="border-bottom:none;margin-bottom:5px">Latent norms · per token (target ≈ √128 ≈ 11.31)</div>
+          <div class="lat-grid" id="grid-lat-norms"></div>
         </div>
       </div>
     </div>
-  </div>
+  </details>
+
+  <!-- ── SECTION B · LOSSES & REWARD ──────────────────────────────────────── -->
+  <details class="section" id="sec-B" open>
+    <summary>
+      <span class="sec-caret">▶</span>
+      <span class="sec-title">B · Losses & Reward</span>
+      <span class="sec-tag">— sec6</span>
+      <span class="sec-inline" id="inline-B">L_total <b id="il-Ltot">—</b> · L_state <b id="il-Ls">—</b> · L_action <b id="il-La">—</b> · r <b id="il-r">—</b></span>
+    </summary>
+    <div class="sec-body">
+
+      <div class="subsec">
+        <div class="subsec-title">B.1 — Loss decomposition (live)</div>
+        <div class="decomp-block" id="decomp-block">L_total  =  <span class="lambda">λ_state</span> · L_state       +  <span class="lambda">λ_action</span> · L_action
+         =   <span class="lambda">0.5</span>    ·  —              +   <span class="lambda">0.5</span>    ·  —
+         =   —
+
+L_state per latent (% share):
+  [0] —   [1] —   [2] —   [3] —
+
+L_action per ground-truth action (CE | n in batch):
+  a=0 CE=—  n=—     a=1 CE=—  n=—
+  a=2 CE=—  n=—     a=3 CE=—  n=—</div>
+      </div>
+
+      <div class="subsec">
+        <div class="subsec-title">B.2 — Loss sparklines</div>
+        <div class="chart-grid">
+          <div class="chart-wrap">
+            <span class="chart-label" data-tip="L_decomp">L_total · L_state · L_action</span>
+            <canvas class="sparkline tall" id="sk-loss3"></canvas>
+            <div class="chart-val" id="v-loss3">—</div>
+            <div class="chart-legend">
+              <span class="lg"><span class="sw" style="background:#e6edf3"></span>L_total</span>
+              <span class="lg"><span class="sw" style="background:#388bfd"></span>L_state</span>
+              <span class="lg"><span class="sw" style="background:#f0c040"></span>L_action</span>
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <span class="chart-label" data-tip="reward_decomp">Reward · total + state + action components</span>
+            <canvas class="sparkline tall" id="sk-reward3"></canvas>
+            <div class="chart-val" id="v-reward3">—</div>
+            <div class="chart-legend">
+              <span class="lg"><span class="sw" style="background:#e6edf3"></span>total</span>
+              <span class="lg"><span class="sw" style="background:#388bfd"></span>state</span>
+              <span class="lg"><span class="sw" style="background:#f0c040"></span>action</span>
+            </div>
+          </div>
+        </div>
+        <div class="subsec">
+          <div class="subsec-title" style="border-bottom:none;margin-bottom:5px">L_state per latent — sparkline grid</div>
+          <div class="lat-grid" id="grid-Ls-per"></div>
+        </div>
+        <div class="subsec">
+          <div class="subsec-title" style="border-bottom:none;margin-bottom:5px">L_action per ground-truth action (CE) — sparkline grid</div>
+          <div class="lat-grid" id="grid-La-per"></div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- ── SECTION C · PREDICTORS ──────────────────────────────────────────── -->
+  <details class="section" id="sec-C">
+    <summary>
+      <span class="sec-caret">▶</span>
+      <span class="sec-title">C · Predictors</span>
+      <span class="sec-tag">— sec4</span>
+      <span class="sec-inline" id="inline-C">ode_step <b id="il-ode">—</b> · ap_ent <b id="il-apent">—</b> · vel <b id="il-vel">—</b></span>
+    </summary>
+    <div class="sec-body">
+      <div class="chart-grid">
+        <div class="chart-wrap">
+          <span class="chart-label" data-tip="ode_step_cossim">ODE step cossim (consecutive)</span>
+          <canvas class="sparkline" id="sk-ode-step"></canvas>
+          <div class="chart-val" id="v-ode-step">—</div>
+        </div>
+        <div class="chart-wrap">
+          <span class="chart-label" data-tip="ode_first_vs_final_cossim">ODE first-vs-final cossim</span>
+          <canvas class="sparkline" id="sk-ode-ff"></canvas>
+          <div class="chart-val" id="v-ode-ff">—</div>
+        </div>
+        <div class="chart-wrap">
+          <span class="chart-label" data-tip="predictor_velocity_norm">Predictor velocity norm</span>
+          <canvas class="sparkline" id="sk-velnorm"></canvas>
+          <div class="chart-val" id="v-velnorm">—</div>
+        </div>
+        <div class="chart-wrap">
+          <span class="chart-label" data-tip="action_pred_entropy">Action-pred entropy (train + eval; H_max ref)</span>
+          <canvas class="sparkline" id="sk-apent-full"></canvas>
+          <div class="chart-val" id="v-apent-full">—</div>
+          <div class="chart-legend">
+            <span class="lg"><span class="sw" style="background:#388bfd"></span>train</span>
+            <span class="lg"><span class="sw" style="background:#f0c040"></span>eval</span>
+            <span class="lg"><span class="sw" style="background:#8b949e"></span>H_max</span>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <span class="chart-label" data-tip="action_pred_input_cossim">Action-pred input cossim (= sec1 ht_htp1)</span>
+          <canvas class="sparkline" id="sk-apinp"></canvas>
+          <div class="chart-val" id="v-apinp">—</div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- ── SECTION D · POLICY ─────────────────────────────────────────────── -->
+  <details class="section" id="sec-D">
+    <summary>
+      <span class="sec-caret">▶</span>
+      <span class="sec-title">D · Policy</span>
+      <span class="sec-tag">— sec5, sec6</span>
+      <span class="sec-inline" id="inline-D">H <b id="il-Hpol">—</b> · loss <b id="il-polloss">—</b> · gnorm <b id="il-polgn">—</b></span>
+    </summary>
+    <div class="sec-body">
+      <div class="chart-grid">
+        <div class="chart-wrap">
+          <span class="chart-label" data-tip="policy_entropy">Policy entropy H + H_max ref</span>
+          <canvas class="sparkline" id="sk-polent"></canvas>
+          <div class="chart-val" id="v-polent">—</div>
+          <div class="chart-legend">
+            <span class="lg"><span class="sw" style="background:#3fb950"></span>H</span>
+            <span class="lg"><span class="sw" style="background:#8b949e"></span>H_max</span>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <span class="chart-label" data-tip="policy_entropy_normalized">Policy entropy · normalized [0,1]</span>
+          <canvas class="sparkline" id="sk-polent-norm"></canvas>
+          <div class="chart-val" id="v-polent-norm">—</div>
+        </div>
+        <div class="chart-wrap">
+          <span class="chart-label" data-tip="pol_loss">Policy loss</span>
+          <canvas class="sparkline" id="sk-polloss"></canvas>
+          <div class="chart-val" id="v-polloss">—</div>
+        </div>
+        <div class="chart-wrap">
+          <span class="chart-label" data-tip="gnorm_policy_total">Policy gradient norm</span>
+          <canvas class="sparkline" id="sk-polgn"></canvas>
+          <div class="chart-val" id="v-polgn">—</div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- ── SECTION E · EXPLORATION ────────────────────────────────────────── -->
+  <details class="section" id="sec-E">
+    <summary>
+      <span class="sec-caret">▶</span>
+      <span class="sec-title">E · Exploration</span>
+      <span class="sec-tag">— sec6 · eval-only</span>
+      <span class="sec-inline" id="inline-E">coverage <b id="il-cov">—</b> · cross_hits <b id="il-cross">—</b></span>
+    </summary>
+    <div class="sec-body">
+      <div class="chart-grid">
+        <div class="chart-wrap">
+          <span class="chart-label" data-tip="reachable_tile_coverage_pct">Reachable tile coverage %<span class="chart-eval-badge">eval</span></span>
+          <canvas class="sparkline" id="sk-cov"></canvas>
+          <div class="chart-val" id="v-cov">—</div>
+        </div>
+        <div class="chart-wrap">
+          <span class="chart-label" data-tip="cross_hits_per_episode">Cross hits per episode<span class="chart-eval-badge">eval</span></span>
+          <canvas class="sparkline" id="sk-cross"></canvas>
+          <div class="chart-val" id="v-cross">—</div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- ── SECTION F · ATTENTION ───────────────────────────────────────────── -->
+  <details class="section" id="sec-F">
+    <summary>
+      <span class="sec-caret">▶</span>
+      <span class="sec-title">F · Attention Distributions</span>
+      <span class="sec-tag">— sec2, sec3</span>
+      <span class="sec-inline" id="inline-F">patch_row <b id="il-pjsd">—</b> · patch_temporal <b id="il-tjsd">—</b></span>
+    </summary>
+    <div class="sec-body">
+      <div class="chart-grid">
+        <div class="chart-wrap">
+          <span class="chart-label" data-tip="patch_sa_row_jsd">Patch SA row JSD (within-step)</span>
+          <canvas class="sparkline" id="sk-pjsd"></canvas>
+          <div class="chart-val" id="v-pjsd">—</div>
+        </div>
+        <div class="chart-wrap">
+          <span class="chart-label" data-tip="patch_sa_temporal_jsd">Patch SA temporal JSD<span class="chart-eval-badge">eval</span></span>
+          <canvas class="sparkline" id="sk-tjsd"></canvas>
+          <div class="chart-val" id="v-tjsd">—</div>
+        </div>
+        <div class="chart-wrap">
+          <span class="chart-label" data-tip="latent_self_attn_row_jsd">Latent SA row JSD · r0 & r1</span>
+          <canvas class="sparkline" id="sk-sa-jsd-2"></canvas>
+          <div class="chart-val" id="v-sa-jsd-2">—</div>
+          <div class="chart-legend">
+            <span class="lg"><span class="sw" style="background:#388bfd"></span>r0</span>
+            <span class="lg"><span class="sw" style="background:#f85149"></span>r1</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- ── SECTION G · GRADIENTS ─────────────────────────────────────────── -->
+  <details class="section" id="sec-G">
+    <summary>
+      <span class="sec-caret">▶</span>
+      <span class="sec-title">G · Gradients</span>
+      <span class="sec-tag">— sec7</span>
+      <span class="sec-inline" id="inline-G">patch_sa <b id="il-gpsa">—</b> · perc_cross_r0 <b id="il-gpcr0">—</b> · action_pred <b id="il-gap">—</b> · policy <b id="il-gpol">—</b></span>
+    </summary>
+    <div class="sec-body">
+      <div class="subtab-bar">
+        <button class="subtab-btn active" data-tab="g-totals">G.1 totals</button>
+        <button class="subtab-btn" data-tab="g-decomp">G.2 source decomposition</button>
+        <button class="subtab-btn" data-tab="g-cos">G.3 cosine agreement</button>
+        <button class="subtab-btn" data-tab="g-uwr">G.4 update / weight ratio</button>
+      </div>
+
+      <!-- G.1 totals -->
+      <div class="subtab-panel active" id="tab-g-totals">
+        <div class="chart-grid" id="grid-gtotals"></div>
+      </div>
+
+      <!-- G.2 source decomposition -->
+      <div class="subtab-panel" id="tab-g-decomp">
+        <div class="chart-grid" id="grid-gdecomp"></div>
+        <div class="subtab-empty" id="empty-gdecomp" style="display:none">decomposition not captured in this run (set grad_decomp_freq &gt; 0)</div>
+      </div>
+
+      <!-- G.3 cosine -->
+      <div class="subtab-panel" id="tab-g-cos">
+        <div class="chart-grid" id="grid-gcos"></div>
+        <div class="subtab-empty" id="empty-gcos" style="display:none">cosine-agreement metrics not captured in this run</div>
+      </div>
+
+      <!-- G.4 UWR -->
+      <div class="subtab-panel" id="tab-g-uwr">
+        <div class="chart-grid" id="grid-guwr"></div>
+        <div class="subtab-empty" id="empty-guwr" style="display:none">update/weight ratio not captured in this run (set uwr_freq &gt; 0)</div>
+      </div>
+    </div>
+  </details>
+
+  <!-- ── SECTION H · RUN META ─────────────────────────────────────────── -->
+  <details class="section" id="sec-H">
+    <summary>
+      <span class="sec-caret">▶</span>
+      <span class="sec-title">H · Run Meta</span>
+      <span class="sec-tag">— throughput · buffer · config</span>
+      <span class="sec-inline" id="inline-H">fps <b id="il-fps">—</b> · buf <b id="il-buf">—</b> · eps <b id="il-eps">—</b></span>
+    </summary>
+    <div class="sec-body">
+      <div class="meta-grid">
+        <div class="meta-cell"><div class="k">fps (steps/sec)</div><div class="v" id="m-fps">—</div></div>
+        <div class="meta-cell"><div class="k">buffer size</div><div class="v" id="m-buf">—</div></div>
+        <div class="meta-cell"><div class="k">episodes completed</div><div class="v" id="m-eps">—</div></div>
+        <div class="meta-cell"><div class="k">latest step</div><div class="v" id="m-step">—</div></div>
+        <div class="meta-cell"><div class="k">λ_state · λ_action</div><div class="v">0.5 · 0.5</div></div>
+        <div class="meta-cell"><div class="k">reward_w_state · _action</div><div class="v">0.5 · 0.5</div></div>
+        <div class="meta-cell"><div class="k">n_actions</div><div class="v">4</div></div>
+        <div class="meta-cell"><div class="k">H_max = ln(n_actions)</div><div class="v">1.386</div></div>
+      </div>
+    </div>
+  </details>
 
 </div><!-- /main -->
 
@@ -257,281 +603,392 @@ canvas.lat-spark{display:block;width:100%;height:36px;background:#0d1117;margin-
 <script>
 'use strict';
 
-// ── Tooltip database ─────────────────────────────────────────────────────────
+// ── Constants ────────────────────────────────────────────────────────────────
+// We keep ALL metric points so pan/zoom across the whole run is faithful.
+// At ~200-step logging cadence, 500K-step runs = ~2500 records × ~100 keys × 16 B ≈ 4 MB.
+const MAX_POINTS = 50000;
+const H_MAX_DEFAULT = Math.log(4);  // updated from data when available
+const LAMBDA_STATE  = 0.5;
+const LAMBDA_ACTION = 0.5;
+
+const COL = {
+  blue:   '#388bfd',
+  green:  '#3fb950',
+  yellow: '#f0c040',
+  red:    '#f85149',
+  white:  '#e6edf3',
+  grey:   '#8b949e',
+  purple: '#8957e5',
+};
+
+// ── Tooltip database (sec1–sec7) ─────────────────────────────────────────────
 const TIPS = {
-  grad_enc_sa: {
-    title: 'SA Block Gradient Norm',
-    body: `L2 norm of all gradient tensors across the patch embedding + 2 SA transformer blocks.
-
-Computed after flow loss backward(), before clip:
-  gnorm = sqrt( Σ_p ||p.grad||² )  over all p in {color_embed, patch_proj, sa_blocks, sa_norm}
-
-Healthy range: 0.1 – 2.0
-Warning threshold: > 200 (GRAD_NORM_CRITICAL)`,
-    example: `Example: at step 5000 with B=32 batch:
-  color_embed.grad ~ 0.05  (tiny — only 6 colors)
-  patch_proj.grad  ~ 0.3   (main signal source)
-  sa_block_0.grad  ~ 0.8
-  sa_block_1.grad  ~ 0.6
-  Total SA gnorm ≈ sqrt(0.05²+0.3²+0.8²+0.6²) ≈ 1.03  ✓ healthy`
-  },
-  across_state_std: {
-    title: 'Cross-State Std (placeholder queries)',
-    body: `Measures whether the encoder produces DIFFERENT latent vectors for different input frames.
-
-Method:
-  1. Sample 16 frames from latent buffer
-  2. Encode all 16 with the same placeholder queries (not recurrent)
-  3. h_m.shape = (16, 4, 128)
-  4. across_std = h_m.std(dim=0).mean()
-     = mean std over 16 frames at each of 4×128=512 scalar positions
-
-Near 0 → encoder maps all frames to the same latent = COLLAPSE (bad)
-Healthy: > 0.05`,
-    example: `Example: B=16 frames, n_latents=4, d_model=128
-  Position [latent=0, dim=42]:
-    values across 16 frames = [0.3, -0.1, 0.7, -0.4, ...]
-    std at this position = 0.38
-  Average across all 512 positions = 0.21  ✓ healthy
-
-  Collapsed encoder:
-    All 16 frames → same latent → std = 0.000 at every position  ✗`
-  },
-  grad_enc_perceiver: {
-    title: 'Perceiver Gradient Norm',
-    body: `L2 norm of gradients across ALL Perceiver parameters (both rounds, cross-attn + self-attn).
-
-Each training step runs encoder() twice (for h_t and h_{t+1}), each with 2 rounds.
-Separate per-round weights (exp_003 fix) halve the gradient accumulation vs exp_002's weight-tied design:
-  exp_002: 4× accumulation (2 calls × 2 rounds, same weights)
-  exp_003: 2× accumulation (2 calls × 2 independent rounds)
-
-Perceiver LR is set to 5e-5 (half of SA's 1e-4) to further stabilise updates.
-Healthy range: 0.1 – 5.0  (higher than SA due to cross-attn complexity)`,
-    example: `Example at step 10000:
-  Perceiver has ~500K parameters across 2 rounds
-  Each param has per-step grad σ ≈ 0.001
-  gnorm ≈ sqrt(2 × 500K) × 0.001 ≈ 1.0  ✓
-
-  If gnorm > 10: weight accumulation or LR too high
-  If gnorm → 0: Perceiver frozen (encoder collapsed)`
-  },
-  grad_time_emb: {
-    title: 'Time Embedding Gradient',
-    body: `Gradient norm of the sinusoidal time embedding MLP in the predictor.
-
-The predictor uses τ ∈ [0,1] (the interpolation coefficient in flow matching) as a conditioning signal.
-If the predictor ignores τ, it learns a constant (τ-blind) prediction → ODE trajectory is flat.
-
-Warning if < 1e-4 (TIME_GRAD_WARN).
-
-The time embedding encodes τ as:
-  τ → sin/cos at multiple frequencies → MLP → d_model`,
-    example: `Example:
-  At step 200 (early): grad_time_emb ≈ 0.12  ✓ predictor learning to use τ
-  At step 50K (collapsed): grad_time_emb ≈ 0.00001  ✗ predictor ignoring time`
-  },
-  latent_pairwise_l2: {
-    title: 'Latent Pairwise L2',
-    body: `How distinct are the 4 latent vectors within a single state's representation?
-
-For each batch sample:
-  Compute L2 distance between all C(4,2)=6 pairs of the 4 latent vectors
-  Average across 16 sampled states
-
-If all 4 latents → same vector: pairwise_L2 → 0 = representation collapse
-With output_norm, ||h_i|| ≈ 11.31, so max L2 between two opposite vectors ≈ 22.6
-
-Healthy: > 3.0  (latents point in clearly different directions)`,
-    example: `Example: n_latents=4, d_model=128, all norms ≈ 11.31
-  Collapsed: h_0 ≈ h_1 ≈ h_2 ≈ h_3 → pairwise_L2 ≈ 0.0  ✗
-  Diverse:   cos_sim(h_i,h_j) ≈ 0.5 → L2 ≈ sqrt(2(1-0.5))×11.31 ≈ 11.3  ✓`
-  },
   latent_eff_rank: {
-    title: 'Effective Rank',
-    body: `How many linearly independent directions do the 4 latent vectors span?
-
-Method (for one batch sample):
-  M = (4, 128) latent matrix
-  σ = SVD singular values of M (4 values)
-  p_i = σ_i / sum(σ)              # normalised to distribution
-  effective_rank = exp(-Σ p_i log(p_i))   # exp(Shannon entropy)
+    title: 'Effective Rank (sec1)',
+    body: `Effective rank of the 4×128 latent matrix: exp(H(p)) where p = singular-value distribution.
 
 Range [1, 4]:
-  1 = all 4 vectors are collinear (rank-1 subspace) = collapse
-  4 = fully orthogonal rank (each vector contributes unique information)
+  1 = all 4 vectors collinear (rank-1 subspace) → COLLAPSE
+  4 = fully orthogonal — each latent contributes unique information
 
-In exp_002 we hit 1.29 by step 500K → near rank-1 collapse.
-Target for exp_003: eff_rank > 2.5`,
-    example: `Example: singular values = [10, 8, 6, 4]
-  p = [10/28, 8/28, 6/28, 4/28] = [0.357, 0.286, 0.214, 0.143]
-  H = -(0.357×log(0.357) + ... ) = 1.33 nats
-  eff_rank = exp(1.33) ≈ 3.78  ✓ high diversity
+This is THE collapse signal for exp_003_2 — the central question being tested
+is whether the action-predictor signal alone keeps eff_rank ≥ 2 without an
+EMA target encoder. Red zone shown at y < 2.
 
-  Collapsed: singular values = [28, 0.001, 0.001, 0.001]
-  eff_rank ≈ 1.0  ✗`
+Computed every LOG_FREQ ticks on the rollout buffer.`,
+    example: `σ = [10, 8, 6, 4] → p = [.357,.286,.214,.143]
+H = 1.33  →  eff_rank = e^1.33 ≈ 3.78  ✓
+σ = [28, ~0, ~0, ~0] → eff_rank ≈ 1.0   ✗ collapse`
   },
-  flow_loss: {
-    title: 'Flow Matching Loss (total)',
-    body: `Mean MSE between predicted and true target latent vectors across all 4 latents and the batch.
+  latent_pairwise_cossim_buf: {
+    title: 'Latent Pairwise Cosine Sim · rollout buffer (sec1)',
+    body: `Mean pairwise cosine similarity across the 4 latent tokens, averaged across rollout samples.
 
-Training objective (velocity formulation):
-  x_0 = h_t         (current latent, has gradient)
-  x_1 = h_{t+1}     (target latent, stop-gradient → detached)
-  τ ~ Uniform[0,1]
-  x_τ = (1-τ)x_0 + τ x_1      (interpolated point)
-  x̂_1 = MLP(x_τ, emb(τ), emb(a))  (predicted clean endpoint)
-  loss = MSE(x_1, x̂_1)
+≈0  → tokens are orthogonal (healthy)
+≈1  → all 4 tokens point the same direction (collapse)
 
-Stop gradient on x_1 prevents the collapse attractor:
-  Without stop grad → encoder can minimize loss by mapping all frames to the same constant
-  With stop grad → encoder must make h_t useful for predictor to reach a FIXED target`,
-    example: `Example: B=32, n_latents=4
-  Total loss = mean over 32×4=128 (latent, sample) pairs
-  At step 1000: loss ≈ 0.8    (predictor just learning)
-  At step 50K:  loss ≈ 0.2    (predictor tracks transitions well)
-  At step 200K: loss ≈ 0.05   (sharp predictions)`
+Companion to effective_rank: cosine measures pairwise alignment, eff_rank
+measures the joint subspace dimensionality. Either alone can miss a mode
+the other catches; together they triangulate.`,
+    example: `Healthy:  pairwise_cossim ≈ 0.05–0.3
+Collapse: pairwise_cossim ≈ 0.99   ← every token == one direction`
   },
-  ode_cossim: {
-    title: 'ODE Step Cosine Similarity',
-    body: `Measures whether the ODE trajectory moves (consecutive steps are similar → near 1 = stuck).
+  latent_pairwise_l2_buf: {
+    title: 'Latent Pairwise L2 (sec1)',
+    body: `L2 distance between pairs of the 4 latent tokens, averaged across rollout samples.
 
-The predictor uses N ODE steps (default 4) to iteratively refine h_{t+1}:
-  x_0 → x_{1/4} → x_{2/4} → x_{3/4} → x_1
+L2 ≈ 0 → all tokens collapsed to the same vector.
+With output_norm clamping ||h|| ≈ 11.31, fully orthogonal pairs sit near
+L2 ≈ √2 · 11.31 ≈ 16.
 
-For the first batch sample, compute cos_sim between consecutive steps:
-  cos_sim(x_k, x_{k+1}) for k in 0..N-1
+Kept alongside cossim because LayerNorm-style output_norm does not strictly
+unit-normalize, so L2 and cosine carry slightly different information.`,
+    example: `cossim(h_i, h_j) ≈ 0.5  →  L2 ≈ √(2·(1-0.5)) · 11.31 ≈ 11.3  ✓`
+  },
+  latent_pairwise_cossim_eval: {
+    title: 'Latent Pairwise Cosine Sim @ t ∈ {1,10,20} · eval (sec1)',
+    body: `Mean pairwise cosine sim between the 4 latent tokens at three fixed
+eval-episode timesteps. Run with a fresh placeholder query at t=1 and the
+recurrent rollout from there on.
 
-Mean over all N steps is reported.
+t=1 measures the freshness of the first cross-attn read.
+t=10 / t=20 measure whether the recurrent boundary degrades over time.
 
-Warning if > 0.99 (ODE_COSSIM_WARN): predictor barely moves between ODE steps.
-This indicates the predictor learned h_t ≈ h_{t+1} (trivial identity) or collapsed.`,
-    example: `Example: N=4 steps, d=128 per latent
-  Healthy: each step moves by ~0.3 units → cos_sim ≈ 0.85
-  Collapsed: each step is identity → cos_sim ≈ 0.9999  ✗ (warn fires)`
+If T_episode < 20 at this checkpoint, the t=20 slot is undefined ("n/a").`,
+    example: `Healthy: t1=0.10  t10=0.18  t20=0.22  (slowly mixing)
+Late collapse: t1=0.30  t10=0.85  t20=0.98  ← recurrent narrowing`
+  },
+  round0_postSA_pairwise_cossim_t1: {
+    title: 'Round-0 post-SA pairwise cossim @ t=1 (sec1 · eval)',
+    body: `Pairwise cosine sim between the 4 latent tokens IMMEDIATELY after the
+self-attention sub-block of round 0 in the Perceiver Resampler, with
+placeholder queries (t=1).
+
+This is the exact site previously identified as the primary collapse
+mechanism: if the 4 query-rows of latent-SA become identical, every
+output latent is the same weighted average → guaranteed collapse downstream.
+
+More diagnostic than watching the final H_t.`,
+    example: `Healthy: 0.10–0.25
+Collapsing: 0.85+  (warning)`
+  },
+  ht_htp1_cossim_rollout: {
+    title: 'H_t · H_t+1 cosine sim (sec1 · rollout)',
+    body: `Mean cosine sim between successive latents within an episode:
+mean_t cos(H_t[i], H_{t+1}[i]) averaged across the 4 latent tokens.
+
+Near 1 → representation is sluggish (state-blind). Near 0 → healthy variability.
+
+The rollout-time version is computed during data collection; the eval
+version (dashed line when overlaid) uses the trained policy on a fixed
+seed and is comparable across checkpoints.`,
+    example: `Healthy:    0.6–0.95  (smooth temporal coherence)
+Collapse:   0.999+   (encoder ignoring transitions)`
+  },
+  H1_HT_cossim: {
+    title: 'H_1 · H_T cosine sim (sec1 · eval)',
+    body: `Cosine sim between the FIRST latent of the eval episode and the LAST
+latent before is_end_of_life fires.
+
+Together with ht_htp1_cossim this tells us whether the trajectory in latent
+space is exploring or pacing in place — ht_htp1 measures local change,
+H1·HT measures global displacement.
+
+T_episode is shown next to this value so length-driven shifts (policy
+improves → episode lengthens) are not misread as representation shifts.`,
+    example: `Healthy:  0.4 (large displacement across the episode)
+Collapse: 0.99 (never moved)`
+  },
+  placeholder_pairwise_cossim: {
+    title: 'Placeholder pairwise cosine sim (sec1)',
+    body: `Mean pairwise cosine sim between the 4 learned placeholder query vectors
+in the Perceiver Resampler.
+
+If the placeholders converge to a single direction, every cross-attention
+query becomes the same query, and the resampler can only emit one
+direction → leading-indicator collapse signal.
+
+Healthy target ≈ 0 (orthogonal placeholders).`,
+    example: `Healthy: 0.05
+Drifting: 0.4 → 0.7 → 0.95 = imminent collapse`
+  },
+  placeholder_drift_from_init_mean: {
+    title: 'Placeholder drift-from-init · mean (sec1)',
+    body: `Mean cosine sim between the CURRENT placeholder vectors and their
+INITIAL (step-0) values, averaged across the 4 placeholders.
+
+≈1 → placeholders haven't moved (gradient path broken)
+↓   → placeholders are learning meaningful directions
+
+Combined with placeholder_pairwise_cossim: if drift drops fast but pairwise
+stays low, placeholders are learning distinct meaningful directions (good).
+If drift drops and pairwise also drops to 1, placeholders are merging into
+a single direction (bad).`,
+    example: `Healthy: drift_mean = 0.6  ·  pairwise = 0.05  ← learned but distinct
+Bad:     drift_mean = 0.6  ·  pairwise = 0.98  ← learned but merged`
+  },
+  latent_self_attn_row_jsd: {
+    title: 'Latent self-attn row JSD per Perceiver round (sec3)',
+    body: `Pairwise Jensen–Shannon divergence between the 4 query-rows of the
+latent self-attention matrix inside each Perceiver round.
+
+If the 4 rows are identical distributions, each latent computes the same
+weighted average of the values → guaranteed downstream collapse.
+
+JSD must be strictly > 0 and ideally stable. Range [0, ln 2].`,
+    example: `Healthy: r0 ≈ 0.02 — 0.15
+Bad:     r0 → 1e-6  (rows collapsed to identical distributions)`
+  },
+  L_decomp: {
+    title: 'Loss decomposition (sec6.1)',
+    body: `L_total = λ_state · L_state + λ_action · L_action
+        = 0.5    · L_state + 0.5    · L_action
+
+L_state is the flow-matching velocity MSE averaged over τ samples per step,
+NOT the rollout-prediction MSE. L_action is multi-class cross-entropy of the
+action predictor against the ground-truth a_t.
+
+Per-latent share row makes visible if one latent's MSE dominates the
+gradient signal; per-action class row catches mode-collapse in the action
+predictor that the aggregate loss hides.`,
+    example: `Step 5000:
+  L_state = 0.30  ← predictor improving
+  L_action = 1.20 ← still near H_max, encoder hasn't escaped collapse yet`
+  },
+  reward_decomp: {
+    title: 'Curiosity reward · decomposition (sec6)',
+    body: `r = clamp(w_state · MSE(h̃, h_{t+1}) + w_action · CE(p_pred, a_t), max=50)
+
+w_state = w_action = 0.5 by default.
+
+IMPORTANT — velocity-MSE vs rollout-MSE clarification:
+  Training loss L_state is the velocity-MSE averaged over K random τ samples.
+  Reward state_component is the FULL N-step Euler rollout MSE between the
+  post-ODE prediction and actual h_{t+1}.
+  These are mathematically related but distinct quantities — do not expect
+  them to agree numerically.`,
+    example: `Early: r ≈ 1.5 (action_err dominates — encoder hasn't co-trained)
+Late : r ≈ 0.3 (predictors converged — agent should now seek novelty)`
+  },
+  ode_step_cossim: {
+    title: 'ODE step cosine sim (sec4)',
+    body: `Cosine sim between successive ODE denoising step outputs x_k → x_{k+1}.
+
+Near 1 → ODE steps are not transforming their input (saturated / under-
+trained predictor). Healthy values < 1.
+
+With n_ode_steps = 3 there are only 3 consecutive-pair samples per batch,
+so the metric is averaged over the batch to denoise.`,
+    example: `Healthy: 0.6–0.95
+Saturated: 0.999+ → predictor frozen`
+  },
+  ode_first_vs_final_cossim: {
+    title: 'ODE first-vs-final cosine sim (sec4)',
+    body: `cos(x_{1/N}, x_1). Measures TOTAL work done by the remaining ODE steps
+after the first.
+
+≈ 1 → predictor essentially finishes in one Euler step; remaining N-1 steps
+are no-ops (the multi-step ODE is overkill / under-utilized).
+≪ 1 → later steps materially refine the prediction (multi-step is paying off).`,
+    example: `N=3 → only x_{1/3} vs x_1 (2 ODE updates apart) — modest resolution.
+Raising N to 5 or 8 at eval-time gives a sharper diagnostic.`
+  },
+  predictor_velocity_norm: {
+    title: 'Predictor velocity norm (sec4)',
+    body: `Mean L2 norm of x_1_hat − x_0 from the full ODE rollout.
+
+If this collapses to ≈ 0, the predictor is outputting "no change" — a
+failure mode where ode_step_cossim looks healthy because every step is
+near zero, not because the predictor reached convergence cleanly.
+
+Read ode_step_cossim and velocity_norm together.`,
+    example: `Healthy: ‖x_1 - x_0‖ ≈ 3–8
+Degenerate: ‖x_1 - x_0‖ ≈ 0.01  ← predictor stuck at identity`
+  },
+  action_pred_entropy: {
+    title: 'Action predictor entropy (sec4)',
+    body: `Entropy of the action predictor's softmax output, in nats.
+H_max = ln(n_actions) = ln(4) ≈ 1.386.
+
+≈ H_max → predictor outputs near-uniform → has NOT learned to invert
+dynamics. If this stays at H_max while encoder eff_rank also drops, the
+anti-collapse signal is doing nothing.
+
+↓ from H_max with rising prediction accuracy = the action-predictor is
+working as an anti-collapse signal.`,
+    example: `Step 0:    H ≈ 1.385  (uniform)
+Step 50K:  H ≈ 0.6    (predictor confident — good)
+Step 50K:  H ≈ 1.385  ← bad: anti-collapse signal has no effect`
+  },
+  action_pred_input_cossim: {
+    title: 'Action-pred input cosine sim (sec4)',
+    body: `Mean cosine sim between H_t and H_{t+1} — the action predictor's two
+inputs.
+
+Identical formula to sec1/ht_htp1_cossim_rollout; kept duplicated for
+ergonomic reasons (filter by subsystem in the dashboard). Diagnostic
+question here: "is the input to the action predictor informative",
+i.e. is there any signal it could use to distinguish actions.
+
+If cos ≈ 1 consistently, the action predictor literally has no signal.`,
+    example: `0.6 — distinct adjacent states (good)
+0.99 — predictor has no signal — collapse`
+  },
+  policy_entropy: {
+    title: 'Policy entropy H (sec5)',
+    body: `Entropy of the policy's softmax distribution (after masking unavailable
+actions). H_max = ln(n_actions) = ln(4) ≈ 1.386.
+
+Low entropy too early → premature commitment.
+Persistently near H_max → no learning.
+
+When env.available_actions masks some actions out, effective H_max is
+ln(|available|). Use the normalized version (sec5/policy_entropy_normalized)
+for precise comparison to H_max.`,
+    example: `Healthy: H drops from 1.36 → 0.9 over ~50K steps
+Stuck:   H ≈ 1.386 throughout (no policy learning signal)`
+  },
+  policy_entropy_normalized: {
+    title: 'Policy entropy · normalized (sec5)',
+    body: `policy_entropy / ln(|available_actions|), so it lies in [0, 1] regardless
+of how many actions are available at each step.
+
+Use when |available_actions| varies per step.`,
+    example: ``
   },
   pol_loss: {
-    title: 'Policy Loss',
-    body: `REINFORCE loss with baseline and entropy bonus.
+    title: 'Policy loss (sec6)',
+    body: `REINFORCE objective with normalized advantage + entropy bonus:
 
-pol_loss = -mean(advantage × log_prob) - λ_entropy × mean(entropy)
+  pol_loss = -mean(adv · log_prob) - λ_entropy · mean(entropy)
 
-where:
-  log_prob = log π(a_t | h_t)   (policy log-probability of taken action)
-  advantage = (r_t - baseline)  / std(r_t - baseline)
-  baseline = exponential moving average of rewards (α=0.05)
-  λ_entropy = 0.01              (entropy regularization coefficient)
-
-Negative pol_loss → policy improving (lower = better, but not monotone due to baseline)
-Very large pol_loss (positive) → policy assigning low prob to high-reward actions`,
-    example: `Example: B=64 transitions (policy_update_freq=64)
-  rewards = [0.1, 0.3, 0.05, ...]
-  baseline = 0.15 (EMA)
-  advantage[0] = (0.1 - 0.15) / std = -0.5
-  advantage[1] = (0.3 - 0.15) / std = +1.5
-  pol_loss ≈ -(+1.5 × log(0.6)) - 0.01×1.37 ≈ +0.77`
+Negative pol_loss → policy is improving (lower is better, but non-monotone
+due to the moving baseline).`,
+    example: ``
   },
-  grad_policy: {
-    title: 'Policy Gradient Norm',
-    body: `L2 norm of policy gradients after policy loss backward(), before clip (clip=1.0).
+  gnorm_policy_total: {
+    title: 'Policy gradient norm (sec7)',
+    body: `L2 norm of policy gradients after the policy backward, before clip
+(grad_clip_policy = 1.0).
 
-Very low (< 0.001): policy frozen — no learning signal
-Very high (> 5.0):  policy taking large update steps (rare, usually fine due to low clip)
-
-Policy uses a separate Adam optimizer with lr=5e-4 and is never touched by the encoder optimizer.
-The policy network receives h_t.detach() as input, ensuring encoder parameters are never updated by pol_loss.`,
-    example: `Example: policy net has 2 layers, d_model=128, hidden=256
-  ~100K parameters total
-  At step 500K: gnorm ≈ 0.15  ✓ steady learning`
+Very low (< 1e-3): policy frozen — no learning signal.
+Very high (> 5): policy taking unusually large update steps (clip absorbs
+this; chronic large values suggest reward instability).`,
+    example: ``
   },
-  entropy: {
-    title: 'Policy Entropy H',
-    body: `Shannon entropy of the action probability distribution at each step.
+  reward_total: {
+    title: 'Mean curiosity reward · total (sec6)',
+    body: `clamp(0.5 · state_err + 0.5 · action_err, max = 50).
 
-H = -Σ_a π(a|h_t) log π(a|h_t)
-
-For n_actions=6 actions, maximum H = log(6) ≈ 1.79 (uniform distribution).
-Near-zero H → policy collapsed to a single deterministic action (agent gets stuck).
-
-Warning if H < 0.30 (ENTROPY_WARN).
-
-The entropy bonus in pol_loss (λ=0.01) encourages exploration and prevents premature convergence.`,
-    example: `Example: n_actions=6
-  Uniform: π = [1/6,...,1/6] → H = 1.79 (max)
-  Slightly biased: π = [0.5, 0.1, 0.1, 0.1, 0.1, 0.1] → H = 1.30
-  Collapsed: π = [0.99, 0.01, ...] → H = 0.08  ✗ (warn fires at H < 0.30)`
-  },
-  mean_reward: {
-    title: 'Mean Curiosity Reward',
-    body: `Average intrinsic curiosity reward over the last LOG_FREQ=200 policy steps.
-
-r_t = min( mean(per_latent_pred_error), REWARD_CAP=50 )
-
-where per_latent_pred_error is the MSE between predictor output and actual h_{t+1} for each latent.
-
-High reward → predictor surprised by transitions (exploring novel states)
-Near-zero reward → predictor fully learned all transitions (or latent collapsed → all predictions trivial)
-
-External completion bonus: +50 added when level_completed.`,
-    example: `Example:
-  per_latent_pred_error = [0.3, 0.5, 0.2, 0.4]
-  mean_pred_error = 0.35
-  r_t = min(0.35, 50) = 0.35
-
-  If collapsed: all h_t ≈ constant → error ≈ 0 → r_t ≈ 0 → policy gets no signal`
+Both errors are computed under no_grad during rollout — state_err uses
+the full N-step Euler integration, action_err is CE of the action predictor.
+The cap at 50 prevents a single extremely surprising transition from
+dominating REINFORCE.`,
+    example: ``
   },
   completion_rate: {
-    title: 'Episode Completion Rate',
-    body: `Fraction of the last 20 episodes where the level was completed.
+    title: 'Episode completion rate (sec6)',
+    body: `Fraction of last-20 episodes with episode.level_completed = True.
 
-episode.level_completed = True when the agent successfully solves the LS20 puzzle before losing all lives.
-
-0.0 = never completed (pure exploration or wrong behavior)
-1.0 = always completes (mastered the level)
-
-Each episode ends when is_end_of_life() fires (energy depleted) or force_flush after MAX_EP_STEPS=300.`,
-    example: `Example: last 20 episodes
-  16 completions → completion_rate = 0.80 = 80%
-  0 completions → completion_rate = 0.00`
+0.0 → never completed (pure exploration or wrong policy).
+1.0 → mastered the level.`,
+    example: ``
   },
-  ht_ht1_cossim: {
-    title: 'H_T → H_T+1 Cosine Similarity (episode avg)',
-    body: `Per-step cosine similarity between the encoder's latent at time T and time T+1,
-averaged over the episode's steps and over the n_latents latent slots.
-
-  cos_sim_i = dot(h_T[i], h_{T+1}[i]) / (||h_T[i]|| × ||h_{T+1}[i]||)
-  per_step = mean over i in 0..n_latents-1
-  reported = rolling mean over recent steps
-
-Near 1.0 → consecutive frames produce nearly identical latents (latent collapse, or truly static scene)
-Near 0.0 → consecutive frames look completely different (noisy encoder or extreme state change)
-Near -1.0 → encoder flips representation between frames (unstable)
-
-Healthy range: 0.7 – 0.97 (smooth temporal coherence with meaningful change)
-If this stays at 1.0: encoder is ignoring transitions (likely collapse)
-If this drops below 0.5: encoder is too noisy`,
-    example: `Example: n_latents=4, output_norm applied (||h|| ≈ 11.31)
-  Static wall: h_T ≈ h_{T+1} → cos_sim ≈ 1.0  (watch for collapse)
-  Active play: cos_sim ≈ 0.88  ✓ significant but smooth state change
-  Collapsed:   all h → same constant → cos_sim ≈ 1.0 always  ✗
-  Random:      cos_sim ≈ 0.0  ✗ no temporal coherence`
+  reachable_tile_coverage_pct: {
+    title: 'Reachable tile coverage % (sec6 · eval)',
+    body: `|tiles visited ∩ reachable tiles| / |reachable tiles|, computed per eval
+episode (or rolling window). Catches the "agent loops in a corner forever"
+failure mode that reward curves do not.`,
+    example: ``
   },
-  fps: {
-    title: 'Steps per Second (fps)',
-    body: `Training throughput: total steps / total wall-clock time since training start.
+  cross_hits_per_episode: {
+    title: 'Cross hits per episode (sec6 · eval)',
+    body: `Number of times the agent steps onto a cross tile in an eval episode.
+Beating LS20 level 1 requires interacting with the cross — until this is
+> 0 the agent has not discovered the core mechanic.`,
+    example: ``
+  },
+  patch_sa_row_jsd: {
+    title: 'Patch SA row JSD · within-step (sec2)',
+    body: `Mean pairwise Jensen–Shannon divergence between the 16 attention rows
+of each Patch SA block. Averaged across heads, blocks, time.
 
-One "step" = one environment step (collect transition) + periodic training update.
+If all 16 patches attend the same way, the SA layer is performing a constant
+weighted average — degenerate. Healthy values well above 0.`,
+    example: ``
+  },
+  patch_sa_temporal_jsd: {
+    title: 'Patch SA temporal JSD (sec2 · eval)',
+    body: `For each fixed patch index i, JSD of A_t[h, i, :] across time steps within
+an episode. Catches state-independent attention (softer collapse mode):
+even if rows are distinct within a step, attention might be identical
+across all states.`,
+    example: ``
+  },
+  // Gradient totals (G.1)
+  gnorm_total_generic: {
+    title: 'Gradient norm (sec7 — total per sub-block)',
+    body: `L2 norm of gradient flowing into a parameter group from the full backward
+pass, measured BEFORE clip_grad_norm_ (so the clip threshold is not folded
+in). Sub-block partition mirrors the gnorm tables in metrics.md §7.
 
-Typical values (MPS/Apple Silicon):
-  ~40–80 fps: env step + encoder forward (no_grad) + policy
-  Lower during training updates (every update_freq=4 steps): backward pass adds ~10ms
+For Perceiver groups, sub-additivity check: gnorm_total ≤ sum(gnorm_sub).
+Violation ⇒ double-counted parameter.`,
+    example: ``
+  },
+  gnorm_source_generic: {
+    title: 'Gradient source decomposition (sec7 — gated)',
+    body: `g_total = g_from_state + g_from_action_via_Ht + g_from_action_via_Htp1
 
-Use this to estimate time to completion:
-  remaining_steps / fps → seconds left`,
-    example: `Example:
-  step=50000, elapsed=1250s → fps = 40 steps/s
-  remaining = 950000 steps
-  ETA ≈ 950000/40 = 23750s ≈ 6.6 hours`
+Computed via separate torch.autograd.grad calls — costs ~2× the JEPA
+backward, gated by config.grad_decomp_freq.
+
+If the action predictor used target-H_{t+1} instead of online, the third
+term would be identically 0 by design — exp_003_2 deliberately uses online
+encoder for H_{t+1} so all three are non-zero.`,
+    example: ``
+  },
+  gcossim_generic: {
+    title: 'Gradient cosine — agreement between losses (sec7 · 7.5/7.6)',
+    body: `cos(g_state, g_action) per parameter group:
+   ≈  +1 → action head redundant with state head
+   ≈   0 → orthogonal — independent signals
+   ≪   0 → opposing — the two heads are fighting (worst case)
+
+cos(g_action_via_Ht, g_action_via_Htp1):
+  ↑ toward 1 = action predictor collapsing into "use either input,
+  doesn't matter" — a precursor to action entropy collapsing to ln(n).`,
+    example: ``
+  },
+  uwr_generic: {
+    title: 'Update-to-weight ratio (sec7 · 7.7)',
+    body: `‖θ_new − θ_old‖₂ / ‖θ_old‖₂ per parameter group, after optimizer.step().
+
+Healthy band ≈ [1e-4, 1e-2]:
+  < 1e-4 → updates barely move the weights (LR too low / frozen / vanishing
+            gradient)
+  > 1e-2 → updates large relative to weights (LR too high / instability)`,
+    example: ``
   },
 };
 
@@ -540,15 +997,68 @@ const S = {
   experiment: '',
   run: '',
   records: [],
+  evalRecords: [],
   lastStep: 0,
   pollInterval: null,
-  chartData: {},   // key → array of {step, val}
+  chartData: {},                          // key → array of {step, val}
+  // ── Interactive view state ────────────────────────────────────────────────
+  view: { xMin: null, xMax: null },       // null/null = fit-all
+  hover: { canvasId: null, step: null, clientX: 0, clientY: 0 },
+  dragState: null,                        // { startClientX, startView, refRect }
+  checkpointSteps: [],                    // [int] — vertical dashed markers
+  // Map of canvas.id → (function() that re-renders just that canvas)
+  // populated by drawSparkline / drawSparklineMulti themselves
+  redrawers: new Map(),
+  rafQueued: false,
 };
 
-const MAX_POINTS = 300;  // keep at most 300 data points per chart
+// ── Color helpers ────────────────────────────────────────────────────────────
+function hexToRgba(hex, a) {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
 
-// ── Chart drawing ─────────────────────────────────────────────────────────────
-function drawSparkline(canvas, pts, color = '#388bfd', fillAlpha = 0.15) {
+// ── View / data range helpers ────────────────────────────────────────────────
+function dataStepRange() {
+  let lo = Infinity, hi = -Infinity;
+  for (const k in S.chartData) {
+    const arr = S.chartData[k];
+    if (!arr.length) continue;
+    if (arr[0].step < lo) lo = arr[0].step;
+    if (arr[arr.length - 1].step > hi) hi = arr[arr.length - 1].step;
+  }
+  if (lo === Infinity) return [0, 1];
+  if (lo === hi) hi = lo + 1;
+  return [lo, hi];
+}
+function getViewRange() {
+  if (S.view.xMin != null && S.view.xMax != null) return [S.view.xMin, S.view.xMax];
+  return dataStepRange();
+}
+function isViewCustom() { return S.view.xMin != null && S.view.xMax != null; }
+
+// Filter to points within view, plus 1 extra on each side so the line continues
+// to clip cleanly at the canvas edge.
+function clipToView(pts, vMin, vMax) {
+  const N = pts.length;
+  if (!N) return [];
+  let lo = 0, hi = N - 1;
+  while (lo < N && pts[lo].step < vMin) lo++;
+  while (hi >= 0 && pts[hi].step > vMax) hi--;
+  const ext0 = Math.max(0, lo - 1);
+  const ext1 = Math.min(N - 1, hi + 1);
+  return pts.slice(ext0, ext1 + 1);
+}
+
+// ── Sparkline drawing (step-based X axis, view-aware, interaction-aware) ────
+// pts: [{step, val}, ...]
+// opts: {color, fillAlpha, yMin, yMax, refLines:[{y, color, dashed}], threshold:{below:y,color}}
+function drawSparkline(canvas, pts, opts = {}) {
+  // Stash redraw closure so hover/pan/zoom can re-render this canvas only.
+  if (canvas.id) S.redrawers.set(canvas.id, () => drawSparkline(canvas, pts, opts));
+
+  const color     = opts.color || COL.blue;
+  const fillAlpha = opts.fillAlpha == null ? 0.16 : opts.fillAlpha;
   const dpr  = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
   const W    = rect.width || canvas.clientWidth || 200;
@@ -557,60 +1067,374 @@ function drawSparkline(canvas, pts, color = '#388bfd', fillAlpha = 0.15) {
   canvas.height = H * dpr;
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
-  ctx.fillStyle = '#161b22';
+
+  ctx.fillStyle = '#0d1117';
   ctx.fillRect(0, 0, W, H);
 
-  if (!pts || pts.length < 2) return;
+  const allValid = (pts || []).filter(p => p && p.val != null && isFinite(p.val));
+  if (allValid.length < 1) {
+    ctx.fillStyle = '#30363d';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('—', W / 2, H / 2);
+    return;
+  }
 
-  const vals = pts.map(p => p.val).filter(v => v != null && isFinite(v));
-  if (vals.length < 2) return;
+  const [vMin, vMax] = getViewRange();
+  const inView = clipToView(allValid, vMin, vMax);
+  const vals = inView.length ? inView.map(p => p.val) : [allValid[allValid.length - 1].val];
 
-  let minV = Math.min(...vals);
-  let maxV = Math.max(...vals);
+  let minV = (opts.yMin != null) ? opts.yMin : Math.min(...vals);
+  let maxV = (opts.yMax != null) ? opts.yMax : Math.max(...vals);
   if (minV === maxV) { minV -= 0.5; maxV += 0.5; }
+  for (const ref of (opts.refLines || [])) {
+    if (ref.y < minV) minV = ref.y;
+    if (ref.y > maxV) maxV = ref.y;
+  }
   const pad = 4;
+  const scaleX = step => pad + ((step - vMin) / (vMax - vMin)) * (W - 2 * pad);
+  const scaleY = v    => H - pad - ((v - minV) / (maxV - minV)) * (H - 2 * pad);
 
-  const scaleX = i => pad + (i / (pts.length - 1)) * (W - 2 * pad);
-  const scaleY = v => H - pad - ((v - minV) / (maxV - minV)) * (H - 2 * pad);
-
-  // Fill
-  ctx.beginPath();
-  ctx.moveTo(scaleX(0), H);
-  for (let i = 0; i < pts.length; i++) {
-    const v = pts[i].val;
-    if (v == null || !isFinite(v)) continue;
-    ctx.lineTo(scaleX(i), scaleY(v));
+  // Threshold band
+  if (opts.threshold && opts.threshold.below != null) {
+    const yTop = scaleY(opts.threshold.below);
+    if (yTop < H - pad) {
+      ctx.fillStyle = hexToRgba(opts.threshold.color || COL.red, 0.10);
+      ctx.fillRect(0, yTop, W, H - yTop);
+    }
   }
-  ctx.lineTo(scaleX(pts.length - 1), H);
-  ctx.closePath();
-  ctx.fillStyle = color.replace(')', `,${fillAlpha})`).replace('rgb', 'rgba').replace('#388bfd', `rgba(56,139,253,${fillAlpha})`);
-  // Simpler fill approach:
-  const hexToRgba = (hex, a) => {
-    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-    return `rgba(${r},${g},${b},${a})`;
-  };
-  ctx.fillStyle = color.startsWith('#') ? hexToRgba(color, fillAlpha) : color;
-  ctx.fill();
 
-  // Line
-  ctx.beginPath();
-  let first = true;
-  for (let i = 0; i < pts.length; i++) {
-    const v = pts[i].val;
-    if (v == null || !isFinite(v)) continue;
-    if (first) { ctx.moveTo(scaleX(i), scaleY(v)); first = false; }
-    else        { ctx.lineTo(scaleX(i), scaleY(v)); }
+  // Checkpoint marker verticals (drawn before lines so they sit underneath)
+  drawCheckpointMarks(ctx, W, H, vMin, vMax, pad);
+
+  // Reference dashed lines (e.g. H_max)
+  for (const ref of (opts.refLines || [])) {
+    const y = scaleY(ref.y);
+    ctx.strokeStyle = ref.color || COL.grey;
+    ctx.lineWidth = 1;
+    ctx.setLineDash(ref.dashed === false ? [] : [3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(0, y); ctx.lineTo(W, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
   }
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
+
+  if (inView.length >= 2) {
+    // Fill
+    ctx.beginPath();
+    ctx.moveTo(scaleX(inView[0].step), H - pad);
+    for (const p of inView) ctx.lineTo(scaleX(p.step), scaleY(p.val));
+    ctx.lineTo(scaleX(inView[inView.length - 1].step), H - pad);
+    ctx.closePath();
+    ctx.fillStyle = hexToRgba(color, fillAlpha);
+    ctx.fill();
+    // Line
+    ctx.beginPath();
+    inView.forEach((p, i) => {
+      const x = scaleX(p.step), y = scaleY(p.val);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  } else if (inView.length === 1) {
+    // Single point in view
+    const p = inView[0];
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(scaleX(p.step), scaleY(p.val), 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   // Axis labels
   ctx.fillStyle = '#484f58';
   ctx.font = '9px monospace';
   ctx.textAlign = 'right';
-  ctx.fillText(fmtVal(maxV), W - 2, 11);
+  ctx.textBaseline = 'top';
+  ctx.fillText(fmtVal(maxV), W - 2, 2);
+  ctx.textBaseline = 'bottom';
   ctx.fillText(fmtVal(minV), W - 2, H - 2);
+
+  // Hover indicator (only for the canvas currently being hovered)
+  if (S.hover.canvasId && canvas.id === S.hover.canvasId && S.hover.step != null) {
+    const series = [{ pts: allValid, color }];
+    drawHoverOverlay(ctx, W, H, pad, vMin, vMax, minV, maxV, S.hover.step, series);
+  }
+}
+
+// Overlay multiple sparklines on one canvas. seriesList = [{pts,color,dashed,fillAlpha?}]
+function drawSparklineMulti(canvas, seriesList, opts = {}) {
+  if (canvas.id) S.redrawers.set(canvas.id, () => drawSparklineMulti(canvas, seriesList, opts));
+
+  const dpr  = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const W    = rect.width || canvas.clientWidth || 200;
+  const H    = rect.height || canvas.clientHeight || 60;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0, 0, W, H);
+
+  const [vMin, vMax] = getViewRange();
+
+  // Filter each series to the view, retaining a 1-point margin
+  const seriesInView = seriesList.map(s => {
+    const valid = (s.pts || []).filter(p => p && p.val != null && isFinite(p.val));
+    return { ...s, pts: clipToView(valid, vMin, vMax), validAll: valid };
+  });
+
+  // Gather y-range over visible points (or fall back to all if nothing in view)
+  let allVals = [];
+  for (const s of seriesInView) for (const p of s.pts) allVals.push(p.val);
+  if (!allVals.length) {
+    for (const s of seriesInView) for (const p of s.validAll) allVals.push(p.val);
+  }
+  if (!allVals.length) {
+    ctx.fillStyle = '#30363d';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('—', W/2, H/2);
+    return;
+  }
+  let minV = (opts.yMin != null) ? opts.yMin : Math.min(...allVals);
+  let maxV = (opts.yMax != null) ? opts.yMax : Math.max(...allVals);
+  if (minV === maxV) { minV -= 0.5; maxV += 0.5; }
+  for (const ref of (opts.refLines || [])) {
+    if (ref.y < minV) minV = ref.y;
+    if (ref.y > maxV) maxV = ref.y;
+  }
+  const pad = 4;
+  const scaleX = step => pad + ((step - vMin) / (vMax - vMin)) * (W - 2 * pad);
+  const scaleY = v    => H - pad - ((v - minV) / (maxV - minV)) * (H - 2 * pad);
+
+  // Threshold band
+  if (opts.threshold && opts.threshold.below != null) {
+    const yTop = scaleY(opts.threshold.below);
+    if (yTop < H - pad) {
+      ctx.fillStyle = hexToRgba(opts.threshold.color || COL.red, 0.10);
+      ctx.fillRect(0, yTop, W, H - yTop);
+    }
+  }
+
+  // Checkpoint marker verticals
+  drawCheckpointMarks(ctx, W, H, vMin, vMax, pad);
+
+  // Reference dashed lines
+  for (const ref of (opts.refLines || [])) {
+    const y = scaleY(ref.y);
+    ctx.strokeStyle = ref.color || COL.grey;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  for (const s of seriesInView) {
+    const pts = s.pts;
+    if (pts.length < 2) {
+      if (pts.length === 1) {
+        ctx.fillStyle = s.color;
+        ctx.beginPath();
+        ctx.arc(scaleX(pts[0].step), scaleY(pts[0].val), 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      continue;
+    }
+    ctx.beginPath();
+    pts.forEach((p, i) => {
+      const x = scaleX(p.step), y = scaleY(p.val);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = 1.5;
+    if (s.dashed) ctx.setLineDash([4, 3]); else ctx.setLineDash([]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Axis labels
+  ctx.fillStyle = '#484f58';
+  ctx.font = '9px monospace';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.fillText(fmtVal(maxV), W - 2, 2);
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(fmtVal(minV), W - 2, H - 2);
+
+  if (S.hover.canvasId && canvas.id === S.hover.canvasId && S.hover.step != null) {
+    const seriesForHover = seriesInView.map(s => ({ pts: s.validAll, color: s.color }));
+    drawHoverOverlay(ctx, W, H, pad, vMin, vMax, minV, maxV, S.hover.step, seriesForHover);
+  }
+}
+
+// ── Checkpoint markers ──────────────────────────────────────────────────────
+// Drawn as short ticks at the bottom edge of each chart so they don't compete
+// with the data curve. The tick is solid (no dashes) and small (5 px tall).
+const CKPT_TICK_H = 5;
+function drawCheckpointMarks(ctx, W, H, vMin, vMax, pad) {
+  if (!S.checkpointSteps || !S.checkpointSteps.length) return;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(63, 185, 80, 0.85)';
+  ctx.lineWidth = 1;
+  for (const cs of S.checkpointSteps) {
+    if (cs < vMin || cs > vMax) continue;
+    const x = pad + ((cs - vMin) / (vMax - vMin)) * (W - 2 * pad);
+    ctx.beginPath();
+    ctx.moveTo(x, H - CKPT_TICK_H);
+    ctx.lineTo(x, H);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ── Hover crosshair + value box ─────────────────────────────────────────────
+// Find the nearest point in `series` to a given step. series = [{pts,color}]
+function findNearestValue(pts, targetStep) {
+  if (!pts || !pts.length) return null;
+  // pts is sorted by step
+  let lo = 0, hi = pts.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (pts[mid].step < targetStep) lo = mid + 1; else hi = mid;
+  }
+  const candidates = [];
+  if (lo > 0) candidates.push(pts[lo - 1]);
+  candidates.push(pts[lo]);
+  if (lo + 1 < pts.length) candidates.push(pts[lo + 1]);
+  let best = candidates[0], bestD = Math.abs(best.step - targetStep);
+  for (let i = 1; i < candidates.length; i++) {
+    const d = Math.abs(candidates[i].step - targetStep);
+    if (d < bestD) { best = candidates[i]; bestD = d; }
+  }
+  return best;
+}
+
+function drawHoverOverlay(ctx, W, H, pad, vMin, vMax, minV, maxV, hoverStep, series) {
+  // Snap to nearest data point of any series so the crosshair lands on actual values
+  let snapped = null, snappedSeries = null, bestD = Infinity;
+  for (const s of series) {
+    const np = findNearestValue(s.pts, hoverStep);
+    if (np && Math.abs(np.step - hoverStep) < bestD) {
+      bestD = Math.abs(np.step - hoverStep); snapped = np; snappedSeries = s;
+    }
+  }
+  if (!snapped) return;
+
+  // Map snapped step to X
+  const x = pad + ((snapped.step - vMin) / (vMax - vMin)) * (W - 2 * pad);
+  ctx.save();
+  ctx.strokeStyle = 'rgba(201, 209, 217, 0.55)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2, 2]);
+  ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Dot on each series at the snapped step
+  for (const s of series) {
+    const np = findNearestValue(s.pts, snapped.step);
+    if (!np) continue;
+    if (np.val == null || !isFinite(np.val)) continue;
+    if (np.val < minV || np.val > maxV) continue;
+    const px = pad + ((np.step - vMin) / (vMax - vMin)) * (W - 2 * pad);
+    const py = H - pad - ((np.val - minV) / (maxV - minV)) * (H - 2 * pad);
+    ctx.fillStyle = '#0d1117';
+    ctx.beginPath(); ctx.arc(px, py, 3.2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = s.color;
+    ctx.beginPath(); ctx.arc(px, py, 2.2, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+
+  // Update floating tip with snapped values
+  showHoverTip(snapped.step, series);
+}
+
+function showHoverTip(step, series) {
+  const tip = document.getElementById('chart-tip');
+  if (!tip) return;
+  let html = `<div class="row step">step ${step.toLocaleString()}</div>`;
+  for (const s of series) {
+    const np = findNearestValue(s.pts, step);
+    const v = np ? np.val : null;
+    html += `<div class="row"><span class="k" style="color:${s.color}">●</span> <span class="v">${fmtVal(v)}</span></div>`;
+  }
+  tip.innerHTML = html;
+  tip.style.display = 'block';
+  // Position near mouse
+  const TW = 160, TH = 18 + series.length * 16;
+  let x = S.hover.clientX + 12, y = S.hover.clientY + 12;
+  if (x + TW > window.innerWidth)  x = S.hover.clientX - TW - 12;
+  if (y + TH > window.innerHeight) y = S.hover.clientY - TH - 12;
+  tip.style.left = Math.max(2, x) + 'px';
+  tip.style.top  = Math.max(2, y) + 'px';
+}
+function hideHoverTip() {
+  const tip = document.getElementById('chart-tip');
+  if (tip) tip.style.display = 'none';
+}
+
+// ── View manipulation ──────────────────────────────────────────────────────
+function resetView() {
+  S.view = { xMin: null, xMax: null };
+  document.getElementById('btn-reset').disabled = true;
+  rafRedrawAll();
+}
+function applyZoomAt(cursorStep, factor) {
+  const [vMin, vMax] = getViewRange();
+  let newMin = cursorStep - (cursorStep - vMin) * factor;
+  let newMax = cursorStep + (vMax - cursorStep) * factor;
+  // Clamp to data
+  const [dMin, dMax] = dataStepRange();
+  newMin = Math.max(dMin, newMin);
+  newMax = Math.min(dMax, newMax);
+  if (newMax - newMin < 2) {
+    // Don't allow zooming below 2-step window
+    return;
+  }
+  S.view = { xMin: newMin, xMax: newMax };
+  document.getElementById('btn-reset').disabled = false;
+  rafRedrawAll();
+}
+function applyPanByStepDelta(dStep) {
+  const [vMin, vMax] = getViewRange();
+  const [dMin, dMax] = dataStepRange();
+  let newMin = vMin - dStep;
+  let newMax = vMax - dStep;
+  if (newMin < dMin) { newMax += (dMin - newMin); newMin = dMin; }
+  if (newMax > dMax) { newMin -= (newMax - dMax); newMax = dMax; }
+  newMin = Math.max(dMin, newMin); newMax = Math.min(dMax, newMax);
+  S.view = { xMin: newMin, xMax: newMax };
+  document.getElementById('btn-reset').disabled = false;
+  rafRedrawAll();
+}
+function rafRedrawAll() {
+  if (S.rafQueued) return;
+  S.rafQueued = true;
+  requestAnimationFrame(() => {
+    S.rafQueued = false;
+    updateAllCharts();
+    updateViewRangeUI();
+  });
+}
+function updateViewRangeUI() {
+  const el = document.getElementById('view-range');
+  if (!el) return;
+  if (!Object.keys(S.chartData).length) { el.textContent = 'all'; return; }
+  const [vMin, vMax] = getViewRange();
+  const [dMin, dMax] = dataStepRange();
+  if (!isViewCustom()) {
+    el.textContent = `all (${dMin.toLocaleString()}–${dMax.toLocaleString()})`;
+  } else {
+    el.textContent = `${Math.round(vMin).toLocaleString()}–${Math.round(vMax).toLocaleString()} / ${dMax.toLocaleString()}`;
+  }
+  const ck = document.getElementById('ck-count');
+  if (ck) ck.textContent = S.checkpointSteps.length
+    ? `· ${S.checkpointSteps.length} ckpts` : '·';
 }
 
 function fmtVal(v) {
@@ -622,64 +1446,152 @@ function fmtVal(v) {
   if (abs >= 0.1)  return v.toFixed(4);
   return v.toExponential(2);
 }
+function fmtPct(v) { return v != null ? (v * 100).toFixed(1) + '%' : '—'; }
 
-// ── Per-latent mini cards ─────────────────────────────────────────────────────
-function buildLatGrid(containerId, prefix, n = 4) {
+// ── Per-latent (or per-action) mini grid builder ────────────────────────────
+function buildMiniGrid(containerId, prefix, labels, n = 4) {
   const el = document.getElementById(containerId);
+  if (!el) return;
   el.innerHTML = '';
   for (let i = 0; i < n; i++) {
     const item = document.createElement('div');
     item.className = 'lat-item';
-    item.innerHTML = `<div class="lat-item-label">L${i}</div>
-<div class="lat-item-val" id="${prefix}-val-${i}">—</div>
-<canvas class="lat-spark" id="${prefix}-spark-${i}"></canvas>`;
+    item.innerHTML =
+      `<div class="lat-item-label">${labels[i]}</div>` +
+      `<div class="lat-item-val" id="${prefix}-val-${i}">—</div>` +
+      `<div class="lat-item-sub" id="${prefix}-sub-${i}"></div>` +
+      `<canvas class="lat-spark" id="${prefix}-spark-${i}"></canvas>`;
     el.appendChild(item);
   }
 }
 
-function updateLatGrid(prefix, arrKey, records, color = '#3fb950') {
-  for (let i = 0; i < 4; i++) {
-    const key = `${arrKey}[${i}]`;
-    const pts = (S.chartData[key] || []);
+function updateMiniGrid(prefix, keyFn, n = 4, color = COL.green, subFn = null) {
+  for (let i = 0; i < n; i++) {
+    const key = keyFn(i);
+    const pts = S.chartData[key] || [];
     const latest = pts.length ? pts[pts.length - 1].val : null;
     const valEl = document.getElementById(`${prefix}-val-${i}`);
     if (valEl) valEl.textContent = latest != null ? fmtVal(latest) : '—';
+    if (subFn) {
+      const subEl = document.getElementById(`${prefix}-sub-${i}`);
+      if (subEl) subEl.textContent = subFn(i);
+    }
     const spark = document.getElementById(`${prefix}-spark-${i}`);
-    if (spark) drawSparkline(spark, pts, color);
+    if (spark) drawSparkline(spark, pts, { color, fillAlpha: 0.14 });
   }
 }
 
-// ── Data ingestion ────────────────────────────────────────────────────────────
+// ── Gradient sub-block list (G.1 / G.2 / G.3 / G.4) ─────────────────────────
+const GRAD_TOTALS = [
+  { id:'patch_sa',           label:'patch SA' },
+  { id:'perc_cross_r0',      label:'perc cross r0' },
+  { id:'perc_self_r0',       label:'perc self r0' },
+  { id:'perc_cross_r1',      label:'perc cross r1' },
+  { id:'perc_self_r1',       label:'perc self r1' },
+  { id:'perc_other',         label:'perc other' },
+  { id:'state_pred_mlp_0',   label:'state_pred MLP 0' },
+  { id:'state_pred_mlp_1',   label:'state_pred MLP 1' },
+  { id:'state_pred_mlp_2',   label:'state_pred MLP 2' },
+  { id:'state_pred_mlp_3',   label:'state_pred MLP 3' },
+  { id:'state_pred_time_emb',label:'state_pred time-emb' },
+  { id:'action_embed',       label:'action embed' },
+  { id:'action_pred',        label:'action_pred' },
+  { id:'policy',             label:'policy' },
+];
+// Subset that receives source-decomposition signals (encoder-side only)
+const GRAD_DECOMP_GROUPS = [
+  { id:'patch_sa',      label:'patch SA' },
+  { id:'perc_cross_r0', label:'perc cross r0' },
+  { id:'perc_self_r0',  label:'perc self r0' },
+  { id:'perc_cross_r1', label:'perc cross r1' },
+  { id:'perc_self_r1',  label:'perc self r1' },
+  { id:'perc_other',    label:'perc other' },
+];
+
+function buildGradGrids() {
+  // G.1 totals
+  const g1 = document.getElementById('grid-gtotals');
+  g1.innerHTML = '';
+  for (const g of GRAD_TOTALS) {
+    const wrap = document.createElement('div');
+    wrap.className = 'chart-wrap';
+    wrap.innerHTML =
+      `<span class="chart-label" data-tip="gnorm_total_generic">${g.label}</span>` +
+      `<canvas class="sparkline" id="sk-gn-${g.id}"></canvas>` +
+      `<div class="chart-val" id="v-gn-${g.id}">—</div>`;
+    g1.appendChild(wrap);
+  }
+  // G.2 decomposition
+  const g2 = document.getElementById('grid-gdecomp');
+  g2.innerHTML = '';
+  for (const g of GRAD_DECOMP_GROUPS) {
+    const wrap = document.createElement('div');
+    wrap.className = 'chart-wrap';
+    wrap.innerHTML =
+      `<span class="chart-label" data-tip="gnorm_source_generic">${g.label} · 3-source split</span>` +
+      `<canvas class="sparkline" id="sk-gd-${g.id}"></canvas>` +
+      `<div class="chart-val" id="v-gd-${g.id}">—</div>` +
+      `<div class="chart-legend">` +
+        `<span class="lg"><span class="sw" style="background:${COL.blue}"></span>from_state</span>` +
+        `<span class="lg"><span class="sw" style="background:${COL.yellow}"></span>from_action_via_Ht</span>` +
+        `<span class="lg"><span class="sw" style="background:${COL.red}"></span>from_action_via_Htp1</span>` +
+      `</div>`;
+    g2.appendChild(wrap);
+  }
+  // G.3 cosine
+  const g3 = document.getElementById('grid-gcos');
+  g3.innerHTML = '';
+  for (const g of GRAD_DECOMP_GROUPS) {
+    const wrap = document.createElement('div');
+    wrap.className = 'chart-wrap';
+    wrap.innerHTML =
+      `<span class="chart-label" data-tip="gcossim_generic">${g.label} · gradient cosines</span>` +
+      `<canvas class="sparkline" id="sk-gc-${g.id}"></canvas>` +
+      `<div class="chart-val" id="v-gc-${g.id}">—</div>` +
+      `<div class="chart-legend">` +
+        `<span class="lg"><span class="sw" style="background:${COL.green}"></span>state · action</span>` +
+        `<span class="lg"><span class="sw" style="background:${COL.purple}"></span>Ht · Htp1</span>` +
+      `</div>`;
+    g3.appendChild(wrap);
+  }
+  // G.4 uwr
+  const g4 = document.getElementById('grid-guwr');
+  g4.innerHTML = '';
+  for (const g of GRAD_TOTALS) {
+    const wrap = document.createElement('div');
+    wrap.className = 'chart-wrap';
+    wrap.innerHTML =
+      `<span class="chart-label" data-tip="uwr_generic">${g.label} · UWR</span>` +
+      `<canvas class="sparkline" id="sk-uwr-${g.id}"></canvas>` +
+      `<div class="chart-val" id="v-uwr-${g.id}">—</div>`;
+    g4.appendChild(wrap);
+  }
+}
+
+// ── Data ingestion ───────────────────────────────────────────────────────────
 function ingestRecords(records) {
   for (const rec of records) {
-    const step = rec.step;
-    function push(key, val) {
-      if (!S.chartData[key]) S.chartData[key] = [];
-      S.chartData[key].push({ step, val });
-      if (S.chartData[key].length > MAX_POINTS)
-        S.chartData[key].shift();
+    if (rec._kind === 'eval_pass') {
+      S.evalRecords.push(rec);
+    } else {
+      S.records.push(rec);
     }
-    push('grad_enc_sa',        rec.grad_enc_sa);
-    push('grad_enc_perceiver', rec.grad_enc_perceiver);
-    push('grad_time_emb',      rec.grad_time_emb);
-    push('across_state_std',   rec.across_state_std);
-    push('latent_pairwise_l2', rec.latent_pairwise_l2);
-    push('latent_eff_rank',    rec.latent_eff_rank);
-    push('flow_loss',          rec.flow_loss);
-    push('ode_cossim',         rec.ode_cossim);
-    push('pol_loss',           rec.pol_loss);
-    push('grad_policy',        rec.grad_policy);
-    push('entropy',            rec.entropy);
-    push('mean_reward',        rec.mean_reward);
-    push('completion_rate',    rec.completion_rate);
-    push('fps',                rec.fps);
-    push('ht_ht1_cossim',     rec.ht_ht1_cossim);
-
-    // Per-latent arrays
-    (rec.latent_norms    || []).forEach((v,i) => push(`latent_norms[${i}]`,    v));
-    (rec.per_lat_loss    || []).forEach((v,i) => push(`per_lat_loss[${i}]`,    v));
-    (rec.grad_pred_mlps  || []).forEach((v,i) => push(`grad_pred_mlps[${i}]`, v));
-    (rec.per_lat_std     || []).forEach((v,i) => push(`per_lat_std[${i}]`,    v));
+    const step = rec.step;
+    for (const k of Object.keys(rec)) {
+      if (k === 'step' || k === '_kind') continue;
+      const v = rec[k];
+      if (typeof v !== 'number' || !isFinite(v)) continue;
+      if (!S.chartData[k]) S.chartData[k] = [];
+      // Eval records have the same step as the previous training tick — dedupe
+      // by checking last entry; if identical step, replace it.
+      const arr = S.chartData[k];
+      if (arr.length && arr[arr.length-1].step === step) {
+        arr[arr.length-1].val = v;
+      } else {
+        arr.push({ step, val: v });
+      }
+      if (arr.length > MAX_POINTS) arr.shift();
+    }
   }
 }
 
@@ -688,64 +1600,410 @@ function latest(key) {
   return pts && pts.length ? pts[pts.length - 1].val : null;
 }
 
-function updateAllCharts() {
-  // ── Encoder SA ──
-  drawSparkline(document.getElementById('sk-grad-sa'),    S.chartData['grad_enc_sa']     || []);
-  drawSparkline(document.getElementById('sk-across-std'), S.chartData['across_state_std'] || [], '#f0c040');
-  setText('v-grad-sa',    latest('grad_enc_sa'));
-  setText('v-across-std', latest('across_state_std'));
+// ── Hero panel updates ───────────────────────────────────────────────────────
+function updateHero() {
+  // [1] Effective rank with red band <2
+  drawSparkline(document.getElementById('hero-effrank'), S.chartData['sec1/latent_eff_rank'] || [], {
+    color: COL.green, yMin: 1, yMax: 4,
+    threshold: { below: 2.0, color: COL.red },
+    refLines: [{ y: 2, color: COL.red }, { y: 3, color: COL.grey }],
+  });
+  setText('hv-effrank', latest('sec1/latent_eff_rank'));
 
-  // ── Perceiver ──
-  drawSparkline(document.getElementById('sk-grad-perc'), S.chartData['grad_enc_perceiver'] || []);
-  drawSparkline(document.getElementById('sk-grad-time'), S.chartData['grad_time_emb']       || [], '#f85149');
-  drawSparkline(document.getElementById('sk-pairwise'),  S.chartData['latent_pairwise_l2']  || [], '#3fb950');
-  drawSparkline(document.getElementById('sk-effrank'),   S.chartData['latent_eff_rank']      || [], '#3fb950');
-  drawSparkline(document.getElementById('sk-ht-cossim'), S.chartData['ht_ht1_cossim']        || [], '#f0c040');
-  setText('v-grad-perc', latest('grad_enc_perceiver'));
-  setText('v-grad-time', latest('grad_time_emb'));
-  setText('v-pairwise',  latest('latent_pairwise_l2'));
-  setText('v-effrank',   latest('latent_eff_rank'));
-  setText('v-ht-cossim', latest('ht_ht1_cossim'));
-  updateLatGrid('ln', 'latent_norms', S.chartData, '#388bfd');
+  // [2] Loss decomposition (3 lines)
+  drawSparklineMulti(document.getElementById('hero-loss'), [
+    { pts: S.chartData['sec6/L_total']  || [], color: COL.white },
+    { pts: S.chartData['sec6/L_state']  || [], color: COL.blue },
+    { pts: S.chartData['sec6/L_action'] || [], color: COL.yellow },
+  ]);
+  const lt = latest('sec6/L_total'), ls = latest('sec6/L_state'), la = latest('sec6/L_action');
+  document.getElementById('hv-loss').textContent = lt != null ? fmtVal(lt) : '—';
+  document.getElementById('hv-loss-sub').textContent =
+    `L_state ${fmtVal(ls)} · L_action ${fmtVal(la)}`;
 
-  // ── Predictor ──
-  drawSparkline(document.getElementById('sk-flow-loss'), S.chartData['flow_loss'] || [], '#f0c040');
-  drawSparkline(document.getElementById('sk-ode'),       S.chartData['ode_cossim'] || [], '#f85149');
-  setText('v-flow-loss', latest('flow_loss'));
-  setText('v-ode',       latest('ode_cossim'));
-  updateLatGrid('pl',  'per_lat_loss',   S.chartData, '#f0c040');
-  updateLatGrid('pg',  'grad_pred_mlps', S.chartData, '#8957e5');
+  // [3] Action pred entropy with H_max ref
+  const hmax = latest('sec4/action_pred_entropy_max') || H_MAX_DEFAULT;
+  drawSparkline(document.getElementById('hero-apent'), S.chartData['sec4/action_pred_entropy'] || [], {
+    color: COL.yellow, yMin: 0, yMax: hmax * 1.02,
+    refLines: [{ y: hmax, color: COL.grey }],
+  });
+  setText('hv-apent', latest('sec4/action_pred_entropy'));
 
-  // ── Policy ──
-  drawSparkline(document.getElementById('sk-pol-loss'),  S.chartData['pol_loss']        || [], '#f0c040');
-  drawSparkline(document.getElementById('sk-grad-pol'),  S.chartData['grad_policy']      || []);
-  drawSparkline(document.getElementById('sk-entropy'),   S.chartData['entropy']          || [], '#3fb950');
-  drawSparkline(document.getElementById('sk-reward'),    S.chartData['mean_reward']      || [], '#f0c040');
-  drawSparkline(document.getElementById('sk-complete'),  S.chartData['completion_rate']  || [], '#3fb950');
-  drawSparkline(document.getElementById('sk-fps'),       S.chartData['fps']              || [], '#8b949e');
-  setText('v-pol-loss', latest('pol_loss'));
-  setText('v-grad-pol', latest('grad_policy'));
-  setText('v-entropy',  latest('entropy'));
-  setText('v-reward',   latest('mean_reward'));
-  setText('v-complete', fmtPct(latest('completion_rate')));
-  setText('v-fps',      fmtVal(latest('fps')));
+  // [4] H_t · H_{t+1} cossim — rollout solid + eval dashed
+  drawSparklineMulti(document.getElementById('hero-htcos'), [
+    { pts: S.chartData['sec1/ht_htp1_cossim_rollout'] || [], color: COL.blue },
+    { pts: S.chartData['sec1/ht_htp1_cossim_eval']    || [], color: COL.yellow, dashed: true },
+  ], { yMin: 0, yMax: 1, refLines: [{ y: 0.99, color: COL.red }] });
+  setText('hv-htcos', latest('sec1/ht_htp1_cossim_rollout'));
+
+  // [5] Reward
+  drawSparkline(document.getElementById('hero-reward'), S.chartData['sec6/reward_total'] || [], {
+    color: COL.green,
+  });
+  setText('hv-reward', latest('sec6/reward_total'));
+
+  // [6] Completion rate
+  drawSparkline(document.getElementById('hero-complete'), S.chartData['sec6/completion_rate'] || [], {
+    color: COL.green, yMin: 0, yMax: 1,
+  });
+  document.getElementById('hv-complete').textContent =
+    fmtPct(latest('sec6/completion_rate'));
+}
+
+// ── Inline section header summaries (visible when collapsed) ────────────────
+function updateInlineSummaries() {
+  // A
+  setInline('il-effrank', latest('sec1/latent_eff_rank'));
+  setInline('il-cossim',  latest('sec1/latent_pairwise_cossim_buf'));
+  const ln = [0,1,2,3].map(i => latest(`sec1/latent_norm_${i}`)).filter(v => v != null);
+  document.getElementById('il-norms').textContent =
+    ln.length ? `${fmtVal(ln.reduce((a,b)=>a+b,0)/ln.length)}` : '—';
+
+  // B
+  setInline('il-Ltot', latest('sec6/L_total'));
+  setInline('il-Ls',   latest('sec6/L_state'));
+  setInline('il-La',   latest('sec6/L_action'));
+  setInline('il-r',    latest('sec6/reward_total'));
+
+  // C
+  setInline('il-ode',  latest('sec4/ode_step_cossim'));
+  setInline('il-apent',latest('sec4/action_pred_entropy'));
+  setInline('il-vel',  latest('sec4/predictor_velocity_norm'));
+
+  // D
+  setInline('il-Hpol', latest('sec5/policy_entropy'));
+  setInline('il-polloss', latest('sec6/pol_loss'));
+  setInline('il-polgn',   latest('sec7/gnorm_policy_total'));
+
+  // E
+  setInline('il-cov',   latest('sec6/reachable_tile_coverage_pct'), fmtPct);
+  setInline('il-cross', latest('sec6/cross_hits_per_episode'));
+
+  // F
+  setInline('il-pjsd', latest('sec2/patch_sa_row_jsd'));
+  setInline('il-tjsd', latest('sec2/patch_sa_temporal_jsd'));
+
+  // G
+  setInline('il-gpsa',  latest('sec7/gnorm_patch_sa_total'));
+  setInline('il-gpcr0', latest('sec7/gnorm_perc_cross_r0_total'));
+  setInline('il-gap',   latest('sec7/gnorm_action_pred_total'));
+  setInline('il-gpol',  latest('sec7/gnorm_policy_total'));
+
+  // H
+  setInline('il-fps', latest('fps'));
+  setInline('il-buf', latest('buf_size'));
+  setInline('il-eps', latest('ep_count'));
+}
+
+function setInline(id, val, fmt = fmtVal) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val != null ? fmt(val) : '—';
 }
 
 function setText(id, val) {
   const el = document.getElementById(id);
   if (el) el.textContent = val != null ? fmtVal(val) : '—';
 }
-function fmtPct(v) { return v != null ? (v * 100).toFixed(1) + '%' : '—'; }
 
-// ── API calls ─────────────────────────────────────────────────────────────────
+// ── Section A — Representation Health ────────────────────────────────────────
+function updateSectionA() {
+  // A.1
+  drawSparkline(document.getElementById('sk-effrank-full'),
+    S.chartData['sec1/latent_eff_rank'] || [], {
+      color: COL.green, yMin: 1, yMax: 4,
+      threshold: { below: 2.0, color: COL.red },
+      refLines: [{y:1,color:COL.red},{y:2,color:COL.red},{y:3,color:COL.grey},{y:4,color:COL.grey}],
+    });
+  setText('v-effrank-full', latest('sec1/latent_eff_rank'));
+
+  drawSparkline(document.getElementById('sk-cossim-buf'),
+    S.chartData['sec1/latent_pairwise_cossim_buf'] || [],
+    { color: COL.yellow, yMin: 0, yMax: 1, refLines:[{y:1,color:COL.red}] });
+  setText('v-cossim-buf', latest('sec1/latent_pairwise_cossim_buf'));
+
+  drawSparkline(document.getElementById('sk-l2-buf'),
+    S.chartData['sec1/latent_pairwise_l2_buf'] || [], { color: COL.green });
+  setText('v-l2-buf', latest('sec1/latent_pairwise_l2_buf'));
+
+  drawSparklineMulti(document.getElementById('sk-cossim-eval'), [
+    { pts: S.chartData['sec1/latent_pairwise_cossim_t1']  || [], color: COL.green },
+    { pts: S.chartData['sec1/latent_pairwise_cossim_t10'] || [], color: COL.yellow },
+    { pts: S.chartData['sec1/latent_pairwise_cossim_t20'] || [], color: COL.red },
+  ], { yMin: 0, yMax: 1, refLines:[{y:1,color:COL.red}] });
+  const t1 = latest('sec1/latent_pairwise_cossim_t1');
+  const t10 = latest('sec1/latent_pairwise_cossim_t10');
+  const t20 = latest('sec1/latent_pairwise_cossim_t20');
+  document.getElementById('v-cossim-eval').textContent =
+    `t1=${fmtVal(t1)}  t10=${fmtVal(t10)}  t20=${fmtVal(t20)}`;
+
+  drawSparkline(document.getElementById('sk-r0sa-t1'),
+    S.chartData['sec1/round0_postSA_pairwise_cossim_t1'] || [],
+    { color: COL.red, yMin: 0, yMax: 1, refLines:[{y:1,color:COL.red}] });
+  setText('v-r0sa-t1', latest('sec1/round0_postSA_pairwise_cossim_t1'));
+
+  // A.2
+  drawSparklineMulti(document.getElementById('sk-htcos-pair'), [
+    { pts: S.chartData['sec1/ht_htp1_cossim_rollout'] || [], color: COL.blue },
+    { pts: S.chartData['sec1/ht_htp1_cossim_eval']    || [], color: COL.yellow, dashed: true },
+  ], { yMin: 0, yMax: 1, refLines:[{y:0.99,color:COL.red}] });
+  const htR = latest('sec1/ht_htp1_cossim_rollout');
+  const htE = latest('sec1/ht_htp1_cossim_eval');
+  document.getElementById('v-htcos-pair').textContent =
+    `rollout=${fmtVal(htR)}  eval=${fmtVal(htE)}`;
+
+  drawSparkline(document.getElementById('sk-h1ht'),
+    S.chartData['sec1/H1_HT_cossim'] || [],
+    { color: COL.green, yMin: 0, yMax: 1 });
+  setText('v-h1ht', latest('sec1/H1_HT_cossim'));
+  const Tep = latest('sec1/T_episode_eval');
+  document.getElementById('v-h1ht-Tep').textContent =
+    `T_episode = ${Tep != null ? Tep.toFixed(0) : '—'}`;
+
+  // A.3
+  drawSparkline(document.getElementById('sk-ph-cossim'),
+    S.chartData['sec1/placeholder_pairwise_cossim'] || [],
+    { color: COL.purple, yMin: 0, yMax: 1, refLines:[{y:1,color:COL.red}] });
+  setText('v-ph-cossim', latest('sec1/placeholder_pairwise_cossim'));
+
+  drawSparkline(document.getElementById('sk-ph-drift-mean'),
+    S.chartData['sec1/placeholder_drift_from_init_mean'] || [],
+    { color: COL.purple, yMin: 0, yMax: 1 });
+  setText('v-ph-drift-mean', latest('sec1/placeholder_drift_from_init_mean'));
+
+  drawSparklineMulti(document.getElementById('sk-sa-jsd'), [
+    { pts: S.chartData['sec3/latent_self_attn_row_jsd_r0'] || [], color: COL.blue },
+    { pts: S.chartData['sec3/latent_self_attn_row_jsd_r1'] || [], color: COL.red },
+  ]);
+  document.getElementById('v-sa-jsd').textContent =
+    `r0=${fmtVal(latest('sec3/latent_self_attn_row_jsd_r0'))}  r1=${fmtVal(latest('sec3/latent_self_attn_row_jsd_r1'))}`;
+
+  // 4-card grids
+  updateMiniGrid('ph-drift', i => `sec1/placeholder_drift_from_init_cossim_${i}`, 4, COL.purple);
+  updateMiniGrid('lat-norm', i => `sec1/latent_norm_${i}`, 4, COL.blue);
+}
+
+// ── Section B — Losses & Reward ──────────────────────────────────────────────
+function updateSectionB() {
+  // B.1 — decomposition text block
+  const Ls = latest('sec6/L_state'), La = latest('sec6/L_action'), Lt = latest('sec6/L_total');
+  const psum = [0,1,2,3].map(i => latest(`sec6/L_state_per_latent_${i}`) || 0).reduce((a,b)=>a+b, 0);
+  function shareTxt(i) {
+    const v = latest(`sec6/L_state_per_latent_${i}`);
+    if (v == null) return `[${i}] —`;
+    const pct = psum > 0 ? (v / psum * 100).toFixed(1) : '—';
+    return `[${i}] ${fmtVal(v)} (${pct}%)`;
+  }
+  function actionTxt(i) {
+    const ce = latest(`sec6/L_action_per_class_${i}`);
+    const n  = latest(`sec6/L_action_count_per_class_${i}`);
+    return `a=${i} CE=${fmtVal(ce)}  n=${n != null ? n.toFixed(1) : '—'}`;
+  }
+  const block =
+`L_total  =  <span class="lambda">λ_state</span> · L_state       +  <span class="lambda">λ_action</span> · L_action
+         =   <span class="lambda">${LAMBDA_STATE}</span>    ·  ${fmtVal(Ls).padEnd(14)}  +   <span class="lambda">${LAMBDA_ACTION}</span>    ·  ${fmtVal(La)}
+         =   <span class="hl">${fmtVal(Lt)}</span>
+
+<span class="dim">L_state per latent (% share):</span>
+  <span class="latent">${shareTxt(0)}</span>   <span class="latent">${shareTxt(1)}</span>   <span class="latent">${shareTxt(2)}</span>   <span class="latent">${shareTxt(3)}</span>
+
+<span class="dim">L_action per ground-truth action (CE | n in batch):</span>
+  <span class="action">${actionTxt(0)}</span>     <span class="action">${actionTxt(1)}</span>
+  <span class="action">${actionTxt(2)}</span>     <span class="action">${actionTxt(3)}</span>`;
+  document.getElementById('decomp-block').innerHTML = block;
+
+  // B.2 — sparklines
+  drawSparklineMulti(document.getElementById('sk-loss3'), [
+    { pts: S.chartData['sec6/L_total']  || [], color: COL.white },
+    { pts: S.chartData['sec6/L_state']  || [], color: COL.blue },
+    { pts: S.chartData['sec6/L_action'] || [], color: COL.yellow },
+  ]);
+  document.getElementById('v-loss3').textContent =
+    `tot=${fmtVal(Lt)}  state=${fmtVal(Ls)}  action=${fmtVal(La)}`;
+
+  drawSparklineMulti(document.getElementById('sk-reward3'), [
+    { pts: S.chartData['sec6/reward_total']            || [], color: COL.white },
+    { pts: S.chartData['sec6/reward_state_component']  || [], color: COL.blue },
+    { pts: S.chartData['sec6/reward_action_component'] || [], color: COL.yellow },
+  ]);
+  const rt = latest('sec6/reward_total'), rs = latest('sec6/reward_state_component'), ra = latest('sec6/reward_action_component');
+  document.getElementById('v-reward3').textContent =
+    `tot=${fmtVal(rt)}  state=${fmtVal(rs)}  action=${fmtVal(ra)}`;
+
+  updateMiniGrid('Ls', i => `sec6/L_state_per_latent_${i}`, 4, COL.blue);
+  updateMiniGrid('La', i => `sec6/L_action_per_class_${i}`, 4, COL.yellow, i => {
+    const n = latest(`sec6/L_action_count_per_class_${i}`);
+    return n != null ? `n=${n.toFixed(1)}` : '';
+  });
+}
+
+// ── Section C — Predictors ───────────────────────────────────────────────────
+function updateSectionC() {
+  drawSparkline(document.getElementById('sk-ode-step'),
+    S.chartData['sec4/ode_step_cossim'] || [],
+    { color: COL.blue, yMin: 0, yMax: 1, refLines:[{y:0.99,color:COL.red}] });
+  setText('v-ode-step', latest('sec4/ode_step_cossim'));
+
+  drawSparkline(document.getElementById('sk-ode-ff'),
+    S.chartData['sec4/ode_first_vs_final_cossim'] || [],
+    { color: COL.green, yMin: 0, yMax: 1 });
+  setText('v-ode-ff', latest('sec4/ode_first_vs_final_cossim'));
+
+  drawSparkline(document.getElementById('sk-velnorm'),
+    S.chartData['sec4/predictor_velocity_norm'] || [],
+    { color: COL.purple });
+  setText('v-velnorm', latest('sec4/predictor_velocity_norm'));
+
+  const hmax = latest('sec4/action_pred_entropy_max') || H_MAX_DEFAULT;
+  drawSparklineMulti(document.getElementById('sk-apent-full'), [
+    { pts: S.chartData['sec4/action_pred_entropy']      || [], color: COL.blue },
+    { pts: S.chartData['sec4/action_pred_entropy_eval'] || [], color: COL.yellow, dashed: true },
+  ], { yMin: 0, yMax: hmax * 1.02, refLines:[{y:hmax,color:COL.grey}] });
+  const apT = latest('sec4/action_pred_entropy'), apE = latest('sec4/action_pred_entropy_eval');
+  document.getElementById('v-apent-full').textContent =
+    `train=${fmtVal(apT)}  eval=${fmtVal(apE)}  H_max=${fmtVal(hmax)}`;
+
+  drawSparkline(document.getElementById('sk-apinp'),
+    S.chartData['sec4/action_pred_input_cossim'] || [],
+    { color: COL.yellow, yMin: 0, yMax: 1 });
+  setText('v-apinp', latest('sec4/action_pred_input_cossim'));
+}
+
+// ── Section D — Policy ───────────────────────────────────────────────────────
+function updateSectionD() {
+  const hmax = latest('sec5/policy_entropy_max') || H_MAX_DEFAULT;
+  drawSparklineMulti(document.getElementById('sk-polent'), [
+    { pts: S.chartData['sec5/policy_entropy'] || [], color: COL.green },
+  ], { yMin: 0, yMax: hmax * 1.02, refLines:[{y:hmax,color:COL.grey}] });
+  setText('v-polent', latest('sec5/policy_entropy'));
+
+  drawSparkline(document.getElementById('sk-polent-norm'),
+    S.chartData['sec5/policy_entropy_normalized'] || [],
+    { color: COL.green, yMin: 0, yMax: 1 });
+  setText('v-polent-norm', latest('sec5/policy_entropy_normalized'));
+
+  drawSparkline(document.getElementById('sk-polloss'),
+    S.chartData['sec6/pol_loss'] || [], { color: COL.yellow });
+  setText('v-polloss', latest('sec6/pol_loss'));
+
+  drawSparkline(document.getElementById('sk-polgn'),
+    S.chartData['sec7/gnorm_policy_total'] || [], { color: COL.blue });
+  setText('v-polgn', latest('sec7/gnorm_policy_total'));
+}
+
+// ── Section E — Exploration ─────────────────────────────────────────────────
+function updateSectionE() {
+  drawSparkline(document.getElementById('sk-cov'),
+    S.chartData['sec6/reachable_tile_coverage_pct'] || [],
+    { color: COL.green, yMin: 0, yMax: 1 });
+  document.getElementById('v-cov').textContent =
+    fmtPct(latest('sec6/reachable_tile_coverage_pct'));
+
+  drawSparkline(document.getElementById('sk-cross'),
+    S.chartData['sec6/cross_hits_per_episode'] || [], { color: COL.yellow });
+  setText('v-cross', latest('sec6/cross_hits_per_episode'));
+}
+
+// ── Section F — Attention ───────────────────────────────────────────────────
+function updateSectionF() {
+  drawSparkline(document.getElementById('sk-pjsd'),
+    S.chartData['sec2/patch_sa_row_jsd'] || [], { color: COL.blue });
+  setText('v-pjsd', latest('sec2/patch_sa_row_jsd'));
+
+  drawSparkline(document.getElementById('sk-tjsd'),
+    S.chartData['sec2/patch_sa_temporal_jsd'] || [], { color: COL.yellow });
+  setText('v-tjsd', latest('sec2/patch_sa_temporal_jsd'));
+
+  drawSparklineMulti(document.getElementById('sk-sa-jsd-2'), [
+    { pts: S.chartData['sec3/latent_self_attn_row_jsd_r0'] || [], color: COL.blue },
+    { pts: S.chartData['sec3/latent_self_attn_row_jsd_r1'] || [], color: COL.red },
+  ]);
+  document.getElementById('v-sa-jsd-2').textContent =
+    `r0=${fmtVal(latest('sec3/latent_self_attn_row_jsd_r0'))}  r1=${fmtVal(latest('sec3/latent_self_attn_row_jsd_r1'))}`;
+}
+
+// ── Section G — Gradients (4 sub-tabs) ──────────────────────────────────────
+function updateSectionG() {
+  // G.1 totals
+  for (const g of GRAD_TOTALS) {
+    drawSparkline(document.getElementById(`sk-gn-${g.id}`),
+      S.chartData[`sec7/gnorm_${g.id}_total`] || [], { color: COL.blue });
+    setText(`v-gn-${g.id}`, latest(`sec7/gnorm_${g.id}_total`));
+  }
+  // G.2 decomposition — three lines per group
+  let anyDecomp = false;
+  for (const g of GRAD_DECOMP_GROUPS) {
+    const fs = S.chartData[`sec7/gnorm_${g.id}_from_state`] || [];
+    const fh = S.chartData[`sec7/gnorm_${g.id}_from_action_via_Ht`] || [];
+    const fp = S.chartData[`sec7/gnorm_${g.id}_from_action_via_Htp1`] || [];
+    if (fs.length || fh.length || fp.length) anyDecomp = true;
+    drawSparklineMulti(document.getElementById(`sk-gd-${g.id}`), [
+      { pts: fs, color: COL.blue },
+      { pts: fh, color: COL.yellow },
+      { pts: fp, color: COL.red },
+    ]);
+    document.getElementById(`v-gd-${g.id}`).textContent =
+      `s=${fmtVal(latest(`sec7/gnorm_${g.id}_from_state`))}  Ht=${fmtVal(latest(`sec7/gnorm_${g.id}_from_action_via_Ht`))}  Htp1=${fmtVal(latest(`sec7/gnorm_${g.id}_from_action_via_Htp1`))}`;
+  }
+  document.getElementById('empty-gdecomp').style.display = anyDecomp ? 'none' : '';
+
+  // G.3 cosines
+  let anyCos = false;
+  for (const g of GRAD_DECOMP_GROUPS) {
+    const sa = S.chartData[`sec7/gcossim_state_vs_action_${g.id}`] || [];
+    const ht = S.chartData[`sec7/gcossim_action_Ht_vs_Htp1_${g.id}`] || [];
+    if (sa.length || ht.length) anyCos = true;
+    drawSparklineMulti(document.getElementById(`sk-gc-${g.id}`), [
+      { pts: sa, color: COL.green },
+      { pts: ht, color: COL.purple },
+    ], { yMin: -1, yMax: 1, refLines:[{y:0,color:COL.grey},{y:1,color:COL.grey},{y:-1,color:COL.grey}] });
+    document.getElementById(`v-gc-${g.id}`).textContent =
+      `state·action=${fmtVal(latest(`sec7/gcossim_state_vs_action_${g.id}`))}  Ht·Htp1=${fmtVal(latest(`sec7/gcossim_action_Ht_vs_Htp1_${g.id}`))}`;
+  }
+  document.getElementById('empty-gcos').style.display = anyCos ? 'none' : '';
+
+  // G.4 UWR
+  let anyUwr = false;
+  for (const g of GRAD_TOTALS) {
+    const pts = S.chartData[`sec7/uwr_${g.id}`] || [];
+    if (pts.length) anyUwr = true;
+    drawSparkline(document.getElementById(`sk-uwr-${g.id}`), pts,
+      { color: COL.green, refLines:[{y:1e-4,color:COL.grey},{y:1e-2,color:COL.grey}] });
+    setText(`v-uwr-${g.id}`, latest(`sec7/uwr_${g.id}`));
+  }
+  document.getElementById('empty-guwr').style.display = anyUwr ? 'none' : '';
+}
+
+// ── Section H — Meta ─────────────────────────────────────────────────────────
+function updateSectionH() {
+  document.getElementById('m-fps').textContent  = fmtVal(latest('fps'));
+  document.getElementById('m-buf').textContent  = fmtVal(latest('buf_size'));
+  document.getElementById('m-eps').textContent  = fmtVal(latest('ep_count'));
+  document.getElementById('m-step').textContent = S.lastStep ? S.lastStep : '—';
+}
+
+// ── Master redraw ────────────────────────────────────────────────────────────
+function updateAllCharts() {
+  updateHero();
+  updateSectionA();
+  updateSectionB();
+  updateSectionC();
+  updateSectionD();
+  updateSectionE();
+  updateSectionF();
+  updateSectionG();
+  updateSectionH();
+  updateInlineSummaries();
+  updateViewRangeUI();
+}
+
+// ── API calls ────────────────────────────────────────────────────────────────
 async function loadExperiments() {
   try {
     const r = await fetch('/api/experiments');
     const d = await r.json();
     const sel = document.getElementById('exp-sel');
     sel.innerHTML = d.experiments.map(e => `<option value="${e}">${e}</option>`).join('');
-    // Prefer exp_003_1, then any 003, then last in list
-    const preferred = d.experiments.find(e => e.includes('003_1'))
+    const preferred = d.experiments.find(e => e.includes('003_2'))
                    || d.experiments.find(e => e.includes('003'))
                    || d.experiments[d.experiments.length - 1];
     if (preferred) sel.value = preferred;
@@ -766,9 +2024,8 @@ async function loadRuns() {
         `<option value="${run.name}">${run.name}  (step ${run.last_step ?? '—'})</option>`
       ).join('');
     sel.onchange = () => selectRun(sel.value);
-    // Auto-select most recent run with metrics
-    const latest = (d.runs || []).find(r => r.has_metrics);
-    if (latest) { sel.value = latest.name; selectRun(latest.name); }
+    const latestRun = (d.runs || []).find(r => r.has_metrics);
+    if (latestRun) { sel.value = latestRun.name; selectRun(latestRun.name); }
   } catch(e) { console.error('loadRuns', e); }
 }
 
@@ -780,6 +2037,15 @@ async function loadCheckpoints() {
     const sel = document.getElementById('ckpt-sel');
     sel.innerHTML = '<option value="">fresh (no checkpoint)</option>' +
       (d.checkpoints || []).map(c => `<option value="${c}">${c}</option>`).join('');
+    // Parse step numbers for marker overlay: "step_005000.pt", "step_001500_final.pt"
+    const steps = [];
+    for (const name of (d.checkpoints || [])) {
+      const m = name.match(/step_(\d+)/);
+      if (m) steps.push(parseInt(m[1], 10));
+    }
+    steps.sort((a, b) => a - b);
+    S.checkpointSteps = steps;
+    updateViewRangeUI();
   } catch(e) { console.error('loadCheckpoints', e); }
 }
 
@@ -787,8 +2053,12 @@ function selectRun(runName) {
   if (!runName) return;
   S.run = runName;
   S.records = [];
+  S.evalRecords = [];
   S.chartData = {};
   S.lastStep = 0;
+  S.view = { xMin: null, xMax: null };
+  S.hover = { canvasId: null, step: null, clientX: 0, clientY: 0 };
+  document.getElementById('btn-reset').disabled = true;
   document.getElementById('run-label').textContent = runName;
   fetchMetrics(true);
   startAutoPoll();
@@ -804,7 +2074,14 @@ async function fetchMetrics(full = false) {
     const recs = d.records || [];
     if (recs.length) {
       ingestRecords(recs);
-      S.lastStep = recs[recs.length - 1].step;
+      // last training-style record's step
+      for (let i = recs.length - 1; i >= 0; i--) {
+        if (recs[i]._kind !== 'eval_pass' && recs[i].step != null) {
+          S.lastStep = recs[i].step; break;
+        } else if (recs[i].step != null) {
+          S.lastStep = Math.max(S.lastStep, recs[i].step);
+        }
+      }
       document.getElementById('last-step').textContent = `step ${S.lastStep}`;
     }
     updateAllCharts();
@@ -847,7 +2124,7 @@ async function checkTrainingStatus() {
 }
 
 async function startTraining() {
-  const experiment = S.experiment || 'exp_003_1_ema_target';
+  const experiment = S.experiment || 'exp_003_2_action_pred_no_ema';
   const ckpt = document.getElementById('ckpt-sel').value || null;
   try {
     const r = await fetch('/api/training/start', {
@@ -870,38 +2147,197 @@ async function stopTraining() {
   setTimeout(checkTrainingStatus, 500);
 }
 
-// ── Tooltip logic ─────────────────────────────────────────────────────────────
-const tip = document.getElementById('tooltip');
-document.querySelectorAll('[data-tip]').forEach(el => {
-  el.addEventListener('mouseenter', (e) => {
-    const key = el.dataset.tip;
-    const info = TIPS[key];
-    if (!info) return;
-    document.getElementById('tip-title').textContent = info.title;
-    document.getElementById('tip-body').textContent  = info.body;
-    const exEl = document.getElementById('tip-example');
-    if (info.example) { exEl.textContent = info.example; exEl.style.display = ''; }
-    else               { exEl.style.display = 'none'; }
-    tip.style.display = 'block';
-    positionTip(e);
-  });
-  el.addEventListener('mousemove', positionTip);
-  el.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+// ── Tooltip wiring (delegated, so it covers dynamically-built grad grids) ───
+const tipEl = document.getElementById('tooltip');
+document.addEventListener('mouseover', (e) => {
+  const el = e.target.closest('[data-tip]');
+  if (!el) return;
+  const key = el.dataset.tip;
+  const info = TIPS[key];
+  if (!info) return;
+  document.getElementById('tip-title').textContent = info.title;
+  document.getElementById('tip-body').textContent  = info.body;
+  const exEl = document.getElementById('tip-example');
+  if (info.example) { exEl.textContent = info.example; exEl.style.display = ''; }
+  else               { exEl.style.display = 'none'; }
+  tipEl.style.display = 'block';
+  positionTip(e);
 });
-
+document.addEventListener('mousemove', (e) => {
+  if (tipEl.style.display === 'block') positionTip(e);
+});
+document.addEventListener('mouseout', (e) => {
+  const el = e.target.closest('[data-tip]');
+  if (el) tipEl.style.display = 'none';
+});
 function positionTip(e) {
-  const TW = 380, TH = 300;
+  const TW = 400, TH = 320;
   let x = e.clientX + 14, y = e.clientY + 14;
   if (x + TW > window.innerWidth)  x = e.clientX - TW - 14;
   if (y + TH > window.innerHeight) y = e.clientY - TH - 14;
-  tip.style.left = x + 'px';
-  tip.style.top  = y + 'px';
+  tipEl.style.left = Math.max(2, x) + 'px';
+  tipEl.style.top  = Math.max(2, y) + 'px';
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-buildLatGrid('lat-norms',    'ln');
-buildLatGrid('lat-loss',     'pl');
-buildLatGrid('lat-pred-grad','pg');
+// ── Chart interactions (pan / zoom / hover) ─────────────────────────────────
+// Delegated handlers — work for ALL canvas.sparkline + canvas.lat-spark, even
+// the dynamically-built gradient grids.
+function nearestChartCanvas(target) {
+  if (!target || !target.closest) return null;
+  // Catch every interactive sparkline: section bodies (.sparkline), per-latent
+  // mini-grids (.lat-spark), and hero strip (no class — match by descendant).
+  const c = target.closest('canvas.sparkline, canvas.lat-spark, .hero-cell canvas');
+  return (c && c.tagName === 'CANVAS') ? c : null;
+}
+
+document.addEventListener('mousedown', (e) => {
+  const c = nearestChartCanvas(e.target);
+  if (!c) return;
+  // Left-button only
+  if (e.button !== 0) return;
+  const rect = c.getBoundingClientRect();
+  S.dragState = {
+    startClientX: e.clientX,
+    startView: getViewRange().slice(),
+    refWidth: rect.width,
+    moved: false,
+  };
+  c.classList.add('dragging');
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', (e) => {
+  // Drag-to-pan takes precedence over hover
+  if (S.dragState) {
+    const dxPx = e.clientX - S.dragState.startClientX;
+    if (Math.abs(dxPx) > 2) S.dragState.moved = true;
+    const [v0Min, v0Max] = S.dragState.startView;
+    const range = v0Max - v0Min;
+    const dStep = (dxPx / S.dragState.refWidth) * range;
+    // Apply pan relative to drag-start view
+    const [dMin, dMax] = dataStepRange();
+    let newMin = v0Min - dStep;
+    let newMax = v0Max - dStep;
+    if (newMin < dMin) { newMax += (dMin - newMin); newMin = dMin; }
+    if (newMax > dMax) { newMin -= (newMax - dMax); newMax = dMax; }
+    newMin = Math.max(dMin, newMin); newMax = Math.min(dMax, newMax);
+    S.view = { xMin: newMin, xMax: newMax };
+    document.getElementById('btn-reset').disabled = false;
+    hideHoverTip();
+    rafRedrawAll();
+    return;
+  }
+
+  // Hover crosshair (no drag in progress)
+  const c = nearestChartCanvas(e.target);
+  if (!c) {
+    if (S.hover.canvasId) {
+      const prev = document.getElementById(S.hover.canvasId);
+      S.hover = { canvasId: null, step: null, clientX: 0, clientY: 0 };
+      if (prev) {
+        const rd = S.redrawers.get(prev.id);
+        if (rd) rd();
+      }
+      hideHoverTip();
+    }
+    return;
+  }
+  const rect = c.getBoundingClientRect();
+  const pad = 4;
+  const xRel = Math.max(pad, Math.min(rect.width - pad, e.clientX - rect.left));
+  const [vMin, vMax] = getViewRange();
+  const step = vMin + ((xRel - pad) / (rect.width - 2 * pad)) * (vMax - vMin);
+
+  const prevId = S.hover.canvasId;
+  S.hover = { canvasId: c.id, step, clientX: e.clientX, clientY: e.clientY };
+  // Redraw the previously-hovered canvas (if different) to clear its overlay
+  if (prevId && prevId !== c.id) {
+    const rd = S.redrawers.get(prevId);
+    if (rd) rd();
+  }
+  // Redraw the current canvas (paints the crosshair + dots, and shows the tip)
+  const rd = S.redrawers.get(c.id);
+  if (rd) rd();
+});
+
+document.addEventListener('mouseup', () => {
+  if (S.dragState) {
+    document.querySelectorAll('canvas.dragging').forEach(c => c.classList.remove('dragging'));
+    const moved = S.dragState.moved;
+    S.dragState = null;
+    if (!moved) return;   // pure click — leave to other handlers
+  }
+});
+
+document.addEventListener('mouseleave', () => {
+  if (S.hover.canvasId) {
+    const prev = document.getElementById(S.hover.canvasId);
+    S.hover = { canvasId: null, step: null, clientX: 0, clientY: 0 };
+    if (prev) {
+      const rd = S.redrawers.get(prev.id);
+      if (rd) rd();
+    }
+    hideHoverTip();
+  }
+}, true);
+
+// Wheel-to-zoom (centered on cursor X)
+document.addEventListener('wheel', (e) => {
+  const c = nearestChartCanvas(e.target);
+  if (!c) return;
+  e.preventDefault();
+  const rect = c.getBoundingClientRect();
+  const pad = 4;
+  const xRel = Math.max(pad, Math.min(rect.width - pad, e.clientX - rect.left));
+  const [vMin, vMax] = getViewRange();
+  const cursorStep = vMin + ((xRel - pad) / (rect.width - 2 * pad)) * (vMax - vMin);
+  // deltaY > 0 = scroll down = zoom out
+  const factor = e.deltaY > 0 ? 1.25 : 1 / 1.25;
+  applyZoomAt(cursorStep, factor);
+}, { passive: false });
+
+// Double-click resets the view
+document.addEventListener('dblclick', (e) => {
+  const c = nearestChartCanvas(e.target);
+  if (!c) return;
+  e.preventDefault();
+  resetView();
+});
+
+// ── Sub-tab wiring (Section G) ──────────────────────────────────────────────
+document.querySelectorAll('.subtab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.subtab-btn').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.subtab-panel').forEach(p => {
+      p.classList.toggle('active', p.id === `tab-${tab}`);
+    });
+    // Force redraw of newly-visible canvases
+    updateSectionG();
+  });
+});
+
+// ── Redraw on resize (sparkline canvases use clientWidth) ───────────────────
+let resizeRaf = null;
+window.addEventListener('resize', () => {
+  if (resizeRaf) cancelAnimationFrame(resizeRaf);
+  resizeRaf = requestAnimationFrame(updateAllCharts);
+});
+
+// ── Redraw a section when it's first opened (canvases that were display:none
+//    had clientWidth=0 at the time of first draw)
+document.querySelectorAll('details.section').forEach(d => {
+  d.addEventListener('toggle', () => {
+    if (d.open) requestAnimationFrame(updateAllCharts);
+  });
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+buildMiniGrid('grid-ph-drift',  'ph-drift', ['p0','p1','p2','p3']);
+buildMiniGrid('grid-lat-norms', 'lat-norm', ['L0','L1','L2','L3']);
+buildMiniGrid('grid-Ls-per',    'Ls',       ['L0','L1','L2','L3']);
+buildMiniGrid('grid-La-per',    'La',       ['a=0','a=1','a=2','a=3']);
+buildGradGrids();
 
 loadExperiments();
 checkTrainingStatus();
