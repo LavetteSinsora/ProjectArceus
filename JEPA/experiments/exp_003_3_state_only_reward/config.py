@@ -41,3 +41,9 @@ class Config(_Base003):
     grad_decomp_freq:  int = 25      # per-source × per-sub-block gnorm every Nth JEPA update
     uwr_freq:          int = 25      # update-to-weight ratio cadence
     capture_attn_freq: int = 25      # eval-mode attention probe every Nth JEPA update
+
+    # ── Weights & Biases ──────────────────────────────────────────────────────
+    # Off by default; enable with --wandb on the CLI.
+    wandb_project: str = "ProjectArceus"
+    wandb_entity:  str | None = None       # None → user's default entity
+    wandb_mode:    str = "online"          # "online" | "offline" | "disabled"

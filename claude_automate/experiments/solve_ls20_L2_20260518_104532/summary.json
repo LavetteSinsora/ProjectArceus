@@ -1,0 +1,20 @@
+{
+  "solved": true,
+  "game_id": "ls20-9607627b",
+  "level_index": 1,
+  "solution_length": 60,
+  "search_env_steps": 332190,
+  "search_iterations": -1,
+  "search_elapsed_s": 0.0,
+  "archive_size": -1,
+  "distill": {
+    "epoch": 120,
+    "loss": 0.00047628689208067954,
+    "train_acc": 1.0
+  },
+  "eval_episodes": 30,
+  "eval_completion_rate": 1.0,
+  "eval_len_min": 60,
+  "eval_len_max": 60,
+  "eval_len_mean": 60.0
+}

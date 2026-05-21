@@ -1,0 +1,287 @@
+/* mini-LS20 Level Editor — LS20-styled visuals */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  background: #1e1e22;
+  color: #e6e6e6;
+  padding: 20px;
+}
+
+#app {
+  max-width: 940px;
+  margin: 0 auto;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #333;
+  padding-bottom: 10px;
+  margin-bottom: 16px;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: 0.4px;
+}
+
+.toast {
+  font-size: 13px;
+  color: #5fff90;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.toast.show { opacity: 1; }
+
+.controls {
+  background: #26262c;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin: 6px 0;
+}
+
+.lbl {
+  font-size: 13px;
+  color: #cccccc;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lbl.checkbox { cursor: pointer; }
+
+input[type=text], input[type=number], select {
+  background: #1a1a1f;
+  color: #e6e6e6;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+input[type=text] { width: 160px; }
+input[type=number] { width: 70px; }
+
+.tools {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.tool {
+  background: #2c2c33;
+  color: #ddd;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.tool:hover { background: #38383f; }
+.tool.selected {
+  background: #3a7bd5;
+  border-color: #5d9cf0;
+  color: #fff;
+}
+
+.panels {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.panel {
+  background: #26262c;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 12px 16px;
+}
+
+.panel h2 {
+  font-size: 14px;
+  margin: 0 0 10px 0;
+  color: #aaa;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+
+.hint {
+  font-size: 11px;
+  color: #888;
+  margin: 8px 0 0 0;
+}
+
+/* ─── Editor grid: LS20-styled cell visuals ─────────────────────────────── */
+/* Palette mapped to CSS:
+ *   bg (5)        = #AAAAAA (grey)        — walkable
+ *   wall (15)     = #014B65 (dark teal)   — impassable
+ *   player (1)    = #0074D9 (blue)
+ *   goal_frame(0) = #000000 (black)
+ *   accent (7)    = #FF851B (orange)      — directional band / dot
+ *   cross (11)    = #FFFFFF (white)
+ *   highlight(13) = #01FF70 (lime)
+ */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(8, 56px);
+  grid-template-rows: repeat(8, 56px);
+  gap: 2px;
+  background: #014B65;            /* match wall color for nice separators */
+  padding: 4px;
+  border-radius: 4px;
+  user-select: none;
+  touch-action: none;             /* prevent touch-drag from scrolling */
+}
+
+.cell {
+  background: #AAAAAA;            /* walkable bg = grey */
+  position: relative;
+  cursor: crosshair;
+  border-radius: 2px;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.cell:hover {
+  outline: 2px solid rgba(255, 255, 255, 0.4);
+  outline-offset: -2px;
+}
+
+.cell.ui-strip {
+  background: #1a1a1a;            /* dark UI strip */
+  cursor: not-allowed;
+}
+
+.cell.ui-strip::after {
+  content: "UI strip";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #666;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+}
+
+/* Wall: dark near-black tile */
+.cell.wall {
+  background: #014B65;
+}
+
+/* Player: blue tile with a FIXED orange top band — does NOT rotate. */
+.cell.player {
+  background: #0074D9;
+}
+.cell.player::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 40%;                    /* matches 2/5 of LS20's sfqyzhzkij sprite */
+  background: #FF851B;
+  pointer-events: none;
+}
+
+/* Goal: blue tile with a 3-cell orange L-mark rotated by goal_rot.
+ * L drawn via clip-path on a pseudo that fills the cell, then rotated. */
+.cell.goal {
+  background: #0074D9;
+}
+.cell.goal::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #FF851B;
+  /* Reference L at rot 0: cells (0,1), (1,1), (1,2) of a 4x4 grid.
+   * In %: vertical bar 25-50% wide × 0-50% tall, horizontal bar 25-75% wide × 25-50% tall.
+   * Polygon traces the L outline clockwise. */
+  clip-path: polygon(25% 0, 50% 0, 50% 25%, 75% 25%, 75% 50%, 25% 50%);
+  pointer-events: none;
+  transform-origin: 50% 50%;
+}
+.cell.goal.rot0::before    { transform: rotate(0deg); }
+.cell.goal.rot90::before   { transform: rotate(90deg); }
+.cell.goal.rot180::before  { transform: rotate(180deg); }
+.cell.goal.rot270::before  { transform: rotate(270deg); }
+
+/* Cross: white tile with a green "+" pattern */
+.cell.cross {
+  background: #AAAAAA;            /* same as bg (walkable) — cross sits on bg */
+}
+.cell.cross::before,
+.cell.cross::after {
+  content: "";
+  position: absolute;
+  background: #FFFFFF;
+  pointer-events: none;
+}
+.cell.cross::before { left: 0; right: 0; top: 35%; height: 30%; }      /* horizontal */
+.cell.cross::after  { top: 0; bottom: 0; left: 35%; width: 30%; }      /* vertical */
+
+/* ─── Preview canvas ───────────────────────────────────────────────────── */
+#preview {
+  width: 320px;                   /* 32 px * 10 */
+  height: 320px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  background: #000;
+  border: 1px solid #444;
+  display: block;
+}
+
+/* ─── Actions ──────────────────────────────────────────────────────────── */
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.action {
+  background: #2c2c33;
+  color: #ddd;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 8px 18px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.action:hover { background: #38383f; }
+.action.primary {
+  background: #3a7bd5;
+  border-color: #5d9cf0;
+  color: #fff;
+}
+.action.primary:hover { background: #4a8ce6; }
+
+.action.danger { color: #ff8a8a; }
+.action.danger:hover { background: #4a2a2a; }
+
+.error {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: #4a1f1f;
+  border: 1px solid #883333;
+  border-radius: 4px;
+  color: #ffb0b0;
+  font-size: 13px;
+  white-space: pre-wrap;
+}

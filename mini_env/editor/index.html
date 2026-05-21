@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>mini-LS20 Level Editor</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>mini-LS20 Level Editor</h1>
+      <div id="toast" class="toast"></div>
+    </header>
+
+    <section class="controls">
+      <div class="row">
+        <span class="lbl">Tool:</span>
+        <div id="tools" class="tools">
+          <button class="tool selected" data-tool="wall">Wall</button>
+          <button class="tool" data-tool="player">Player</button>
+          <button class="tool" data-tool="goal">Goal</button>
+          <button class="tool" data-tool="cross">Cross</button>
+          <button class="tool" data-tool="erase">Erase</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <label class="lbl">Name:
+          <input type="text" id="name-input" value="level_01" maxlength="64">
+        </label>
+        <label class="lbl">step_limit:
+          <input type="number" id="step-limit" value="42" min="1" max="999">
+        </label>
+      </div>
+
+      <div class="row">
+        <label class="lbl">player_start.rotation:
+          <select id="player-rot">
+            <option value="0">0</option>
+            <option value="90">90</option>
+            <option value="180">180</option>
+            <option value="270" selected>270</option>
+          </select>
+        </label>
+        <label class="lbl">goal.rotation:
+          <select id="goal-rot">
+            <option value="0" selected>0</option>
+            <option value="90">90</option>
+            <option value="180">180</option>
+            <option value="270">270</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="row">
+        <label class="lbl checkbox">
+          <input type="checkbox" id="goal-gated" checked>
+          goal_gated
+        </label>
+        <label class="lbl checkbox">
+          <input type="checkbox" id="show-match-cue" checked>
+          show_match_cue
+        </label>
+      </div>
+    </section>
+
+    <section class="panels">
+      <div class="panel">
+        <h2>Editor (8×8 grid)</h2>
+        <div id="grid" class="grid"></div>
+        <p class="hint">Click or drag to paint. Bottom row (row 7) is the UI strip and is not editable.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Preview (32×32, upscaled)</h2>
+        <canvas id="preview" width="32" height="32"></canvas>
+        <p class="hint">This is the exact frame the Python renderer should emit.</p>
+      </div>
+    </section>
+
+    <section class="actions">
+      <button id="save-btn" class="action primary">Save JSON</button>
+      <button id="load-btn" class="action">Load JSON</button>
+      <input type="file" id="load-file" accept=".json" style="display:none">
+      <button id="reset-btn" class="action danger">Reset</button>
+    </section>
+
+    <section class="error" id="error-box" hidden></section>
+  </div>
+
+  <script src="editor.js"></script>
+</body>
+</html>

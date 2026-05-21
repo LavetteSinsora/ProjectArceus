@@ -1,0 +1,20 @@
+{
+  "solved": true,
+  "game_id": "tu93-0768757b",
+  "level_index": 6,
+  "solution_length": 26,
+  "search_env_steps": 2776,
+  "search_iterations": 616,
+  "search_elapsed_s": 3.6,
+  "archive_size": 80,
+  "distill": {
+    "epoch": 124,
+    "loss": 0.0037121130153536797,
+    "train_acc": 1.0
+  },
+  "eval_episodes": 30,
+  "eval_completion_rate": 1.0,
+  "eval_len_min": 26,
+  "eval_len_max": 26,
+  "eval_len_mean": 26.0
+}

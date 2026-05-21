@@ -1,0 +1,20 @@
+{
+  "solved": true,
+  "game_id": "g50t-5849a774",
+  "level_index": 0,
+  "solution_length": 54,
+  "search_env_steps": 23116,
+  "search_iterations": 925,
+  "search_elapsed_s": 15.7,
+  "archive_size": 163,
+  "distill": {
+    "epoch": 150,
+    "loss": 0.008391562849283218,
+    "train_acc": 1.0
+  },
+  "eval_episodes": 30,
+  "eval_completion_rate": 1.0,
+  "eval_len_min": 54,
+  "eval_len_max": 54,
+  "eval_len_mean": 54.0
+}

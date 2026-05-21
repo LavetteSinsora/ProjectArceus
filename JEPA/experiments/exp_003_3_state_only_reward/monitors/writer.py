@@ -32,10 +32,13 @@ def _r(v: float, dp: int = 6):
 
 
 class MetricsWriter:
-    def __init__(self, run_dir: Path):
+    def __init__(self, run_dir: Path, wandb_run: Any = None):
         self._path = run_dir / "metrics.jsonl"
         self._fh = open(self._path, "w", buffering=1, encoding="utf-8")
+        self._wandb = wandb_run
         print(f"[exp003_3] Metrics file: {self._path}")
+        if self._wandb is not None:
+            print(f"[exp003_3] wandb run:    {self._wandb.url}")
 
     def _record_from_health(self, health: HealthMonitor) -> Dict[str, Any]:
         out: Dict[str, Any] = {}
@@ -99,6 +102,8 @@ class MetricsWriter:
         }
         rec.update(self._record_from_health(health))
         self._fh.write(json.dumps(rec) + "\n")
+        if self._wandb is not None:
+            self._wandb.log(rec, step=step)
 
     def write_eval(self, step: int, eval_dict: Dict[str, Any]) -> None:
         """One-shot extra line for an eval pass; keys must be already section-tagged."""
@@ -106,6 +111,10 @@ class MetricsWriter:
         for k, v in eval_dict.items():
             rec[k] = _r(v) if isinstance(v, (int, float)) else v
         self._fh.write(json.dumps(rec) + "\n")
+        if self._wandb is not None:
+            wb_rec = {k: v for k, v in rec.items()
+                      if k != "_kind" and isinstance(v, (int, float))}
+            self._wandb.log(wb_rec, step=step)
 
     def close(self) -> None:
         self._fh.close()

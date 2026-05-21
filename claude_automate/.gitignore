@@ -1,0 +1,7 @@
+# Bulky periodic checkpoints — keep best.pt, metrics.jsonl, config.json only.
+experiments/*/step_*.pt
+experiments/*/placeholder_init.pt
+experiments/*.log
+__pycache__/
+*.pyc
+.pytest_cache/

@@ -1,0 +1,23 @@
+{
+  "name": "level_02",
+  "grid_cells": [8, 8],
+  "tile_px": 4,
+  "step_limit": 60,
+  "palette": {
+    "bg": 5,
+    "wall": 15,
+    "player": 1,
+    "goal_frame": 0,
+    "cross": 11,
+    "preview_bg": 0,
+    "highlight": 13,
+    "energy": 4,
+    "denial_flash": 2
+  },
+  "walls": [[4, 3], [4, 4], [4, 5]],
+  "player_start": {"cell": [1, 5], "rotation": 270},
+  "goal":         {"cell": [6, 1], "rotation": 0},
+  "cross":        {"cell": [1, 2]},
+  "goal_gated":   true,
+  "show_match_cue": true
+}

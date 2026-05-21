@@ -36,6 +36,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import wandb
 
 _repo_root = Path(__file__).parent.parent.parent.parent
 if str(_repo_root) not in sys.path:
@@ -227,7 +228,8 @@ def print_stats(step, health: HealthMonitor, act_mon: ActivationMonitor,
 
 def train(cfg: Config, resume_path: str = None, run_dir: Path = None,
           checkpoint_schedule: str = "default",
-          checkpoint_dir: Path | None = None) -> None:
+          checkpoint_dir: Path | None = None,
+          wandb_run=None) -> None:
     set_seeds(cfg.seed)
     device = torch.device(
         "mps"  if torch.backends.mps.is_available() else
@@ -320,7 +322,7 @@ def train(cfg: Config, resume_path: str = None, run_dir: Path = None,
     raw_env = arc.make(cfg.game_id)
     env = LS20Env(raw_env)
 
-    metrics_writer = MetricsWriter(run_dir) if run_dir else None
+    metrics_writer = MetricsWriter(run_dir, wandb_run=wandb_run) if run_dir else None
     health = HealthMonitor(
         window_fast=LOG_FREQ, window_slow=50, window_eval=5,
         n_latents=cfg.n_latents, n_actions=cfg.n_actions,
@@ -720,6 +722,23 @@ def main():
               "diagnostic runs (e.g. --checkpoint-schedule staged) isolated "
               "from the main checkpoints directory."),
     )
+    parser.add_argument(
+        "--wandb",
+        action="store_true",
+        help="Mirror metrics.jsonl to Weights & Biases (project/entity/mode from Config).",
+    )
+    parser.add_argument(
+        "--wandb-run-id",
+        default=None,
+        help=("Resume an existing W&B run by id. Required to continue logging "
+              "into the same dashboard run across a --resume restart."),
+    )
+    parser.add_argument(
+        "--wandb-name",
+        default=None,
+        help=("Custom display name for the W&B run (e.g. 'ablation-no-action-reward'). "
+              "Defaults to the local run-dir name (run_<timestamp>_<fresh|resume>)."),
+    )
     args = parser.parse_args()
 
     cfg = Config()
@@ -732,11 +751,36 @@ def main():
     ckpt_dir_path = Path(args.checkpoint_dir).resolve() if args.checkpoint_dir else None
 
     _run_dir, _tee = setup_run_logger(args.resume)
+
+    wandb_run = None
+    if args.wandb:
+        wandb_run = wandb.init(
+            project=cfg.wandb_project,
+            entity=cfg.wandb_entity,
+            mode=cfg.wandb_mode,
+            name=args.wandb_name or _run_dir.name,
+            id=args.wandb_run_id,
+            resume="allow" if args.wandb_run_id else None,
+            config=dataclasses.asdict(cfg),
+            dir=str(_run_dir),
+            settings=wandb.Settings(console="off"),
+        )
+        (_run_dir / "wandb_run_id.txt").write_text(wandb_run.id)
+        if args.resume and not args.wandb_run_id:
+            print("[exp003_3] --resume given without --wandb-run-id; "
+                  "starting a NEW wandb run instead of continuing the old one.")
+
     try:
         train(cfg, resume_path=args.resume, run_dir=_run_dir,
               checkpoint_schedule=args.checkpoint_schedule,
-              checkpoint_dir=ckpt_dir_path)
+              checkpoint_dir=ckpt_dir_path,
+              wandb_run=wandb_run)
     finally:
+        if wandb_run is not None:
+            try:
+                wandb_run.finish()
+            except Exception as e:
+                print(f"[exp003_3] wandb.finish() failed: {e}")
         sys.stdout = _tee._orig
         _tee.close()
 
