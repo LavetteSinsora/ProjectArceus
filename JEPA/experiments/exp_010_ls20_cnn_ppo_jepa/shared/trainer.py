@@ -116,6 +116,7 @@ def train(cfg, smoke: bool = False):
 
     global_step = 0
     t_start = time.time()
+    consec_success = 0          # consecutive evals at/above the early-stop threshold
     for update in range(1, cfg.total_updates + 1):
         rollout = collect_rollout(envs, model, device, cfg.rollout_steps)
         compute_gae(rollout, cfg.gamma, cfg.gae_lambda)
@@ -149,18 +150,36 @@ def train(cfg, smoke: bool = False):
             **jstats,
         }
 
-        if update % cfg.eval_every == 0 or update == cfg.total_updates:
+        is_eval = (update % cfg.eval_every == 0 or update == cfg.total_updates)
+        if is_eval:
             record.update(evaluate(model, eval_envs, device, cfg.eval_episodes))
             record.update(feature_health(rollout.features))
 
         if update % cfg.log_every == 0:
             writer.write(record)
 
-        if update % cfg.save_every == 0 or update == cfg.total_updates:
-            p = save_checkpoint(cfg, model, predictor, idm, global_step, update, ckpt_dir)
+        # Decide early stop on sustained eval success.
+        stop_now = False
+        if is_eval:
+            esr = record.get("success_rate", float("nan"))
             print(f"[exp010] update {update}/{cfg.total_updates} step={global_step} "
-                  f"succ={record.get('success_rate', record.get('train_success_rate'))} "
-                  f"saved={p.name}")
+                  f"eval_success_rate={esr if esr == esr else 'nan'} "
+                  f"avg_steps_to_solve={record.get('avg_steps_to_solve')}")
+            if cfg.early_stop_enabled:
+                # esr == esr filters out NaN (no successful episodes).
+                consec_success = (consec_success + 1
+                                  if (esr == esr and esr >= cfg.early_stop_success_rate)
+                                  else 0)
+                stop_now = consec_success >= cfg.early_stop_patience
+
+        if update % cfg.save_every == 0 or update == cfg.total_updates or stop_now:
+            p = save_checkpoint(cfg, model, predictor, idm, global_step, update, ckpt_dir)
+            print(f"[exp010]   saved {p.name}")
+
+        if stop_now:
+            print(f"[exp010] early stop: eval success_rate >= {cfg.early_stop_success_rate} "
+                  f"for {cfg.early_stop_patience} consecutive evals (step={global_step})")
+            break
 
     writer.close()
     print(f"[exp010] done. checkpoints in {ckpt_dir}")

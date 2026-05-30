@@ -63,6 +63,13 @@ class Config:
     eval_episodes: int = 32
     save_every: int = 100
 
+    # Early stopping (PPO): stop once eval success_rate stays at/above
+    # `early_stop_success_rate` for `early_stop_patience` consecutive evals.
+    # Set early_stop_enabled=False to always run the full budget.
+    early_stop_enabled: bool = True
+    early_stop_success_rate: float = 0.99
+    early_stop_patience: int = 3
+
     @property
     def total_updates(self) -> int:
         return self.total_env_steps // (self.rollout_steps * self.n_envs)

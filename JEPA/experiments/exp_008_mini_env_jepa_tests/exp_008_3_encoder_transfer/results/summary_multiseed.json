@@ -6,144 +6,232 @@
   ],
   "cells": {
     "hard1__jepa_frozen": {
-      "n_runs": 0,
+      "n_runs": 3,
       "n_solved": 0,
       "steps_to_99_mean": null,
       "steps_to_99_std": 0.0,
       "steps_to_99_per_seed": [],
-      "final_eval_mean": null,
-      "final_eval_std": 0.0,
-      "final_eval_per_seed": []
+      "final_eval_mean": 0.34375,
+      "final_eval_std": 0.06750771560841522,
+      "final_eval_per_seed": [
+        0.4375,
+        0.28125,
+        0.3125
+      ]
     },
     "hard1__jepa_unfrozen": {
-      "n_runs": 0,
-      "n_solved": 0,
-      "steps_to_99_mean": null,
-      "steps_to_99_std": 0.0,
-      "steps_to_99_per_seed": [],
-      "final_eval_mean": null,
+      "n_runs": 3,
+      "n_solved": 3,
+      "steps_to_99_mean": 47786.666666666664,
+      "steps_to_99_std": 12771.523880188386,
+      "steps_to_99_per_seed": [
+        61440,
+        30720,
+        51200
+      ],
+      "final_eval_mean": 1.0,
       "final_eval_std": 0.0,
-      "final_eval_per_seed": []
+      "final_eval_per_seed": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     "hard1__ppo_early_frozen": {
-      "n_runs": 0,
+      "n_runs": 3,
       "n_solved": 0,
       "steps_to_99_mean": null,
       "steps_to_99_std": 0.0,
       "steps_to_99_per_seed": [],
-      "final_eval_mean": null,
+      "final_eval_mean": 0.0,
       "final_eval_std": 0.0,
-      "final_eval_per_seed": []
+      "final_eval_per_seed": [
+        0.0,
+        0.0,
+        0.0
+      ]
     },
     "hard1__ppo_early_unfrozen": {
-      "n_runs": 0,
-      "n_solved": 0,
-      "steps_to_99_mean": null,
-      "steps_to_99_std": 0.0,
-      "steps_to_99_per_seed": [],
-      "final_eval_mean": null,
+      "n_runs": 3,
+      "n_solved": 3,
+      "steps_to_99_mean": 34133.333333333336,
+      "steps_to_99_std": 4827.182292900165,
+      "steps_to_99_per_seed": [
+        30720,
+        30720,
+        40960
+      ],
+      "final_eval_mean": 1.0,
       "final_eval_std": 0.0,
-      "final_eval_per_seed": []
+      "final_eval_per_seed": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     "hard1__ppo_final_frozen": {
-      "n_runs": 0,
+      "n_runs": 3,
       "n_solved": 0,
       "steps_to_99_mean": null,
       "steps_to_99_std": 0.0,
       "steps_to_99_per_seed": [],
-      "final_eval_mean": null,
-      "final_eval_std": 0.0,
-      "final_eval_per_seed": []
+      "final_eval_mean": 0.3125,
+      "final_eval_std": 0.4419417382415922,
+      "final_eval_per_seed": [
+        0.9375,
+        0.0,
+        0.0
+      ]
     },
     "hard1__ppo_final_unfrozen": {
-      "n_runs": 0,
-      "n_solved": 0,
-      "steps_to_99_mean": null,
-      "steps_to_99_std": 0.0,
-      "steps_to_99_per_seed": [],
-      "final_eval_mean": null,
+      "n_runs": 3,
+      "n_solved": 3,
+      "steps_to_99_mean": 40960,
+      "steps_to_99_std": 8360.924988699915,
+      "steps_to_99_per_seed": [
+        30720,
+        51200,
+        40960
+      ],
+      "final_eval_mean": 1.0,
       "final_eval_std": 0.0,
-      "final_eval_per_seed": []
+      "final_eval_per_seed": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     "hard1__scratch_unfrozen": {
-      "n_runs": 0,
-      "n_solved": 0,
-      "steps_to_99_mean": null,
-      "steps_to_99_std": 0.0,
-      "steps_to_99_per_seed": [],
-      "final_eval_mean": null,
+      "n_runs": 3,
+      "n_solved": 3,
+      "steps_to_99_mean": 47786.666666666664,
+      "steps_to_99_std": 4827.182292900165,
+      "steps_to_99_per_seed": [
+        51200,
+        40960,
+        51200
+      ],
+      "final_eval_mean": 1.0,
       "final_eval_std": 0.0,
-      "final_eval_per_seed": []
+      "final_eval_per_seed": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     "hard2__jepa_frozen": {
-      "n_runs": 0,
+      "n_runs": 3,
       "n_solved": 0,
       "steps_to_99_mean": null,
       "steps_to_99_std": 0.0,
       "steps_to_99_per_seed": [],
-      "final_eval_mean": null,
-      "final_eval_std": 0.0,
-      "final_eval_per_seed": []
+      "final_eval_mean": 0.21875,
+      "final_eval_std": 0.06750771560841522,
+      "final_eval_per_seed": [
+        0.125,
+        0.25,
+        0.28125
+      ]
     },
     "hard2__jepa_unfrozen": {
-      "n_runs": 0,
-      "n_solved": 0,
-      "steps_to_99_mean": null,
-      "steps_to_99_std": 0.0,
-      "steps_to_99_per_seed": [],
-      "final_eval_mean": null,
+      "n_runs": 3,
+      "n_solved": 3,
+      "steps_to_99_mean": 58026.666666666664,
+      "steps_to_99_std": 21041.199796800774,
+      "steps_to_99_per_seed": [
+        81920,
+        30720,
+        61440
+      ],
+      "final_eval_mean": 1.0,
       "final_eval_std": 0.0,
-      "final_eval_per_seed": []
+      "final_eval_per_seed": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     "hard2__ppo_early_frozen": {
-      "n_runs": 0,
+      "n_runs": 3,
       "n_solved": 0,
       "steps_to_99_mean": null,
       "steps_to_99_std": 0.0,
       "steps_to_99_per_seed": [],
-      "final_eval_mean": null,
-      "final_eval_std": 0.0,
-      "final_eval_per_seed": []
+      "final_eval_mean": 0.16666666666666666,
+      "final_eval_std": 0.23570226039551584,
+      "final_eval_per_seed": [
+        0.0,
+        0.5,
+        0.0
+      ]
     },
     "hard2__ppo_early_unfrozen": {
-      "n_runs": 0,
-      "n_solved": 0,
-      "steps_to_99_mean": null,
-      "steps_to_99_std": 0.0,
-      "steps_to_99_per_seed": [],
-      "final_eval_mean": null,
+      "n_runs": 3,
+      "n_solved": 3,
+      "steps_to_99_mean": 47786.666666666664,
+      "steps_to_99_std": 9654.36458580033,
+      "steps_to_99_per_seed": [
+        61440,
+        40960,
+        40960
+      ],
+      "final_eval_mean": 1.0,
       "final_eval_std": 0.0,
-      "final_eval_per_seed": []
+      "final_eval_per_seed": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     "hard2__ppo_final_frozen": {
-      "n_runs": 0,
+      "n_runs": 3,
       "n_solved": 0,
       "steps_to_99_mean": null,
       "steps_to_99_std": 0.0,
       "steps_to_99_per_seed": [],
-      "final_eval_mean": null,
+      "final_eval_mean": 0.0,
       "final_eval_std": 0.0,
-      "final_eval_per_seed": []
+      "final_eval_per_seed": [
+        0.0,
+        0.0,
+        0.0
+      ]
     },
     "hard2__ppo_final_unfrozen": {
-      "n_runs": 0,
-      "n_solved": 0,
-      "steps_to_99_mean": null,
-      "steps_to_99_std": 0.0,
-      "steps_to_99_per_seed": [],
-      "final_eval_mean": null,
+      "n_runs": 3,
+      "n_solved": 3,
+      "steps_to_99_mean": 102400,
+      "steps_to_99_std": 46551.66019237839,
+      "steps_to_99_per_seed": [
+        51200,
+        163840,
+        92160
+      ],
+      "final_eval_mean": 1.0,
       "final_eval_std": 0.0,
-      "final_eval_per_seed": []
+      "final_eval_per_seed": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     "hard2__scratch_unfrozen": {
-      "n_runs": 0,
-      "n_solved": 0,
-      "steps_to_99_mean": null,
-      "steps_to_99_std": 0.0,
-      "steps_to_99_per_seed": [],
-      "final_eval_mean": null,
+      "n_runs": 3,
+      "n_solved": 3,
+      "steps_to_99_mean": 102400,
+      "steps_to_99_std": 79758.14106827382,
+      "steps_to_99_per_seed": [
+        215040,
+        40960,
+        51200
+      ],
+      "final_eval_mean": 1.0,
       "final_eval_std": 0.0,
-      "final_eval_per_seed": []
+      "final_eval_per_seed": [
+        1.0,
+        1.0,
+        1.0
+      ]
     }
   }
 }
