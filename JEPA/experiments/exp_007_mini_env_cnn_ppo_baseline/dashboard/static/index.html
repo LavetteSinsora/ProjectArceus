@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>exp_007 CNN+PPO Dashboard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Menlo','Monaco','Consolas',monospace; font-size: 12px;
+       background: #0d1117; color: #c9d1d9; min-width: 1100px; }
+a { color: #388bfd; }
+
+#hdr { position: sticky; top: 0; z-index: 100; background: #161b22;
+       border-bottom: 1px solid #30363d; padding: 10px 18px;
+       display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#hdr h1 { font-size: 14px; color: #e6edf3; letter-spacing: .5px;
+          margin-right: 10px; }
+#hdr select, #hdr input[type=number] {
+  background: #0d1117; border: 1px solid #30363d; color: #c9d1d9;
+  padding: 4px 8px; border-radius: 4px; font-size: 12px;
+}
+#run-select { min-width: 280px; }
+#ckpt-select { min-width: 140px; }
+#seed-input { width: 60px; }
+.btn { background: #21262d; border: 1px solid #30363d; color: #c9d1d9;
+       padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+.btn:hover { background: #30363d; }
+.btn-primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+.btn-primary:hover { background: #388bfd; }
+#status { font-size: 11px; color: #8b949e; margin-left: 12px; }
+
+.sl { background: #161b22; border-top: 2px solid #21262d; border-bottom: 1px solid #21262d;
+      padding: 8px 18px; font-size: 11px; font-weight: bold; letter-spacing: 1px;
+      color: #388bfd; }
+
+/* layout */
+.main { display: grid; grid-template-columns: 460px 1fr; gap: 0; }
+#left { border-right: 1px solid #21262d; min-height: calc(100vh - 80px); }
+#right { overflow-y: auto; }
+.card { border-bottom: 1px solid #21262d; padding: 12px 16px; }
+.card-title { font-size: 10px; font-weight: bold; letter-spacing: .8px;
+              color: #388bfd; text-transform: uppercase; margin-bottom: 8px; }
+
+/* canvas */
+.canvas-wrap { padding: 12px 16px; text-align: center; }
+#puzzle { display: block; margin: 0 auto;
+          image-rendering: pixelated; image-rendering: crisp-edges;
+          border: 1px solid #30363d; background: #000; }
+
+/* playback */
+.pb-row { display: flex; align-items: center; gap: 8px; padding: 8px 16px;
+          border-top: 1px solid #21262d; border-bottom: 1px solid #21262d; }
+.pb-btn { background: #21262d; border: 1px solid #30363d; color: #c9d1d9;
+          padding: 4px 9px; border-radius: 3px; cursor: pointer; font-size: 14px; }
+.pb-btn:hover { background: #30363d; }
+#pb-slider { flex: 1; accent-color: #388bfd; }
+#pb-counter { color: #8b949e; font-size: 11px; }
+#pb-speed { background: #0d1117; border: 1px solid #30363d; color: #c9d1d9;
+            padding: 2px 4px; border-radius: 3px; font-size: 11px; }
+
+/* stats */
+.stat-grid { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; align-items: baseline; }
+.sl-lbl { font-size: 11px; color: #8b949e; white-space: nowrap; }
+.sv { font-size: 11px; color: #e6edf3; font-variant-numeric: tabular-nums; }
+.sv.good { color: #3fb950; } .sv.warn { color: #d29922; } .sv.bad { color: #f85149; }
+
+/* policy bars */
+.bar-row { display: grid; grid-template-columns: 40px 1fr 50px; gap: 8px;
+           align-items: center; margin-bottom: 4px; }
+.bar-lbl { color: #8b949e; font-size: 11px; }
+.bar-track { background: #21262d; height: 14px; border-radius: 2px;
+             border: 1px solid #30363d; overflow: hidden; }
+.bar-fill { height: 100%; background: #388bfd; transition: width .15s; }
+.bar-fill.selected { background: #3fb950; }
+.bar-val { color: #c9d1d9; font-size: 11px; text-align: right;
+           font-variant-numeric: tabular-nums; }
+
+/* mini canvas charts */
+.chart-block { padding: 8px 16px; border-bottom: 1px solid #21262d; }
+.chart-title { font-size: 10px; color: #8b949e; margin-bottom: 4px; letter-spacing: .5px; }
+.chart-canvas { width: 100%; height: 90px; display: block; background: #0d1117;
+                border: 1px solid #21262d; border-radius: 3px; }
+.chart-axis { font-size: 10px; color: #8b949e; }
+
+/* multi-line legend */
+.legend { display: flex; gap: 12px; font-size: 10px; color: #8b949e; margin-top: 4px; }
+.legend span { display: inline-flex; align-items: center; gap: 4px; }
+.legend i { display: inline-block; width: 10px; height: 2px; }
+
+/* batch episode list */
+.ep-list { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;
+           font-size: 10px; }
+.ep-cell { padding: 4px 6px; border-radius: 3px; text-align: center;
+           border: 1px solid #30363d; background: #161b22; cursor: pointer; }
+.ep-cell.won { background: #1a3a1a; border-color: #3fb950; color: #3fb950; }
+.ep-cell.lost { background: #3a1a1a; border-color: #f85149; color: #f85149; }
+.ep-cell:hover { background: #21262d; }
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <h1>exp_007 CNN+PPO inspector</h1>
+  <a href="/dynamics" style="color:#388bfd;text-decoration:none;font-size:11px;margin-right:10px">training dynamics →</a>
+  <a href="/probe" style="color:#388bfd;text-decoration:none;font-size:11px;margin-right:10px">state probe →</a>
+  <span>Run:</span>
+  <select id="run-select"></select>
+  <span>Checkpoint:</span>
+  <select id="ckpt-select"></select>
+  <span>Level:</span>
+  <select id="level-select" title="Override the level config used for inspection (defaults to the level the checkpoint was trained on)"></select>
+  <span id="trained-on-badge" style="font-size:11px;color:#8b949e;margin-left:4px"></span>
+  <span>Seed:</span>
+  <input id="seed-input" type="number" value="0" min="0">
+  <label style="font-size:11px;color:#8b949e">
+    <input type="checkbox" id="greedy-check"> greedy
+  </label>
+  <button class="btn btn-primary" id="run-btn">Run episode</button>
+  <button class="btn" id="batch-btn">Batch ×16</button>
+  <span id="status"></span>
+</div>
+
+<div class="main">
+  <!-- LEFT: episode viewer -->
+  <div id="left">
+    <div class="sl">EPISODE VIEWER</div>
+    <div class="canvas-wrap">
+      <canvas id="puzzle" width="384" height="384"></canvas>
+    </div>
+    <div class="pb-row">
+      <button class="pb-btn" id="pb-prev">◀</button>
+      <button class="pb-btn" id="pb-play">▶</button>
+      <button class="pb-btn" id="pb-next">▶</button>
+      <input id="pb-slider" type="range" min="0" max="0" value="0">
+      <span id="pb-counter">0 / 0</span>
+      <select id="pb-speed">
+        <option value="60">slow</option>
+        <option value="150" selected>med</option>
+        <option value="400">fast</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <div class="card-title">State (pre-action)</div>
+      <div class="stat-grid" id="state-grid"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Policy π(a|s)</div>
+      <div id="policy-bars"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Critic V(s) + feature</div>
+      <div class="stat-grid" id="critic-grid"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Episode summary</div>
+      <div class="stat-grid" id="ep-summary"></div>
+    </div>
+
+    <div class="card" id="batch-card" style="display:none">
+      <div class="card-title">Batch results (16 episodes)</div>
+      <div class="stat-grid" id="batch-summary" style="margin-bottom:10px"></div>
+      <div class="ep-list" id="batch-list"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: training metrics -->
+  <div id="right">
+    <div class="sl">TRAINING METRICS</div>
+    <div class="card" id="run-meta-card">
+      <div class="card-title">Run info</div>
+      <div class="stat-grid" id="run-meta"></div>
+    </div>
+
+    <div class="chart-block">
+      <div class="chart-title">eval_success_rate (red) &mdash; train_success_rate (blue, smoothed)</div>
+      <canvas class="chart-canvas" id="chart-success"></canvas>
+    </div>
+    <div class="chart-block">
+      <div class="chart-title">eval_avg_steps_to_solve (lower is better)</div>
+      <canvas class="chart-canvas" id="chart-steps"></canvas>
+    </div>
+    <div class="chart-block">
+      <div class="chart-title">eval_pattern_matched_at_end_rate</div>
+      <canvas class="chart-canvas" id="chart-match"></canvas>
+    </div>
+    <div class="chart-block">
+      <div class="chart-title">policy entropy (blue) &mdash; max=log(4)≈1.386</div>
+      <canvas class="chart-canvas" id="chart-entropy"></canvas>
+    </div>
+    <div class="chart-block">
+      <div class="chart-title">mean_feature_cosine (h_t · h_{t+1})</div>
+      <canvas class="chart-canvas" id="chart-cos"></canvas>
+    </div>
+    <div class="chart-block">
+      <div class="chart-title">value_loss (red) &mdash; policy_loss (blue)</div>
+      <canvas class="chart-canvas" id="chart-losses"></canvas>
+    </div>
+    <div class="chart-block">
+      <div class="chart-title">grad_norm_ratio_critic_over_actor (log scale clamped to [.001, 1000])</div>
+      <canvas class="chart-canvas" id="chart-gradratio"></canvas>
+    </div>
+    <div class="chart-block">
+      <div class="chart-title">approx_kl (target &lt; 0.02) &mdash; clipfrac (target 0.1–0.3)</div>
+      <canvas class="chart-canvas" id="chart-kl"></canvas>
+    </div>
+    <div class="chart-block">
+      <div class="chart-title">eval_coverage_rate (green) &mdash; eval_wall_hit_rate (orange, /50)</div>
+      <canvas class="chart-canvas" id="chart-explore"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const ARC_RGB = [
+  [0,0,0],[0,116,217],[255,65,54],[46,204,64],[255,220,0],[170,170,170],
+  [240,18,190],[255,133,27],[127,219,255],[135,12,37],[61,153,112],[255,255,255],
+  [0,31,63],[1,255,112],[133,20,75],[1,75,101]
+];
+const ACTION_NAMES = ['up','down','left','right'];
+const ACTION_ARROWS = ['↑','↓','←','→'];
+
+let _runs = [];
+let _levels = [];
+let _episode = null;
+let _stepIdx = 0;
+let _playTimer = null;
+let _metrics = null;
+
+const $ = id => document.getElementById(id);
+
+// ── Fetch levels ──────────────────────────────────────────────────────────
+async function fetchLevels() {
+  const res = await fetch('/api/levels').then(r => r.json());
+  _levels = res.levels || [];
+  const sel = $('level-select');
+  sel.innerHTML = '';
+  for (const l of _levels) {
+    const o = document.createElement('option');
+    o.value = l.path; o.textContent = l.label;
+    sel.appendChild(o);
+  }
+}
+
+// ── Fetch runs ────────────────────────────────────────────────────────────
+async function fetchRuns() {
+  const res = await fetch('/api/runs').then(r => r.json());
+  _runs = res.runs;
+  const sel = $('run-select');
+  sel.innerHTML = '';
+  for (const r of _runs) {
+    const o = document.createElement('option');
+    o.value = r.name;
+    const exp = r.exp_name || r.name;
+    const upd = r.last_update == null ? '?' : r.last_update;
+    o.textContent = `${exp}  (${upd} upd)`;
+    sel.appendChild(o);
+  }
+  if (_runs.length) {
+    sel.value = _runs[0].name;
+    onRunChange();
+  }
+}
+
+function onRunChange() {
+  const name = $('run-select').value;
+  const r = _runs.find(x => x.name === name);
+  if (!r) return;
+  const ckSel = $('ckpt-select');
+  ckSel.innerHTML = '';
+  for (const ck of r.checkpoints) {
+    const o = document.createElement('option');
+    o.value = ck; o.textContent = ck;
+    ckSel.appendChild(o);
+  }
+  if (r.checkpoints.includes('final.pt')) ckSel.value = 'final.pt';
+  // Default the level dropdown to the level this run was trained on (if it's known).
+  const lvlSel = $('level-select');
+  if (r.trained_on && _levels.some(l => l.path === r.trained_on)) {
+    lvlSel.value = r.trained_on;
+  }
+  // "Trained on" badge — shows the level used during training, even if the user
+  // overrides the level dropdown for inspection.
+  const trainedLabel = _levels.find(l => l.path === r.trained_on)?.label || r.trained_on || '—';
+  $('trained-on-badge').textContent = `(trained on: ${trainedLabel})`;
+  renderRunMeta(r);
+  fetchAndRenderMetrics(name);
+}
+
+function renderRunMeta(r) {
+  const g = $('run-meta');
+  g.innerHTML = '';
+  const rows = [
+    ['exp_name', r.exp_name],
+    ['reward_mode', r.reward_mode],
+    ['trained_on', r.trained_on || '—'],
+    ['total_env_steps', (r.total_env_steps ?? '').toLocaleString?.()],
+    ['records', r.n_metric_records],
+    ['last_update', r.last_update],
+    ['checkpoints', r.checkpoints.length],
+  ];
+  for (const [k, v] of rows) {
+    const l = document.createElement('div'); l.className = 'sl-lbl'; l.textContent = k;
+    const x = document.createElement('div'); x.className = 'sv'; x.textContent = v == null ? '—' : v;
+    g.appendChild(l); g.appendChild(x);
+  }
+}
+
+// ── Metrics + charts ──────────────────────────────────────────────────────
+async function fetchAndRenderMetrics(run) {
+  $('status').textContent = 'loading metrics…';
+  const res = await fetch('/api/metrics?run=' + encodeURIComponent(run)).then(r => r.json());
+  _metrics = res.records;
+  $('status').textContent = `${_metrics.length} metric records`;
+  renderAllCharts();
+}
+
+// Stateful chart manager: stores series + draw state so we can re-render on
+// hover and overlay a crosshair + tooltip showing the exact (episode, value)
+// under the cursor for each plotted series.
+const _charts = {};  // canvas.id -> { series, bounds, pad, xLabel, opts }
+
+function _makeChart(canvas, series, opts = {}) {
+  _charts[canvas.id] = { series, opts, xLabel: opts.xLabel || 'episode' };
+  _renderChart(canvas);
+  if (!canvas._hoverWired) {
+    canvas.addEventListener('mousemove', e => _onChartHover(canvas, e));
+    canvas.addEventListener('mouseleave', () => _renderChart(canvas));
+    canvas._hoverWired = true;
+  }
+}
+
+function _renderChart(canvas, hoverX = null) {
+  const state = _charts[canvas.id];
+  if (!state) return;
+  const { series, opts } = state;
+
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth, cssH = canvas.clientHeight;
+  canvas.width = cssW * dpr; canvas.height = cssH * dpr;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, cssW, cssH);
+  if (!series.length) return;
+
+  // bounds
+  let xmin = Infinity, xmax = -Infinity;
+  let ymin = opts.ymin != null ? opts.ymin : Infinity;
+  let ymax = opts.ymax != null ? opts.ymax : -Infinity;
+  for (const s of series) {
+    for (let i = 0; i < s.x.length; i++) {
+      const v = s.y[i]; if (!Number.isFinite(v)) continue;
+      if (s.x[i] < xmin) xmin = s.x[i];
+      if (s.x[i] > xmax) xmax = s.x[i];
+      if (opts.ymin == null && v < ymin) ymin = v;
+      if (opts.ymax == null && v > ymax) ymax = v;
+    }
+  }
+  if (!isFinite(xmin) || !isFinite(ymin)) return;
+  if (ymax === ymin) ymax = ymin + 1;
+
+  const pad = { l: 42, r: 10, t: 6, b: 18 };
+  const W = cssW - pad.l - pad.r, H = cssH - pad.t - pad.b;
+  const xMap = x => pad.l + (x - xmin) / (xmax - xmin) * W;
+  const yMap = y => pad.t + (1 - (y - ymin) / (ymax - ymin)) * H;
+  const xUnmap = px => xmin + (px - pad.l) / W * (xmax - xmin);
+
+  // axes
+  ctx.strokeStyle = '#21262d'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, pad.t + H); ctx.lineTo(pad.l + W, pad.t + H);
+  ctx.stroke();
+  ctx.fillStyle = '#8b949e'; ctx.font = '10px Menlo';
+
+  // y gridlines and labels
+  const yticks = [ymin, (ymin + ymax) / 2, ymax];
+  for (const y of yticks) {
+    const py = yMap(y);
+    ctx.fillStyle = '#8b949e';
+    ctx.fillText(y.toFixed(2), 2, py + 3);
+    ctx.strokeStyle = '#161b22';
+    ctx.beginPath(); ctx.moveTo(pad.l, py); ctx.lineTo(pad.l + W, py); ctx.stroke();
+  }
+  // x ticks
+  ctx.fillStyle = '#8b949e';
+  ctx.fillText(xmin.toLocaleString(), pad.l, cssH - 4);
+  const labelMax = xmax.toLocaleString();
+  ctx.fillText(labelMax, cssH > 0 ? pad.l + W - ctx.measureText(labelMax).width : 0, cssH - 4);
+  ctx.fillText(state.xLabel, pad.l + W / 2 - 20, cssH - 4);
+
+  // y=0 reference
+  if (ymin < 0 && ymax > 0) {
+    const py = yMap(0);
+    ctx.strokeStyle = '#30363d';
+    ctx.beginPath(); ctx.moveTo(pad.l, py); ctx.lineTo(pad.l + W, py); ctx.stroke();
+  }
+
+  // series
+  for (const s of series) {
+    ctx.strokeStyle = s.color || '#388bfd';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    let first = true;
+    for (let i = 0; i < s.x.length; i++) {
+      const v = s.y[i]; if (!Number.isFinite(v)) { first = true; continue; }
+      const px = xMap(s.x[i]), py = yMap(v);
+      if (first) { ctx.moveTo(px, py); first = false; }
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+
+  // Cache geometry for hover.
+  state.geom = { pad, W, H, xmin, xmax, ymin, ymax, xMap, yMap, xUnmap };
+
+  // Crosshair overlay
+  if (hoverX != null) {
+    const cx = Math.max(pad.l, Math.min(pad.l + W, hoverX));
+    const xVal = xUnmap(cx);
+    ctx.strokeStyle = '#388bfd'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(cx, pad.t); ctx.lineTo(cx, pad.t + H); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Find nearest sample per series, draw markers
+    const tooltipLines = [];
+    let nearestY = pad.t + H;
+    for (const s of series) {
+      let bi = -1, bdx = Infinity;
+      for (let i = 0; i < s.x.length; i++) {
+        if (!Number.isFinite(s.y[i])) continue;
+        const dx = Math.abs(s.x[i] - xVal);
+        if (dx < bdx) { bdx = dx; bi = i; }
+      }
+      if (bi >= 0) {
+        const px = xMap(s.x[bi]), py = yMap(s.y[bi]);
+        ctx.fillStyle = s.color || '#388bfd';
+        ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2); ctx.fill();
+        tooltipLines.push({
+          color: s.color || '#388bfd',
+          label: s.label || '',
+          val: s.y[bi].toFixed(3),
+          xv: s.x[bi],
+        });
+        if (py < nearestY) nearestY = py;
+      }
+    }
+
+    // tooltip box top-right of the crosshair
+    if (tooltipLines.length) {
+      const xv = tooltipLines[0].xv;
+      const tx = cx + 8 > pad.l + W - 130 ? cx - 138 : cx + 8;
+      const ty = pad.t + 4;
+      const lineH = 12;
+      const boxH = lineH * (tooltipLines.length + 1) + 8;
+      ctx.fillStyle = 'rgba(13, 17, 23, 0.92)';
+      ctx.strokeStyle = '#30363d';
+      ctx.fillRect(tx, ty, 130, boxH);
+      ctx.strokeRect(tx, ty, 130, boxH);
+      ctx.font = '10px Menlo';
+      ctx.fillStyle = '#e6edf3';
+      ctx.fillText(state.xLabel + '=' + Math.round(xv).toLocaleString(), tx + 6, ty + 12);
+      let yy = ty + 12 + lineH;
+      for (const tl of tooltipLines) {
+        ctx.fillStyle = tl.color;
+        ctx.fillRect(tx + 6, yy - 7, 8, 2);
+        ctx.fillStyle = '#c9d1d9';
+        ctx.fillText((tl.label ? tl.label + ': ' : '') + tl.val, tx + 18, yy);
+        yy += lineH;
+      }
+    }
+  }
+}
+
+function _onChartHover(canvas, e) {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  _renderChart(canvas, x);
+}
+
+// Back-compat: keep the old draw entry point that other places might call.
+function _drawLine(canvas, series, opts) { _makeChart(canvas, series, opts); }
+
+function _ewma(values, alpha = 0.1) {
+  const out = []; let e = null;
+  for (const v of values) {
+    if (!Number.isFinite(v)) { out.push(NaN); continue; }
+    e = e == null ? v : alpha * v + (1 - alpha) * e;
+    out.push(e);
+  }
+  return out;
+}
+
+function renderAllCharts() {
+  if (!_metrics) return;
+  // Compute cumulative training episodes finished by each update (per-row).
+  let cum = 0;
+  const cum_ep = _metrics.map(r => { cum += (r.train_completed_episodes || 0); return cum; });
+  // For each metric record, x = its cumulative episode count.
+  const x_train = cum_ep;
+  // Eval rows: align eval x to cumulative episodes at that update's row index.
+  const ev = [];
+  const ev_x = [];
+  for (let i = 0; i < _metrics.length; i++) {
+    if ('eval_success_rate' in _metrics[i]) { ev.push(_metrics[i]); ev_x.push(cum_ep[i]); }
+  }
+  // Grad-decomp rows align similarly.
+  const gd = [], gd_x = [];
+  for (let i = 0; i < _metrics.length; i++) {
+    if ('grad_norm_ratio_critic_over_actor' in _metrics[i]) { gd.push(_metrics[i]); gd_x.push(cum_ep[i]); }
+  }
+  const xL = 'episode';
+
+  _makeChart($('chart-success'), [
+    { x: ev_x, y: ev.map(r => r.eval_success_rate), color: '#f85149', label: 'eval_success' },
+    { x: x_train, y: _ewma(_metrics.map(r => r.train_success_rate)), color: '#388bfd', label: 'train_success (EWMA)' },
+  ], { ymin: 0, ymax: 1, xLabel: xL });
+
+  _makeChart($('chart-steps'),
+    [{ x: ev_x, y: ev.map(r => r.eval_avg_steps_to_solve), color: '#d29922', label: 'avg_steps_to_solve' }],
+    { ymin: 0, xLabel: xL });
+
+  _makeChart($('chart-match'),
+    [{ x: ev_x, y: ev.map(r => r.eval_pattern_matched_at_end_rate), color: '#3fb950', label: 'pattern_matched_end' }],
+    { ymin: 0, ymax: 1, xLabel: xL });
+
+  _makeChart($('chart-entropy'),
+    [{ x: x_train, y: _metrics.map(r => r.entropy), color: '#388bfd', label: 'entropy' }],
+    { ymin: 0, ymax: 1.4, xLabel: xL });
+
+  _makeChart($('chart-cos'),
+    [{ x: x_train, y: _metrics.map(r => r.mean_feature_cosine), color: '#a371f7', label: 'feature_cosine' }],
+    { ymin: 0, ymax: 1, xLabel: xL });
+
+  _makeChart($('chart-losses'), [
+    { x: x_train, y: _metrics.map(r => r.value_loss), color: '#f85149', label: 'value_loss' },
+    { x: x_train, y: _metrics.map(r => -r.policy_loss), color: '#388bfd', label: '-policy_loss' },
+  ], { xLabel: xL });
+
+  const safeLog = v => {
+    if (!Number.isFinite(v) || v <= 0) return NaN;
+    return Math.log10(Math.max(1e-3, Math.min(1e3, v)));
+  };
+  _makeChart($('chart-gradratio'),
+    [{ x: gd_x,
+       y: gd.map(r => safeLog(r.grad_norm_ratio_critic_over_actor)),
+       color: '#d29922', label: 'log10(critic/actor)' }],
+    { ymin: -3, ymax: 3, xLabel: xL });
+
+  _makeChart($('chart-kl'), [
+    { x: x_train, y: _metrics.map(r => r.approx_kl), color: '#f85149', label: 'approx_kl' },
+    { x: x_train, y: _metrics.map(r => r.clipfrac), color: '#388bfd', label: 'clipfrac' },
+  ], { ymin: 0, xLabel: xL });
+
+  _makeChart($('chart-explore'), [
+    { x: ev_x, y: ev.map(r => r.eval_coverage_rate), color: '#3fb950', label: 'coverage' },
+    { x: ev_x, y: ev.map(r => (r.eval_wall_hit_rate || 0) / 50), color: '#d29922', label: 'wall_hits/50' },
+  ], { ymin: 0, ymax: 1, xLabel: xL });
+}
+
+// ── Episode running + viewer ─────────────────────────────────────────────
+async function runEpisode() {
+  const run = $('run-select').value, ckpt = $('ckpt-select').value;
+  const seed = parseInt($('seed-input').value);
+  const greedy = $('greedy-check').checked;
+  $('status').textContent = 'running episode…';
+  $('run-btn').disabled = true;
+  try {
+    const res = await fetch('/api/episode', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ run, checkpoint: ckpt, seed, greedy, level_path: $('level-select').value || null }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    _episode = await res.json();
+    _stepIdx = 0;
+    $('pb-slider').max = _episode.steps.length - 1;
+    $('pb-slider').value = 0;
+    $('status').textContent = `episode done — ${_episode.n_steps} steps, won=${_episode.won}`;
+    renderEpisodeStep();
+    renderEpSummary();
+  } catch (e) {
+    $('status').textContent = 'error: ' + e.message;
+  } finally {
+    $('run-btn').disabled = false;
+  }
+}
+
+function renderEpSummary() {
+  const g = $('ep-summary');
+  g.innerHTML = '';
+  const ep = _episode;
+  const rows = [
+    ['won', ep.won ? '✓' : '✗', ep.won ? 'good' : 'bad'],
+    ['n_steps', ep.n_steps],
+    ['goal_rotation', ep.goal_rotation + '°'],
+    ['step_limit', ep.step_limit],
+    ['sampling', ep.sample ? 'stochastic' : 'greedy'],
+    ['seed', ep.seed],
+  ];
+  for (const [k, v, cls] of rows) {
+    const l = document.createElement('div'); l.className = 'sl-lbl'; l.textContent = k;
+    const x = document.createElement('div'); x.className = 'sv ' + (cls || ''); x.textContent = v;
+    g.appendChild(l); g.appendChild(x);
+  }
+}
+
+function renderEpisodeStep() {
+  if (!_episode) return;
+  const s = _episode.steps[_stepIdx];
+  drawFrame(s.frame);
+  $('pb-counter').textContent = `${_stepIdx} / ${_episode.steps.length - 1}`;
+  $('pb-slider').value = _stepIdx;
+
+  // state grid
+  const sg = $('state-grid');
+  sg.innerHTML = '';
+  const stateRows = [
+    ['t', s.t],
+    ['action', s.action == null ? '— (terminal)' : `${s.action} (${ACTION_ARROWS[s.action]} ${s.action_name})`],
+    ['player_c, _r', `(${s.player_c}, ${s.player_r})`],
+    ['player_rotation', `${s.player_rotation}°`],
+    ['goal_rotation', `${_episode.goal_rotation}° ${s.goal_rotation_matched ? '✓ matched' : '✗ mismatch'}`,
+       s.goal_rotation_matched ? 'good' : 'warn'],
+    ['step_counter', `${s.step_counter} / ${_episode.step_limit}`],
+    ['denial_frames', s.denial_frames],
+    ['wall_hit', s.wall_hit ? '✗ blocked' : 'ok', s.wall_hit ? 'warn' : ''],
+    ['reward', s.reward.toFixed(2), s.reward > 0 ? 'good' : ''],
+    ['won', s.won ? '✓' : '—', s.won ? 'good' : ''],
+  ];
+  for (const [k, v, cls] of stateRows) {
+    const l = document.createElement('div'); l.className = 'sl-lbl'; l.textContent = k;
+    const x = document.createElement('div'); x.className = 'sv ' + (cls || ''); x.textContent = v;
+    sg.appendChild(l); sg.appendChild(x);
+  }
+
+  // policy bars
+  const pb = $('policy-bars');
+  pb.innerHTML = '';
+  for (let i = 0; i < 4; i++) {
+    const row = document.createElement('div'); row.className = 'bar-row';
+    const lbl = document.createElement('div'); lbl.className = 'bar-lbl';
+    lbl.textContent = `${ACTION_ARROWS[i]} ${ACTION_NAMES[i]}`;
+    const tr = document.createElement('div'); tr.className = 'bar-track';
+    const fi = document.createElement('div'); fi.className = 'bar-fill';
+    if (s.action === i) fi.classList.add('selected');
+    fi.style.width = (s.probs[i] * 100).toFixed(1) + '%';
+    tr.appendChild(fi);
+    const v = document.createElement('div'); v.className = 'bar-val';
+    v.textContent = (s.probs[i] * 100).toFixed(1) + '%';
+    row.appendChild(lbl); row.appendChild(tr); row.appendChild(v);
+    pb.appendChild(row);
+  }
+
+  // critic grid
+  const cg = $('critic-grid');
+  cg.innerHTML = '';
+  const cRows = [
+    ['V(s)', s.value.toFixed(4)],
+    ['||h_t||', s.feature_norm.toFixed(3)],
+    ['logits', s.logits.map(x => x.toFixed(2)).join(', ')],
+    ['entropy', _entropyOf(s.probs).toFixed(3)],
+  ];
+  for (const [k, v] of cRows) {
+    const l = document.createElement('div'); l.className = 'sl-lbl'; l.textContent = k;
+    const x = document.createElement('div'); x.className = 'sv'; x.textContent = v;
+    cg.appendChild(l); cg.appendChild(x);
+  }
+}
+
+function _entropyOf(probs) {
+  let h = 0;
+  for (const p of probs) if (p > 1e-9) h -= p * Math.log(p);
+  return h;
+}
+
+function drawFrame(frameRGB) {
+  const canvas = $('puzzle');
+  const ctx = canvas.getContext('2d');
+  const H = frameRGB.length, W = frameRGB[0].length;
+  const tile = canvas.width / W;
+  for (let r = 0; r < H; r++) {
+    for (let c = 0; c < W; c++) {
+      const [R, G, B] = frameRGB[r][c];
+      ctx.fillStyle = `rgb(${R},${G},${B})`;
+      ctx.fillRect(c * tile, r * tile, tile, tile);
+    }
+  }
+}
+
+// ── Playback ─────────────────────────────────────────────────────────────
+function step(delta) {
+  if (!_episode) return;
+  _stepIdx = Math.max(0, Math.min(_episode.steps.length - 1, _stepIdx + delta));
+  renderEpisodeStep();
+}
+
+function togglePlay() {
+  if (_playTimer) { clearInterval(_playTimer); _playTimer = null; $('pb-play').textContent = '▶'; return; }
+  $('pb-play').textContent = '⏸';
+  const spd = parseInt($('pb-speed').value);
+  _playTimer = setInterval(() => {
+    if (!_episode || _stepIdx >= _episode.steps.length - 1) {
+      clearInterval(_playTimer); _playTimer = null; $('pb-play').textContent = '▶'; return;
+    }
+    _stepIdx++;
+    renderEpisodeStep();
+  }, spd);
+}
+
+// ── Batch ────────────────────────────────────────────────────────────────
+async function runBatch() {
+  const run = $('run-select').value, ckpt = $('ckpt-select').value;
+  const greedy = $('greedy-check').checked;
+  $('status').textContent = 'running batch of 16…';
+  $('batch-btn').disabled = true;
+  try {
+    const res = await fetch('/api/batch', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ run, checkpoint: ckpt, n: 16, greedy, level_path: $('level-select').value || null }),
+    });
+    const data = await res.json();
+    $('status').textContent = `batch done — ${data.success_count}/${data.n_episodes} won`;
+    renderBatch(data);
+  } catch (e) {
+    $('status').textContent = 'batch error: ' + e.message;
+  } finally {
+    $('batch-btn').disabled = false;
+  }
+}
+
+function renderBatch(data) {
+  $('batch-card').style.display = '';
+  const g = $('batch-summary');
+  g.innerHTML = '';
+  const rows = [
+    ['success_rate', (data.success_rate * 100).toFixed(0) + '%',
+       data.success_rate > 0.5 ? 'good' : 'warn'],
+    ['min_steps', data.min_steps_to_solve ?? '—'],
+    ['avg_steps', data.avg_steps_to_solve == null ? '—' : data.avg_steps_to_solve.toFixed(1)],
+  ];
+  for (const [k, v, cls] of rows) {
+    const l = document.createElement('div'); l.className = 'sl-lbl'; l.textContent = k;
+    const x = document.createElement('div'); x.className = 'sv ' + (cls || ''); x.textContent = v;
+    g.appendChild(l); g.appendChild(x);
+  }
+  const lst = $('batch-list'); lst.innerHTML = '';
+  for (const ep of data.episodes) {
+    const c = document.createElement('div');
+    c.className = 'ep-cell ' + (ep.won ? 'won' : 'lost');
+    c.textContent = `s${ep.seed}: ${ep.won ? ep.n_steps + 's' : '✗'}`;
+    c.title = `seed=${ep.seed}, won=${ep.won}, steps=${ep.n_steps}`;
+    c.onclick = () => { $('seed-input').value = ep.seed; runEpisode(); };
+    lst.appendChild(c);
+  }
+}
+
+// ── Wire up ──────────────────────────────────────────────────────────────
+$('run-select').onchange = onRunChange;
+$('run-btn').onclick = runEpisode;
+$('batch-btn').onclick = runBatch;
+$('pb-prev').onclick = () => step(-1);
+$('pb-next').onclick = () => step(1);
+$('pb-play').onclick = togglePlay;
+$('pb-slider').oninput = e => { _stepIdx = parseInt(e.target.value); renderEpisodeStep(); };
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft') step(-1);
+  if (e.key === 'ArrowRight') step(1);
+  if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+});
+(async () => { await fetchLevels(); await fetchRuns(); })();
+</script>
+</body>
+</html>

@@ -506,7 +506,9 @@ def train(cfg: Config, resume_path: str = None) -> None:
 
     predictor   = Predictor(cfg.d_model, cfg.d_action).to(device)
     action_emb  = ActionEmbedding(cfg.n_actions, cfg.d_action).to(device)
-    policy      = PolicyNetwork(cfg.d_model, cfg.n_actions).to(device)
+    policy      = PolicyNetwork(
+        cfg.d_model, cfg.n_actions, attn_gain_init=cfg.policy_attn_gain_init
+    ).to(device)
 
     # ── Optional resume from checkpoint ──────────────────────────────────────
     resume_step = 0
@@ -766,7 +768,9 @@ def _load_resume(path: str, encoder, target_encoder, predictor, action_embed,
     target_encoder.load_state_dict(ckpt["target_encoder"])
     predictor.load_state_dict(ckpt["predictor"])
     action_embed.load_state_dict(ckpt["action_embed"])
-    policy.load_state_dict(ckpt["policy"])
+    # strict=False so legacy checkpoints (no attn_gain) keep the constructor's
+    # value from cfg.policy_attn_gain_init — i.e. the fix is applied on resume.
+    policy.load_state_dict(ckpt["policy"], strict=False)
     step = ckpt.get("step", 0)
     print(f"[JEPA] Resumed from {Path(path).name} at step {step}")
     return step

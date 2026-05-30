@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>exp_007 — Training Dynamics</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Menlo','Monaco','Consolas',monospace; font-size: 12px;
+       background: #0d1117; color: #c9d1d9; min-width: 1100px; }
+a { color: #388bfd; }
+#hdr { position: sticky; top: 0; z-index: 100; background: #161b22;
+       border-bottom: 1px solid #30363d; padding: 10px 18px;
+       display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#hdr h1 { font-size: 14px; color: #e6edf3; margin-right: 10px; }
+#hdr select, #hdr input[type=number] {
+  background: #0d1117; border: 1px solid #30363d; color: #c9d1d9;
+  padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+#run-select { min-width: 280px; } #ckpt-select { min-width: 140px; }
+#seed-input,#epochs-input { width: 60px; }
+.btn { background: #21262d; border: 1px solid #30363d; color: #c9d1d9;
+       padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+.btn:hover { background: #30363d; }
+.btn-primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+.btn-primary:hover { background: #388bfd; }
+#status { font-size: 11px; color: #8b949e; margin-left: 12px; }
+.nav-link { color: #388bfd; text-decoration: none; margin-left: 6px; font-size: 11px; }
+.nav-link:hover { text-decoration: underline; }
+
+.sl { background: #161b22; border-top: 2px solid #21262d; border-bottom: 1px solid #21262d;
+      padding: 8px 18px; font-size: 11px; font-weight: bold; letter-spacing: 1px; color: #388bfd; }
+
+/* Summary card */
+.summary { padding: 12px 18px; border-bottom: 1px solid #21262d;
+           display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.summary-card { background: #161b22; border: 1px solid #21262d; border-radius: 4px;
+                padding: 10px 12px; }
+.summary-title { font-size: 10px; color: #8b949e; text-transform: uppercase;
+                 letter-spacing: .5px; margin-bottom: 6px; }
+.summary-stat { display: flex; justify-content: space-between; align-items: baseline;
+                margin: 2px 0; }
+.summary-stat .k { color: #8b949e; font-size: 11px; }
+.summary-stat .v { color: #e6edf3; font-size: 11px; font-variant-numeric: tabular-nums; }
+.summary-stat .v.good { color: #3fb950; } .summary-stat .v.bad { color: #f85149; }
+.summary-stat .v.warn { color: #d29922; }
+
+/* Time-series row across the top */
+.charts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;
+          border-bottom: 1px solid #21262d; }
+.chart-block { padding: 8px 14px; border-right: 1px solid #21262d; }
+.chart-block:last-child { border-right: none; }
+.chart-title { font-size: 10px; color: #8b949e; margin-bottom: 4px; letter-spacing: .5px; }
+.chart-canvas { width: 100%; height: 130px; display: block; background: #0d1117;
+                border: 1px solid #21262d; border-radius: 3px; }
+
+/* Step grid */
+.steps-grid { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 14px; }
+.step-card { background: #161b22; border: 1px solid #21262d; border-radius: 4px;
+             padding: 6px 8px; width: 220px; }
+.step-card.win { border-color: #3fb950; }
+.step-card.term { border-color: #f85149; }
+.step-card .frame-wrap { text-align: center; }
+.step-card canvas { display: block; margin: 0 auto;
+                    image-rendering: pixelated; image-rendering: crisp-edges;
+                    border: 1px solid #30363d; }
+.step-card .row { display: flex; justify-content: space-between; align-items: baseline;
+                  font-size: 10px; margin: 2px 0; }
+.step-card .lbl { color: #8b949e; }
+.step-card .val { color: #e6edf3; font-variant-numeric: tabular-nums; }
+.step-card .val.good { color: #3fb950; }
+.step-card .val.bad  { color: #f85149; }
+.step-card .val.warn { color: #d29922; }
+.step-card .v-bars { display: grid; grid-template-columns: 60px 1fr; gap: 4px; align-items: center;
+                      margin: 4px 0; }
+.step-card .v-bars .lbl { font-size: 9px; color: #8b949e; }
+.step-card .v-bars .vbar { background: #21262d; height: 8px; position: relative;
+                            border-radius: 1px; overflow: hidden; }
+.step-card .v-bars .vbar > span { position: absolute; top: 0; bottom: 0; }
+.step-card .gae { margin: 4px 0 2px; padding: 4px 6px; background: #0d1117;
+                  border: 1px solid #21262d; border-radius: 3px; font-size: 9px;
+                  font-variant-numeric: tabular-nums; }
+.step-card .gae .head { color: #8b949e; font-size: 8.5px; letter-spacing: .3px;
+                        margin-bottom: 2px; text-transform: uppercase; }
+.step-card .gae .row { display: grid; grid-template-columns: 22px 50px 36px 52px;
+                       gap: 3px; align-items: baseline; font-size: 9px; line-height: 1.25; }
+.step-card .gae .row .k    { color: #8b949e; }
+.step-card .gae .row .d    { color: #c9d1d9; text-align: right; }
+.step-card .gae .row .w    { color: #8b949e; text-align: right; }
+.step-card .gae .row .c    { color: #e6edf3; text-align: right; }
+.step-card .gae .row .c.p  { color: #3fb950; }
+.step-card .gae .row .c.n  { color: #f85149; }
+.step-card .gae .sum-row { border-top: 1px solid #21262d; margin-top: 2px; padding-top: 2px; }
+.step-card .gae .sum-row .lbl { color: #c9d1d9; font-weight: bold; grid-column: 1 / 4; }
+.step-card .gae .formula { color: #6b7280; font-size: 8px; margin-top: 2px;
+                            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.step-card .pi-row { display: grid; grid-template-columns: 16px 1fr 60px; gap: 4px;
+                     align-items: center; margin: 1px 0; font-size: 9px; }
+.step-card .pi-row .label { color: #8b949e; }
+.step-card .pi-row .track { background: #21262d; height: 8px; border-radius: 1px;
+                             position: relative; overflow: hidden; }
+.step-card .pi-row .fill { display: block; height: 100%; background: #388bfd; min-width: 0; }
+.step-card .pi-row .fill.taken { background: #3fb950; }
+.step-card .pi-row .fill-old { position: absolute; top: 0; left: 0; height: 100%;
+                                background: rgba(139, 148, 158, 0.45); pointer-events: none; }
+.step-card .pi-row .pct { color: #c9d1d9; text-align: right; font-variant-numeric: tabular-nums;
+                          font-size: 9px; }
+
+.legend { font-size: 10px; color: #8b949e; padding: 4px 14px 12px;
+          display: flex; gap: 14px; flex-wrap: wrap; }
+.legend span { display: inline-flex; align-items: center; gap: 4px; }
+.legend i { display: inline-block; width: 14px; height: 4px; }
+
+/* ── Stepper section ──────────────────────────────────────────────── */
+.stepper-bar { background: #0a1729; border-top: 2px solid #1f6feb;
+               border-bottom: 1px solid #30363d; padding: 10px 18px;
+               display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.stepper-bar .pill { background: #161b22; border: 1px solid #30363d;
+                     border-radius: 12px; padding: 3px 10px; font-size: 11px; color: #c9d1d9; }
+.stepper-bar .pill.live { border-color: #3fb950; color: #3fb950; }
+.stepper-bar input[type=number] { background: #0d1117; border: 1px solid #30363d;
+                                  color: #c9d1d9; padding: 4px 8px; border-radius: 4px;
+                                  font-size: 12px; width: 60px; }
+.stepper-bar .lbl { color: #8b949e; font-size: 11px; }
+.stepper-bar .btn-danger { background: #6e2222; border-color: #8e2222; color: #fff; }
+.stepper-bar .btn-danger:hover { background: #8e2222; }
+
+#stepper-status { color: #8b949e; font-size: 11px; margin-left: 8px; }
+
+.step-card.pinned { outline: 2px solid #d29922; outline-offset: -2px; }
+.step-card { cursor: pointer; }
+.step-card:hover { background: #1c232e; }
+
+.pinned-panel { padding: 12px 18px; border-bottom: 1px solid #21262d;
+                display: grid; grid-template-columns: 200px 1fr; gap: 14px; }
+.pinned-list { display: flex; flex-direction: column; gap: 8px; }
+.pinned-item { background: #161b22; border: 1px solid #30363d; border-radius: 4px;
+               padding: 6px; display: flex; gap: 6px; align-items: center; }
+.pinned-item canvas { image-rendering: pixelated; image-rendering: crisp-edges;
+                      border: 1px solid #30363d; flex-shrink: 0; }
+.pinned-item .meta { font-size: 10px; color: #c9d1d9; flex: 1; line-height: 1.3; }
+.pinned-item .x { background: transparent; border: none; color: #8b949e; cursor: pointer;
+                  font-size: 14px; padding: 0 4px; }
+.pinned-item .x:hover { color: #f85149; }
+.pinned-item.active { border-color: #d29922; }
+
+.pinned-chart-wrap { background: #0d1117; border: 1px solid #21262d; border-radius: 3px;
+                     padding: 4px; }
+.pinned-chart-wrap canvas { width: 100%; height: 220px; display: block; }
+.pi-legend { font-size: 10px; color: #8b949e; padding-top: 6px;
+             display: flex; gap: 14px; flex-wrap: wrap; }
+.pi-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.pi-legend i { display: inline-block; width: 14px; height: 4px; }
+
+.history-strip { padding: 8px 18px; max-height: 140px; overflow-y: auto;
+                  font-size: 11px; border-bottom: 1px solid #21262d; }
+.history-strip .hev { padding: 2px 0; color: #c9d1d9; font-variant-numeric: tabular-nums; }
+.history-strip .hev.episode { color: #8b949e; }
+.history-strip .hev.update { color: #d29922; }
+.history-strip .hev .tag { display: inline-block; min-width: 60px;
+                            color: #8b949e; margin-right: 8px; }
+
+.episode-section { padding: 8px 18px; border-bottom: 1px solid #21262d; }
+.episode-section .ep-hdr { font-size: 11px; color: #8b949e; margin-bottom: 6px;
+                            font-weight: bold; letter-spacing: 0.5px; }
+.episode-section .ep-hdr .ep-meta { color: #c9d1d9; font-weight: normal; margin-left: 8px; }
+.episode-section .ep-cards { display: flex; flex-wrap: wrap; gap: 6px; }
+.episode-section .ep-card { background: #161b22; border: 1px solid #21262d; border-radius: 4px;
+                            padding: 6px; width: 120px; cursor: pointer; }
+.episode-section .ep-card:hover { background: #1c232e; }
+.episode-section .ep-card.pinned { outline: 2px solid #d29922; outline-offset: -2px; }
+.episode-section .ep-card canvas { display: block; margin: 0 auto;
+                                    image-rendering: pixelated; image-rendering: crisp-edges;
+                                    border: 1px solid #30363d; }
+.episode-section .ep-card .row { display: flex; justify-content: space-between;
+                                  font-size: 9px; margin-top: 2px; color: #c9d1d9; }
+.episode-section .ep-card .row .k { color: #8b949e; }
+.episode-section .ep-card .pi-mini { display: grid;
+                                      grid-template-columns: 12px 1fr 28px; gap: 3px;
+                                      align-items: center; font-size: 8px; margin-top: 1px; }
+.episode-section .ep-card .pi-mini .track { background: #21262d; height: 5px; border-radius: 1px;
+                                              position: relative; overflow: hidden; }
+.episode-section .ep-card .pi-mini .fill { display: block; height: 100%; background: #388bfd; }
+.episode-section .ep-card .pi-mini .fill.taken { background: #3fb950; }
+.episode-section .ep-card .pi-mini .pct { text-align: right; color: #c9d1d9; }
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <h1>exp_007 — Training Dynamics</h1>
+  <a class="nav-link" href="/">← inspector</a>
+  <a class="nav-link" href="/probe">probe</a>
+  <span>Run:</span><select id="run-select"></select>
+  <span>Checkpoint:</span><select id="ckpt-select"></select>
+  <span>Seed:</span><input id="seed-input" type="number" value="0" min="0">
+  <span>Update epochs:</span><input id="epochs-input" type="number" value="2" min="1" max="10">
+  <button class="btn btn-primary" id="run-btn">Run debug update</button>
+  <span id="status">Pick a checkpoint and click "Run debug update".</span>
+</div>
+
+<!-- ── Interactive stepper: persists weights across calls ─────────────── -->
+<div class="sl">INTERACTIVE STEPPER — alternate episodes &amp; PPO updates on a live policy</div>
+
+<div class="stepper-bar">
+  <button class="btn btn-primary" id="step-start-btn">Start session</button>
+  <span class="pill" id="step-session-pill">no session</span>
+  <button class="btn" id="step-episode-btn" disabled>Run episode</button>
+  <span class="lbl">seed</span><input id="step-seed" type="number" value="0" min="0">
+  <label class="lbl"><input type="checkbox" id="step-greedy"> greedy</label>
+  <button class="btn" id="step-update-btn" disabled>Apply update</button>
+  <span class="lbl">n_episodes</span><input id="step-nep" type="number" value="8" min="1" max="64">
+  <span class="lbl">epochs</span><input id="step-epochs" type="number" value="2" min="1" max="10">
+  <button class="btn" id="step-reset-btn" disabled>Reset to ckpt</button>
+  <button class="btn btn-danger" id="step-end-btn" disabled>End session</button>
+  <span id="stepper-status">Pick a checkpoint above, then "Start session".</span>
+</div>
+
+<div class="pinned-panel" id="pinned-panel" style="display:none">
+  <div>
+    <div style="font-size: 10px; color: #8b949e; margin-bottom: 6px; letter-spacing: 0.5px;">
+      PINNED STATES (click a frame below to pin)
+    </div>
+    <div class="pinned-list" id="pinned-list"></div>
+  </div>
+  <div>
+    <div style="font-size: 10px; color: #8b949e; margin-bottom: 6px; letter-spacing: 0.5px;">
+      π(a | s_pinned) ACROSS UPDATES — active pin
+    </div>
+    <div class="pinned-chart-wrap">
+      <canvas id="pinned-chart"></canvas>
+    </div>
+    <div class="pi-legend">
+      <span><i style="background:#388bfd"></i>↑ up</span>
+      <span><i style="background:#3fb950"></i>↓ down</span>
+      <span><i style="background:#d29922"></i>← left</span>
+      <span><i style="background:#f85149"></i>→ right</span>
+      <span><i style="background:#8b949e"></i>V(s) (right axis, dashed)</span>
+    </div>
+  </div>
+</div>
+
+<div class="history-strip" id="history-strip" style="display:none"></div>
+
+<div id="episodes-container"></div>
+
+<!-- ── One-shot debug update (clone, no persistent state) ─────────────── -->
+<div class="sl">ONE-SHOT DEBUG UPDATE (clone checkpoint, one rollout + one PPO update)</div>
+<div class="summary" id="summary"></div>
+
+<div class="sl">PER-STEP TIME SERIES (one episode)</div>
+<div class="charts">
+  <div class="chart-block">
+    <div class="chart-title">V(s) — value, target, post-update</div>
+    <canvas class="chart-canvas" id="chart-V"></canvas>
+  </div>
+  <div class="chart-block">
+    <div class="chart-title">advantage (raw) &amp; TD-error δ_t</div>
+    <canvas class="chart-canvas" id="chart-adv"></canvas>
+  </div>
+  <div class="chart-block">
+    <div class="chart-title">π(a_taken|s) — old (blue) vs new (green)</div>
+    <canvas class="chart-canvas" id="chart-pi"></canvas>
+  </div>
+</div>
+<div class="legend">
+  <span><i style="background:#388bfd"></i>V(s) — pre-update value</span>
+  <span><i style="background:#d29922"></i>V_target(s) — GAE target</span>
+  <span><i style="background:#3fb950"></i>V_new(s) — post-update value</span>
+</div>
+
+<div class="sl">PER-STEP STATE GRID — frames, action, π, V/V_target/V_new</div>
+<div class="steps-grid" id="steps-grid"></div>
+
+<script>
+'use strict';
+
+const ACTION_ARROWS = ['↑','↓','←','→'];
+const ACTION_NAMES = ['up','down','left','right'];
+let _runs = [];
+let _data = null;
+
+const $ = id => document.getElementById(id);
+
+async function fetchRuns() {
+  const res = await fetch('/api/runs').then(r => r.json());
+  _runs = res.runs;
+  const sel = $('run-select');
+  sel.innerHTML = '';
+  for (const r of _runs) {
+    const o = document.createElement('option');
+    o.value = r.name;
+    o.textContent = `${r.exp_name || r.name}`;
+    sel.appendChild(o);
+  }
+  // Default to the most interesting variant for understanding dynamics.
+  const naive = _runs.find(r => (r.exp_name || '').endsWith('naive'));
+  if (naive) sel.value = naive.name;
+  onRunChange();
+}
+
+function onRunChange() {
+  const name = $('run-select').value;
+  const r = _runs.find(x => x.name === name);
+  if (!r) return;
+  const ckSel = $('ckpt-select');
+  ckSel.innerHTML = '';
+  for (const ck of r.checkpoints) {
+    const o = document.createElement('option');
+    o.value = ck; o.textContent = ck;
+    ckSel.appendChild(o);
+  }
+  if (r.checkpoints.includes('update_000050.pt')) ckSel.value = 'update_000050.pt';
+  else if (r.checkpoints.includes('final.pt')) ckSel.value = 'final.pt';
+}
+
+async function runDebug() {
+  const run = $('run-select').value;
+  const ckpt = $('ckpt-select').value;
+  const seed = parseInt($('seed-input').value);
+  const epochs = parseInt($('epochs-input').value);
+  $('status').textContent = 'running rollout + one PPO update (CPU)…';
+  $('run-btn').disabled = true;
+  try {
+    const resp = await fetch('/api/debug_update', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ run, checkpoint: ckpt, seed, epochs }),
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    _data = await resp.json();
+    $('status').textContent = `episode: ${_data.n_steps} steps, won=${_data.won}, reward_mode=${_data.reward_mode}`;
+    renderSummary();
+    renderCharts();
+    renderSteps();
+  } catch (e) {
+    $('status').textContent = 'error: ' + e.message;
+  } finally {
+    $('run-btn').disabled = false;
+  }
+}
+
+function renderSummary() {
+  const s = _data.rollout_summary;
+  const g = $('summary');
+  g.innerHTML = '';
+  const fmt = v => (v == null ? '—' : (Math.abs(v) < 1e-4 ? v.toExponential(2) : v.toFixed(4)));
+  const card = (title, rows) => {
+    const c = document.createElement('div'); c.className = 'summary-card';
+    c.innerHTML = `<div class="summary-title">${title}</div>` +
+      rows.map(([k, v, cls]) =>
+        `<div class="summary-stat"><span class="k">${k}</span><span class="v ${cls||''}">${v}</span></div>`
+      ).join('');
+    return c;
+  };
+  g.appendChild(card('episode', [
+    ['n_steps', _data.n_steps],
+    ['won', _data.won ? '✓' : '✗', _data.won ? 'good' : 'bad'],
+    ['total_reward', fmt(s.total_reward), s.total_reward > 0 ? 'good' : ''],
+    ['reward_mode', _data.reward_mode],
+  ]));
+  const vlr = s.value_loss_reduction;
+  g.appendChild(card('value function', [
+    ['pre_value_loss', fmt(s.pre_value_loss)],
+    ['post_value_loss', fmt(s.post_value_loss), (vlr || 0) > 0 ? 'good' : 'bad'],
+    ['Δ (pre − post)', fmt(vlr), (vlr || 0) > 0 ? 'good' : 'bad'],
+    ['V_pre / V_tgt / V_new (mean)', `${fmt(s.v_pre_mean)} / ${fmt(s.v_target_mean)} / ${fmt(s.v_post_mean)}`],
+  ]));
+  g.appendChild(card('advantage', [
+    ['adv_mean', fmt(s.advantage_mean)],
+    ['adv_std', fmt(s.advantage_std)],
+    ['mean |δ_t|', fmt(s.td_error_mean_abs)],
+    ['epochs applied', _data.epochs_applied],
+  ]));
+  g.appendChild(card('policy', [
+    ['pre_policy_loss', fmt(s.pre_policy_loss)],
+    ['pre_entropy', fmt(s.pre_entropy)],
+    ['post_entropy', fmt(s.post_entropy)],
+    ['Δ entropy', fmt((s.post_entropy || 0) - (s.pre_entropy || 0))],
+  ]));
+}
+
+// Mini line chart with hover (same idea as main page).
+function _drawSeries(canvas, series, opts = {}, hoverX = null) {
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth, cssH = canvas.clientHeight;
+  canvas.width = cssW * dpr; canvas.height = cssH * dpr;
+  ctx.setTransform(1,0,0,1,0,0); ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, cssW, cssH);
+  if (!series.length) return;
+  let xmin = Infinity, xmax = -Infinity;
+  let ymin = opts.ymin != null ? opts.ymin : Infinity;
+  let ymax = opts.ymax != null ? opts.ymax : -Infinity;
+  for (const s of series) for (let i = 0; i < s.x.length; i++) {
+    const v = s.y[i]; if (!Number.isFinite(v)) continue;
+    if (s.x[i] < xmin) xmin = s.x[i];
+    if (s.x[i] > xmax) xmax = s.x[i];
+    if (opts.ymin == null && v < ymin) ymin = v;
+    if (opts.ymax == null && v > ymax) ymax = v;
+  }
+  if (!isFinite(xmin) || !isFinite(ymin)) return;
+  if (ymax === ymin) ymax = ymin + 1;
+  const pad = { l: 36, r: 8, t: 6, b: 16 };
+  const W = cssW - pad.l - pad.r, H = cssH - pad.t - pad.b;
+  const xMap = x => pad.l + (x - xmin) / (xmax - xmin) * W;
+  const yMap = y => pad.t + (1 - (y - ymin) / (ymax - ymin)) * H;
+  ctx.strokeStyle = '#21262d'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, pad.t + H); ctx.lineTo(pad.l + W, pad.t + H);
+  ctx.stroke();
+  ctx.fillStyle = '#8b949e'; ctx.font = '10px Menlo';
+  for (const yv of [ymin, (ymin+ymax)/2, ymax]) {
+    const py = yMap(yv);
+    ctx.fillText(yv.toFixed(2), 2, py + 3);
+    ctx.strokeStyle = '#161b22';
+    ctx.beginPath(); ctx.moveTo(pad.l, py); ctx.lineTo(pad.l + W, py); ctx.stroke();
+  }
+  ctx.fillText('step ' + xmin, pad.l, cssH - 3);
+  ctx.fillText('step ' + xmax, pad.l + W - 50, cssH - 3);
+  if (ymin < 0 && ymax > 0) {
+    const py = yMap(0);
+    ctx.strokeStyle = '#30363d';
+    ctx.beginPath(); ctx.moveTo(pad.l, py); ctx.lineTo(pad.l + W, py); ctx.stroke();
+  }
+  for (const s of series) {
+    ctx.strokeStyle = s.color || '#388bfd'; ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    let first = true;
+    for (let i = 0; i < s.x.length; i++) {
+      const v = s.y[i]; if (!Number.isFinite(v)) { first = true; continue; }
+      const px = xMap(s.x[i]), py = yMap(v);
+      if (first) { ctx.moveTo(px, py); first = false; } else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    // also draw dots
+    ctx.fillStyle = s.color || '#388bfd';
+    for (let i = 0; i < s.x.length; i++) {
+      const v = s.y[i]; if (!Number.isFinite(v)) continue;
+      ctx.beginPath(); ctx.arc(xMap(s.x[i]), yMap(v), 1.6, 0, Math.PI*2); ctx.fill();
+    }
+  }
+  if (hoverX != null) {
+    const cx = Math.max(pad.l, Math.min(pad.l + W, hoverX));
+    const xv = xmin + (cx - pad.l) / W * (xmax - xmin);
+    const it = Math.round(xv);
+    ctx.strokeStyle = '#388bfd'; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(cx, pad.t); ctx.lineTo(cx, pad.t + H); ctx.stroke();
+    ctx.setLineDash([]);
+    // tooltip
+    const lines = [`t=${it}`];
+    for (const s of series) {
+      if (it >= 0 && it < s.x.length) {
+        lines.push(`${s.label || ''}: ${(s.y[it] || 0).toFixed(3)}`);
+      }
+    }
+    const tx = cx + 6 > pad.l + W - 140 ? cx - 144 : cx + 6;
+    const ty = pad.t + 4;
+    const lineH = 12;
+    ctx.fillStyle = 'rgba(13,17,23,0.92)'; ctx.strokeStyle = '#30363d';
+    ctx.fillRect(tx, ty, 138, lines.length * lineH + 6);
+    ctx.strokeRect(tx, ty, 138, lines.length * lineH + 6);
+    ctx.fillStyle = '#c9d1d9'; let yy = ty + 12;
+    for (const l of lines) { ctx.fillText(l, tx + 6, yy); yy += lineH; }
+  }
+}
+
+function _wireHover(canvas, drawFn) {
+  if (canvas._wired) return; canvas._wired = true;
+  canvas.addEventListener('mousemove', e => {
+    const r = canvas.getBoundingClientRect();
+    drawFn(e.clientX - r.left);
+  });
+  canvas.addEventListener('mouseleave', () => drawFn(null));
+}
+
+function renderCharts() {
+  const steps = _data.steps;
+  const x = steps.map(s => s.t);
+  const seriesV = [
+    { x, y: steps.map(s => s.value),        color: '#388bfd', label: 'V(s)' },
+    { x, y: steps.map(s => s.value_target), color: '#d29922', label: 'V_target' },
+    { x, y: steps.map(s => s.value_new),    color: '#3fb950', label: 'V_new' },
+  ];
+  const drawV = h => _drawSeries($('chart-V'), seriesV, {}, h);
+  drawV(null); _wireHover($('chart-V'), drawV);
+
+  const seriesAdv = [
+    { x, y: steps.map(s => s.advantage), color: '#a371f7', label: 'advantage' },
+    { x, y: steps.map(s => s.td_error),  color: '#f85149', label: 'δ_t' },
+  ];
+  const drawAdv = h => _drawSeries($('chart-adv'), seriesAdv, {}, h);
+  drawAdv(null); _wireHover($('chart-adv'), drawAdv);
+
+  const seriesPi = [
+    { x, y: steps.map(s => Math.exp(s.log_prob_old)), color: '#388bfd', label: 'π_old(a)' },
+    { x, y: steps.map(s => Math.exp(s.log_prob_new)), color: '#3fb950', label: 'π_new(a)' },
+  ];
+  const drawPi = h => _drawSeries($('chart-pi'), seriesPi, { ymin: 0, ymax: 1 }, h);
+  drawPi(null); _wireHover($('chart-pi'), drawPi);
+}
+
+function drawTiny(canvas, frameRGB) {
+  const ctx = canvas.getContext('2d');
+  const H = frameRGB.length, W = frameRGB[0].length;
+  const tile = canvas.width / W;
+  for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
+    const [R,G,B] = frameRGB[r][c];
+    ctx.fillStyle = `rgb(${R},${G},${B})`;
+    ctx.fillRect(c*tile, r*tile, tile, tile);
+  }
+}
+
+function renderSteps() {
+  const grid = $('steps-grid'); grid.innerHTML = '';
+  for (const s of _data.steps) {
+    const card = document.createElement('div'); card.className = 'step-card';
+    if (s.won) card.classList.add('win');
+    if (s.done && !s.won) card.classList.add('term');
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 96; canvas.height = 96;
+    card.appendChild(canvas);
+
+    // Header rows
+    const rotMatch = s.rotation_matched ? '✓' : '✗';
+    const rotCls = s.rotation_matched ? 'good' : 'warn';
+    const headRows = [
+      ['t', s.t],
+      ['action', `${ACTION_ARROWS[s.action]} ${ACTION_NAMES[s.action]}`],
+      ['reward', s.reward.toFixed(2), s.reward > 0 ? 'good' : (s.reward < 0 ? 'bad' : '')],
+      [`rot ${s.player_rotation}°`, rotMatch, rotCls],
+    ];
+    for (const [k, v, cls] of headRows) {
+      const row = document.createElement('div'); row.className = 'row';
+      row.innerHTML = `<span class="lbl">${k}</span><span class="val ${cls||''}">${v}</span>`;
+      card.appendChild(row);
+    }
+
+    // Value triplet bars: shared scale [vMin, vMax] across all 3
+    const vmin = Math.min(s.value, s.value_target, s.value_new, 0);
+    const vmax = Math.max(s.value, s.value_target, s.value_new, 0.01);
+    const span = (vmax - vmin) || 1;
+    const colors = { value: '#388bfd', value_target: '#d29922', value_new: '#3fb950' };
+    const labels = { value: 'V', value_target: 'V*', value_new: 'V′' };
+    for (const k of ['value', 'value_target', 'value_new']) {
+      const wrap = document.createElement('div'); wrap.className = 'v-bars';
+      const lbl = document.createElement('div'); lbl.className = 'lbl';
+      lbl.textContent = `${labels[k]} ${s[k].toFixed(3)}`;
+      const tr = document.createElement('div'); tr.className = 'vbar';
+      const span_el = document.createElement('span');
+      // bar fills from "0 baseline" toward the value
+      const zeroPos = (0 - vmin) / span * 100;
+      const valPos = (s[k] - vmin) / span * 100;
+      const left = Math.min(zeroPos, valPos);
+      const width = Math.abs(valPos - zeroPos);
+      span_el.style.left = left + '%';
+      span_el.style.width = width + '%';
+      span_el.style.background = colors[k];
+      tr.appendChild(span_el);
+      wrap.appendChild(lbl); wrap.appendChild(tr);
+      card.appendChild(wrap);
+    }
+
+    // td/advantage
+    const tdRow = document.createElement('div'); tdRow.className = 'row';
+    tdRow.innerHTML = `<span class="lbl">δ_t / A_t</span><span class="val">${s.td_error.toFixed(3)} / ${s.advantage.toFixed(3)}</span>`;
+    card.appendChild(tdRow);
+
+    // GAE breakdown: A_t = Σ (γλ)^k · δ_{t+k}
+    const gae = document.createElement('div'); gae.className = 'gae';
+    gae.innerHTML = `<div class="head">GAE: A_t = Σ (γλ)^k · δ_{t+k}, γλ=${(_data.gamma*_data.gae_lambda).toFixed(3)}</div>`;
+    const head = document.createElement('div'); head.className = 'row';
+    head.innerHTML = `<span class="k">k</span><span class="d">δ_{t+k}</span><span class="w">(γλ)^k</span><span class="c">contrib</span>`;
+    gae.appendChild(head);
+    let cumul = 0;
+    for (const c of s.gae_contributors) {
+      const row = document.createElement('div'); row.className = 'row';
+      const sign = c.contribution >= 0 ? 'p' : 'n';
+      row.innerHTML =
+        `<span class="k">${c.k}</span>` +
+        `<span class="d">${c.delta.toFixed(3)}</span>` +
+        `<span class="w">${c.weight.toFixed(3)}</span>` +
+        `<span class="c ${sign}">${c.contribution >= 0 ? '+' : ''}${c.contribution.toFixed(3)}</span>`;
+      gae.appendChild(row);
+      cumul += c.contribution;
+    }
+    if (s.gae_tail && s.gae_tail.n > 0) {
+      const tailRow = document.createElement('div'); tailRow.className = 'row';
+      const sign = s.gae_tail.sum >= 0 ? 'p' : 'n';
+      tailRow.innerHTML =
+        `<span class="k">+tail</span>` +
+        `<span class="d">${s.gae_tail.n} more</span>` +
+        `<span class="w"></span>` +
+        `<span class="c ${sign}">${s.gae_tail.sum >= 0 ? '+' : ''}${s.gae_tail.sum.toFixed(3)}</span>`;
+      gae.appendChild(tailRow);
+    }
+    const sumRow = document.createElement('div'); sumRow.className = 'row sum-row';
+    const advSign = s.advantage >= 0 ? 'p' : 'n';
+    sumRow.innerHTML =
+      `<span class="lbl">A_t =</span>` +
+      `<span class="c ${advSign}" style="grid-column: 4">${s.advantage >= 0 ? '+' : ''}${s.advantage.toFixed(3)}</span>`;
+    gae.appendChild(sumRow);
+    const vtRow = document.createElement('div'); vtRow.className = 'row';
+    vtRow.innerHTML =
+      `<span class="lbl" style="grid-column: 1 / 3">V* = A_t + V</span>` +
+      `<span class="c" style="grid-column: 4">${s.value_target.toFixed(3)}</span>`;
+    gae.appendChild(vtRow);
+    // Normalized advantage (what the clipped surrogate actually uses).
+    const advNormSign = s.advantage_norm >= 0 ? 'p' : 'n';
+    const aN = document.createElement('div'); aN.className = 'row';
+    aN.innerHTML =
+      `<span class="lbl" style="grid-column: 1 / 3">A_norm (drives π update)</span>` +
+      `<span class="c ${advNormSign}" style="grid-column: 4">${s.advantage_norm >= 0 ? '+' : ''}${s.advantage_norm.toFixed(3)}</span>`;
+    gae.appendChild(aN);
+    card.appendChild(gae);
+
+    // policy distribution: ghost bar = π_old(a), solid bar = π_new(a).
+    // Bar fill is green for the action that was actually taken, blue otherwise.
+    for (let i = 0; i < 4; i++) {
+      const row = document.createElement('div'); row.className = 'pi-row';
+      const arrow = document.createElement('div'); arrow.className = 'label';
+      arrow.textContent = ACTION_ARROWS[i];
+      const track = document.createElement('div'); track.className = 'track';
+      const ghost = document.createElement('div'); ghost.className = 'fill-old';
+      const fill = document.createElement('div'); fill.className = 'fill';
+      if (i === s.action) fill.classList.add('taken');
+      const pNew = s.probs_new[i];
+      const pOld = s.probs[i];
+      ghost.style.width = (pOld * 100).toFixed(1) + '%';
+      fill.style.width = (pNew * 100).toFixed(1) + '%';
+      track.appendChild(ghost);     // grey "old" underlay
+      track.appendChild(fill);      // colored "new" overlay
+      const pct = document.createElement('div'); pct.className = 'pct';
+      const diff = pNew - pOld;
+      const sign = diff > 0 ? '+' : '';
+      pct.innerHTML = `${(pOld*100).toFixed(0)}→${(pNew*100).toFixed(0)} <span style="color:${diff>=0?'#3fb950':'#f85149'}">${sign}${(diff*100).toFixed(0)}</span>`;
+      row.appendChild(arrow); row.appendChild(track); row.appendChild(pct);
+      card.appendChild(row);
+    }
+
+    grid.appendChild(card);
+    drawTiny(canvas, s.frame);
+  }
+}
+
+$('run-select').onchange = onRunChange;
+$('run-btn').onclick = runDebug;
+fetchRuns();
+
+// ── Interactive stepper ─────────────────────────────────────────────────
+
+const STEP = {
+  sessionId: null,
+  episodes: [],         // [{ episode_idx, after_update, n_steps, won, steps, ... }]
+  events: [],           // unified log: episode + update entries (chronological)
+  pinned: [],           // [{ key, frame, obs, history: [{n_updates, n_episodes, probs[4], value}] }]
+  activePinIdx: null,
+};
+
+function pinKey(step) {
+  return `${step.player_c},${step.player_r},${step.player_rotation},${step.step_counter}`;
+}
+
+function setStepperButtons(active) {
+  $('step-start-btn').disabled = active;
+  $('step-episode-btn').disabled = !active;
+  $('step-update-btn').disabled = !active;
+  $('step-reset-btn').disabled = !active;
+  $('step-end-btn').disabled = !active;
+}
+
+function renderStepperPill() {
+  const p = $('step-session-pill');
+  if (!STEP.sessionId) {
+    p.textContent = 'no session';
+    p.classList.remove('live');
+  } else {
+    const nEp = STEP.episodes.length;
+    const nUp = STEP.events.filter(e => e.kind === 'update').length;
+    p.textContent = `session ${STEP.sessionId.slice(0, 6)} · ep ${nEp} · upd ${nUp}`;
+    p.classList.add('live');
+  }
+}
+
+async function stepStart() {
+  const run = $('run-select').value;
+  const ckpt = $('ckpt-select').value;
+  if (!run || !ckpt) { $('stepper-status').textContent = 'pick a run + checkpoint first'; return; }
+  $('stepper-status').textContent = 'starting session…';
+  try {
+    const resp = await fetch('/api/stepper/start', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ run, checkpoint: ckpt }),
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    const s = await resp.json();
+    STEP.sessionId = s.session_id;
+    STEP.episodes = [];
+    STEP.events = [];
+    STEP.pinned = [];
+    STEP.activePinIdx = null;
+    $('episodes-container').innerHTML = '';
+    $('history-strip').style.display = 'block';
+    $('pinned-panel').style.display = 'grid';
+    setStepperButtons(true);
+    renderStepperPill();
+    renderHistory();
+    renderPinnedList();
+    drawPinnedChart();
+    $('stepper-status').textContent = `loaded ${ckpt} (update ${s.source_update}); ready.`;
+  } catch (e) {
+    $('stepper-status').textContent = 'error: ' + e.message;
+  }
+}
+
+async function stepRunEpisode() {
+  if (!STEP.sessionId) return;
+  const seed = parseInt($('step-seed').value);
+  const greedy = $('step-greedy').checked;
+  $('stepper-status').textContent = 'rolling out episode…';
+  $('step-episode-btn').disabled = true;
+  try {
+    const resp = await fetch(`/api/stepper/${STEP.sessionId}/episode`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ seed, greedy }),
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    const ep = await resp.json();
+    STEP.episodes.unshift(ep);  // newest first
+    STEP.events.push({
+      kind: 'episode',
+      episode_idx: ep.episode_idx,
+      after_update: ep.after_update,
+      n_steps: ep.n_steps,
+      won: ep.won,
+      total_reward: ep.total_reward,
+      seed: ep.seed,
+    });
+    // Bump seed for next click so successive runs differ unless user resets it.
+    $('step-seed').value = String(seed + 1);
+    $('stepper-status').textContent =
+      `episode ${ep.episode_idx} done (after ${ep.after_update} updates): ${ep.n_steps} steps, ${ep.won ? '✓ won' : '✗ lost'}`;
+    renderStepperPill();
+    renderHistory();
+    renderEpisodes();
+    // Pinned states may include this rollout's visits; refresh π from current weights.
+    await refreshPins();
+  } catch (e) {
+    $('stepper-status').textContent = 'error: ' + e.message;
+  } finally {
+    if (STEP.sessionId) $('step-episode-btn').disabled = false;
+  }
+}
+
+async function stepApplyUpdate() {
+  if (!STEP.sessionId) return;
+  const n_episodes = parseInt($('step-nep').value);
+  const epochs = parseInt($('step-epochs').value);
+  $('stepper-status').textContent = 'applying PPO update…';
+  $('step-update-btn').disabled = true;
+  try {
+    const resp = await fetch(`/api/stepper/${STEP.sessionId}/update`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ n_episodes, epochs }),
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    const upd = await resp.json();
+    STEP.events.push(upd);
+    $('stepper-status').textContent =
+      `update ${upd.update_idx}: KL=${upd.approx_kl.toFixed(4)}, ` +
+      `Δentropy=${(upd.post_entropy - upd.pre_entropy).toFixed(4)}, ` +
+      `Δvalue_loss=${upd.value_loss_reduction.toFixed(4)}, ` +
+      `mean_Δlogp(taken)=${upd.mean_logp_delta_on_taken.toFixed(4)}`;
+    renderStepperPill();
+    renderHistory();
+    await refreshPins();
+  } catch (e) {
+    $('stepper-status').textContent = 'error: ' + e.message;
+  } finally {
+    if (STEP.sessionId) $('step-update-btn').disabled = false;
+  }
+}
+
+async function stepReset() {
+  if (!STEP.sessionId) return;
+  if (!confirm('Reset model to original checkpoint? Clears all episodes + updates in this session.')) return;
+  try {
+    const resp = await fetch(`/api/stepper/${STEP.sessionId}/reset`, { method: 'POST' });
+    if (!resp.ok) throw new Error(await resp.text());
+    STEP.episodes = [];
+    STEP.events = [];
+    // Keep pins but clear their histories.
+    for (const p of STEP.pinned) p.history = [];
+    $('episodes-container').innerHTML = '';
+    renderStepperPill();
+    renderHistory();
+    renderPinnedList();
+    drawPinnedChart();
+    $('stepper-status').textContent = 'session reset to checkpoint.';
+    await refreshPins();
+  } catch (e) {
+    $('stepper-status').textContent = 'error: ' + e.message;
+  }
+}
+
+async function stepEnd() {
+  if (!STEP.sessionId) return;
+  try {
+    await fetch(`/api/stepper/${STEP.sessionId}`, { method: 'DELETE' });
+  } catch (e) {}
+  STEP.sessionId = null;
+  STEP.episodes = [];
+  STEP.events = [];
+  STEP.pinned = [];
+  STEP.activePinIdx = null;
+  $('episodes-container').innerHTML = '';
+  $('history-strip').style.display = 'none';
+  $('pinned-panel').style.display = 'none';
+  setStepperButtons(false);
+  renderStepperPill();
+  $('stepper-status').textContent = 'session ended.';
+}
+
+function renderHistory() {
+  const strip = $('history-strip');
+  strip.innerHTML = '';
+  // newest at top
+  for (let i = STEP.events.length - 1; i >= 0; i--) {
+    const ev = STEP.events[i];
+    const div = document.createElement('div');
+    div.className = 'hev ' + ev.kind;
+    if (ev.kind === 'episode') {
+      div.innerHTML = `<span class="tag">[ep ${ev.episode_idx}]</span>` +
+        `after ${ev.after_update} updates · seed ${ev.seed} · ${ev.n_steps} steps · ` +
+        `<span class="${ev.won ? 'val good' : 'val bad'}">${ev.won ? '✓ won' : '✗ lost'}</span> · ` +
+        `reward ${ev.total_reward.toFixed(3)}`;
+    } else {
+      div.innerHTML = `<span class="tag">[upd ${ev.update_idx}]</span>` +
+        `used ${ev.n_episodes_used} eps (${ev.n_transitions} steps) · ` +
+        `KL=${ev.approx_kl.toFixed(4)} · ` +
+        `Δentropy=${(ev.post_entropy - ev.pre_entropy).toFixed(4)} · ` +
+        `Δvalue_loss=${ev.value_loss_reduction.toFixed(4)} · ` +
+        `mean_Δlogp(a_t)=${ev.mean_logp_delta_on_taken.toFixed(4)}`;
+    }
+    strip.appendChild(div);
+  }
+}
+
+function renderEpisodes() {
+  // Render newest-first. Keep last 6 to bound DOM size.
+  const container = $('episodes-container');
+  const maxEps = 6;
+  const eps = STEP.episodes.slice(0, maxEps);
+  container.innerHTML = '';
+  for (const ep of eps) {
+    const sec = document.createElement('div'); sec.className = 'episode-section';
+    const hdr = document.createElement('div'); hdr.className = 'ep-hdr';
+    hdr.innerHTML = `EPISODE ${ep.episode_idx}` +
+      `<span class="ep-meta">after ${ep.after_update} updates · seed ${ep.seed} · ` +
+      `${ep.n_steps} steps · ${ep.won ? '<span style="color:#3fb950">✓ won</span>' : '<span style="color:#f85149">✗ lost</span>'} · ` +
+      `reward ${ep.total_reward.toFixed(3)}</span>`;
+    sec.appendChild(hdr);
+    const cards = document.createElement('div'); cards.className = 'ep-cards';
+    for (const step of ep.steps) cards.appendChild(renderEpStepCard(step));
+    sec.appendChild(cards);
+    container.appendChild(sec);
+  }
+}
+
+function renderEpStepCard(step) {
+  const card = document.createElement('div'); card.className = 'ep-card';
+  const k = pinKey(step);
+  const pinIdx = STEP.pinned.findIndex(p => p.key === k);
+  if (pinIdx >= 0) card.classList.add('pinned');
+  const canvas = document.createElement('canvas');
+  canvas.width = 64; canvas.height = 64;
+  card.appendChild(canvas);
+
+  const r1 = document.createElement('div'); r1.className = 'row';
+  const actLabel = step.action == null ? '—' : `${ACTION_ARROWS[step.action]} ${ACTION_NAMES[step.action]}`;
+  r1.innerHTML = `<span class="k">t=${step.t}</span><span>${actLabel}</span>`;
+  card.appendChild(r1);
+
+  const r2 = document.createElement('div'); r2.className = 'row';
+  r2.innerHTML = `<span class="k">V=${step.value.toFixed(2)}</span>` +
+    `<span class="k">rot ${step.player_rotation}°${step.rotation_matched ? '✓' : ''}</span>`;
+  card.appendChild(r2);
+
+  // mini policy bars
+  for (let i = 0; i < 4; i++) {
+    const row = document.createElement('div'); row.className = 'pi-mini';
+    const arrow = document.createElement('div'); arrow.textContent = ACTION_ARROWS[i];
+    const track = document.createElement('div'); track.className = 'track';
+    const fill = document.createElement('div'); fill.className = 'fill';
+    if (i === step.action) fill.classList.add('taken');
+    fill.style.width = (step.probs[i] * 100).toFixed(1) + '%';
+    track.appendChild(fill);
+    const pct = document.createElement('div'); pct.className = 'pct';
+    pct.textContent = (step.probs[i] * 100).toFixed(0);
+    row.appendChild(arrow); row.appendChild(track); row.appendChild(pct);
+    card.appendChild(row);
+  }
+
+  drawTiny(canvas, step.frame);
+  card.onclick = () => togglePin(step);
+  return card;
+}
+
+function togglePin(step) {
+  if (!STEP.sessionId) return;
+  if (!step.obs) return;  // terminal record may lack obs
+  const k = pinKey(step);
+  const idx = STEP.pinned.findIndex(p => p.key === k);
+  if (idx >= 0) {
+    STEP.pinned.splice(idx, 1);
+    if (STEP.activePinIdx === idx) STEP.activePinIdx = STEP.pinned.length ? 0 : null;
+    else if (STEP.activePinIdx != null && STEP.activePinIdx > idx) STEP.activePinIdx -= 1;
+  } else {
+    STEP.pinned.push({
+      key: k,
+      label: `(${step.player_c},${step.player_r}) rot ${step.player_rotation}° sc=${step.step_counter}`,
+      frame: step.frame,
+      obs: step.obs,
+      history: [],
+    });
+    STEP.activePinIdx = STEP.pinned.length - 1;
+  }
+  renderEpisodes();
+  renderPinnedList();
+  refreshPins();  // populate history from current weights
+}
+
+async function refreshPins() {
+  if (!STEP.sessionId || !STEP.pinned.length) {
+    drawPinnedChart();
+    return;
+  }
+  // Re-eval each pinned state under current weights; append a new history point.
+  const results = await Promise.all(STEP.pinned.map(async p => {
+    try {
+      const resp = await fetch(`/api/stepper/${STEP.sessionId}/eval_state`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ frame: p.obs }),
+      });
+      if (!resp.ok) return null;
+      return await resp.json();
+    } catch (e) { return null; }
+  }));
+  for (let i = 0; i < STEP.pinned.length; i++) {
+    const r = results[i]; if (!r) continue;
+    const p = STEP.pinned[i];
+    // De-duplicate: only push if (n_updates, n_episodes) differs from last entry.
+    const last = p.history[p.history.length - 1];
+    if (!last || last.n_updates !== r.n_updates || last.n_episodes !== r.n_episodes) {
+      p.history.push({
+        n_updates: r.n_updates,
+        n_episodes: r.n_episodes,
+        probs: r.probs,
+        value: r.value,
+      });
+    }
+  }
+  drawPinnedChart();
+}
+
+function renderPinnedList() {
+  const list = $('pinned-list');
+  list.innerHTML = '';
+  if (!STEP.pinned.length) {
+    const empty = document.createElement('div');
+    empty.style.fontSize = '11px'; empty.style.color = '#8b949e';
+    empty.textContent = 'No pins yet — click any frame to pin it.';
+    list.appendChild(empty);
+    return;
+  }
+  STEP.pinned.forEach((p, idx) => {
+    const item = document.createElement('div'); item.className = 'pinned-item';
+    if (idx === STEP.activePinIdx) item.classList.add('active');
+    const canvas = document.createElement('canvas');
+    canvas.width = 40; canvas.height = 40;
+    item.appendChild(canvas);
+    const meta = document.createElement('div'); meta.className = 'meta';
+    meta.textContent = p.label + ` (${p.history.length} pts)`;
+    item.appendChild(meta);
+    const x = document.createElement('button'); x.className = 'x'; x.textContent = '×';
+    x.onclick = (e) => {
+      e.stopPropagation();
+      STEP.pinned.splice(idx, 1);
+      if (STEP.activePinIdx === idx) STEP.activePinIdx = STEP.pinned.length ? 0 : null;
+      else if (STEP.activePinIdx != null && STEP.activePinIdx > idx) STEP.activePinIdx -= 1;
+      renderPinnedList(); renderEpisodes(); drawPinnedChart();
+    };
+    item.appendChild(x);
+    item.onclick = () => { STEP.activePinIdx = idx; renderPinnedList(); drawPinnedChart(); };
+    drawTiny(canvas, p.frame);
+    list.appendChild(item);
+  });
+}
+
+function drawPinnedChart() {
+  const canvas = $('pinned-chart');
+  if (!canvas) return;
+  // size canvas (DPR-aware)
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth || 800, cssH = canvas.clientHeight || 220;
+  canvas.width = cssW * dpr; canvas.height = cssH * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(1,0,0,1,0,0); ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, cssW, cssH);
+
+  const pad = { l: 40, r: 40, t: 8, b: 22 };
+  const W = cssW - pad.l - pad.r, H = cssH - pad.t - pad.b;
+
+  // frame + axes
+  ctx.strokeStyle = '#21262d'; ctx.lineWidth = 1;
+  ctx.strokeRect(pad.l, pad.t, W, H);
+
+  const pin = (STEP.activePinIdx != null) ? STEP.pinned[STEP.activePinIdx] : null;
+  if (!pin || pin.history.length === 0) {
+    ctx.fillStyle = '#8b949e'; ctx.font = '11px Menlo';
+    ctx.fillText('No pinned state selected, or no data yet.', pad.l + 8, pad.t + 16);
+    return;
+  }
+  const hist = pin.history;
+  const xmin = 0;
+  const xmax = Math.max(1, hist[hist.length - 1].n_updates);
+  const xMap = x => pad.l + (xmax === xmin ? W / 2 : (x - xmin) / (xmax - xmin) * W);
+
+  // left axis: probabilities [0,1]
+  const yMapP = y => pad.t + (1 - y) * H;
+  ctx.fillStyle = '#8b949e'; ctx.font = '10px Menlo';
+  for (const yv of [0, 0.25, 0.5, 0.75, 1]) {
+    const py = yMapP(yv);
+    ctx.fillText(yv.toFixed(2), 4, py + 3);
+    ctx.strokeStyle = '#161b22';
+    ctx.beginPath(); ctx.moveTo(pad.l, py); ctx.lineTo(pad.l + W, py); ctx.stroke();
+  }
+  // x-axis labels
+  ctx.fillStyle = '#8b949e';
+  ctx.fillText('updates →', pad.l, cssH - 6);
+  ctx.fillText(String(xmax), pad.l + W - 18, cssH - 6);
+
+  // right axis: V(s)
+  const vMin = Math.min(...hist.map(h => h.value), 0);
+  const vMax = Math.max(...hist.map(h => h.value), 0.01);
+  const vSpan = (vMax - vMin) || 1;
+  const yMapV = y => pad.t + (1 - (y - vMin) / vSpan) * H;
+  ctx.fillStyle = '#8b949e';
+  ctx.fillText('V', cssW - pad.r + 4, pad.t + 10);
+  ctx.fillText(vMax.toFixed(2), cssW - pad.r + 4, yMapV(vMax) + 3);
+  ctx.fillText(vMin.toFixed(2), cssW - pad.r + 4, yMapV(vMin) + 3);
+
+  // π lines (4 actions)
+  const colors = ['#388bfd', '#3fb950', '#d29922', '#f85149'];  // up, down, left, right
+  for (let a = 0; a < 4; a++) {
+    ctx.strokeStyle = colors[a]; ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    let first = true;
+    for (const h of hist) {
+      const px = xMap(h.n_updates), py = yMapP(h.probs[a]);
+      if (first) { ctx.moveTo(px, py); first = false; } else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.fillStyle = colors[a];
+    for (const h of hist) {
+      ctx.beginPath(); ctx.arc(xMap(h.n_updates), yMapP(h.probs[a]), 2.2, 0, Math.PI*2); ctx.fill();
+    }
+  }
+  // V(s) dashed grey
+  ctx.strokeStyle = '#8b949e'; ctx.lineWidth = 1.2; ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  let first = true;
+  for (const h of hist) {
+    const px = xMap(h.n_updates), py = yMapV(h.value);
+    if (first) { ctx.moveTo(px, py); first = false; } else ctx.lineTo(px, py);
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+}
+
+$('step-start-btn').onclick = stepStart;
+$('step-episode-btn').onclick = stepRunEpisode;
+$('step-update-btn').onclick = stepApplyUpdate;
+$('step-reset-btn').onclick = stepReset;
+$('step-end-btn').onclick = stepEnd;
+window.addEventListener('resize', drawPinnedChart);
+</script>
+</body>
+</html>

@@ -215,8 +215,16 @@ canvas.patch-canvas{display:block;image-rendering:pixelated;border:1px solid #30
       </div>
       <!-- h_t history stack — full-width below the policy row -->
       <div id="lc-ht-history" style="padding:8px 12px 10px;border-top:1px solid #21262d">
-        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
-          <span class="mini-label">h_t HISTORY (newest → oldest, each row = 1 step)</span>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px;flex-wrap:wrap">
+          <span class="mini-label" id="lc-ht-label">h_t HISTORY (newest → oldest, each row = 1 step)</span>
+          <!-- Latent switcher — only shown for experiments whose timesteps carry
+               latent_vectors (4 × 128). Hidden for exp_001's single reasoning_token. -->
+          <span id="lc-ht-latent-switcher" style="display:none;gap:4px;margin-left:auto">
+            <button class="layer-btn active" data-latent="0">L0</button>
+            <button class="layer-btn"        data-latent="1">L1</button>
+            <button class="layer-btn"        data-latent="2">L2</button>
+            <button class="layer-btn"        data-latent="3">L3</button>
+          </span>
         </div>
         <div style="display:flex;gap:4px;align-items:flex-start">
           <canvas id="h-stack-labels" width="28" height="8" style="flex-shrink:0;image-rendering:pixelated"></canvas>
@@ -415,6 +423,7 @@ const S = {
   encLayer: 2,      // 1 or 2
   polPatch: null,   // selected policy cross-attn patch
   arcColors: null,  // [[R,G,B]×16]
+  selLatent: 0,     // selected latent index (0..n_latents-1) for h_t history stack
 };
 
 // ── Shared utilities namespace exposed to panel.js plugins ────────────────────
@@ -443,7 +452,10 @@ let _panelMod = null;
 
 async function loadPanel(experimentName) {
   try {
-    _panelMod = await import(`/static/exp/${experimentName}/panel.js`);
+    // Cache-bust: ES modules are de-duped by URL within the browser, so a
+    // server-side panel.js edit won't be picked up across reloads without
+    // a unique query string. Dashboard is dev-mode — fresh every load is fine.
+    _panelMod = await import(`/static/exp/${experimentName}/panel.js?t=${Date.now()}`);
   } catch(e) {
     console.warn('No panel.js for', experimentName, e);
     _panelMod = null;
@@ -846,11 +858,27 @@ const H_STACK_W      = 384;  // canvas width: 128 dims × 3px each
 const H_STACK_PX_DIM = 3;    // pixels per dimension
 const H_STACK_LBL_W  = 28;   // label canvas width
 
+// Pulls the per-timestep "hidden vector" for the history stack. Returns:
+//   - reasoning_token (128-dim) for exp_001-style episodes, OR
+//   - latent_vectors[S.selLatent] (one row of a 4×128 grid) for plugin episodes
+//     such as exp_006 that carry 4 latents.
+// Anything else → null (history stack is then skipped).
+function _stackVecAt(stepIdx) {
+  const ts = S.ep && S.ep.timesteps[stepIdx];
+  if (!ts) return null;
+  if (ts.reasoning_token) return ts.reasoning_token;
+  if (ts.latent_vectors && Array.isArray(ts.latent_vectors)) {
+    const li = Math.max(0, Math.min(ts.latent_vectors.length - 1, S.selLatent || 0));
+    return ts.latent_vectors[li];
+  }
+  return null;
+}
+
 function drawReasoningStack(currentT) {
   const hmCanvas  = document.getElementById('h-heatmap');
   const lblCanvas = document.getElementById('h-stack-labels');
   if (!hmCanvas || !S.ep) return;
-  if (!S.ep.timesteps[currentT].reasoning_token) return;
+  if (_stackVecAt(currentT) == null) return;
 
   const nRows  = Math.min(currentT + 1, H_STACK_MAX);
   const totalH = nRows * H_STACK_ROW_H;
@@ -871,7 +899,8 @@ function drawReasoningStack(currentT) {
 
   for (let row = 0; row < nRows; row++) {
     const stepIdx = currentT - row;   // row 0 = current, row 1 = t-1, …
-    const h = S.ep.timesteps[stepIdx].reasoning_token;
+    const h = _stackVecAt(stepIdx);
+    if (!h) continue;
     const y = row * H_STACK_ROW_H;
 
     const img = ctx.createImageData(H_STACK_W, H_STACK_ROW_H);
@@ -929,8 +958,9 @@ function renderPolicySection(t) {
   const h = ts.reasoning_token;
   if (h) {
     setText('h-preview', `h = [${h.slice(0,3).map(v=>Number(v).toFixed(4)).join(', ')}, …, ${h.slice(-3).map(v=>Number(v).toFixed(4)).join(', ')}]`);
-    drawReasoningStack(t);
   }
+  // h_t history stack: fires for both reasoning_token and latent_vectors-bearing episodes.
+  if (h || ts.latent_vectors) drawReasoningStack(t);
 }
 
 // ── Encoder attention section ──────────────────────────────────────────────
@@ -1319,18 +1349,27 @@ async function runEpisode() {
   }
 }
 
+// Map of experiment name -> external dashboard URL (populated by populateExperiments).
+const _EXTERNAL_DASHBOARDS = {};
+
 async function populateExperiments() {
   try {
     const resp = await fetch('/api/experiments');
     const data = await resp.json();
     const sel  = document.getElementById('exp-select');
-    if (!data.experiments || data.experiments.length === 0) {
+    const entries = data.entries || (data.experiments || []).map(n => ({ name: n }));
+    if (!entries.length) {
       sel.innerHTML = '<option value="">— no experiments —</option>';
       setStatus('No experiments found under JEPA/experiments/.');
       return;
     }
-    sel.innerHTML = data.experiments
-      .map((e,i) => `<option value="${e}"${i===0?' selected':''}>${e}</option>`)
+    sel.innerHTML = entries
+      .map((e,i) => {
+        if (e.external_dashboard) _EXTERNAL_DASHBOARDS[e.name] = e.external_dashboard;
+        const tag = e.external_dashboard ? ' ⎘' : '';   // mark external-dashboard experiments
+        const cls = e.is_container ? ' [container]' : '';
+        return `<option value="${e.name}"${i===0?' selected':''}>${e.name}${tag}${cls}</option>`;
+      })
       .join('');
     sel.addEventListener('change', onExperimentChange);
     document.getElementById('env-select').addEventListener('change', onEnvChange);
@@ -1340,7 +1379,34 @@ async function populateExperiments() {
   }
 }
 
+function _maybeShowExternalDashboardBanner(exp) {
+  const url = _EXTERNAL_DASHBOARDS[exp];
+  const warnEl = document.getElementById('env-warning');
+  if (!warnEl) return false;
+  if (!url) return false;
+  warnEl.innerHTML = `⎘ <b>${exp}</b> is inspected via its own dashboard. ` +
+    `<a href="${url}" target="_blank" style="color:#388bfd;text-decoration:underline">Open ${url}</a>`;
+  warnEl.classList.add('show');
+  return true;
+}
+
 async function onExperimentChange() {
+  const exp = document.getElementById('exp-select').value;
+  // If this experiment ships its own dashboard, surface that prominently and
+  // skip env/checkpoint discovery (which won't work for non-JEPA architectures).
+  if (_maybeShowExternalDashboardBanner(exp)) {
+    document.getElementById('env-select').innerHTML = '';
+    document.getElementById('ckpt-select').innerHTML = '<option value="">— see dedicated dashboard —</option>';
+    const btn = document.getElementById('run-btn');
+    if (btn) btn.disabled = true;
+    setStatus(`${exp} uses a dedicated inspector — open the linked dashboard above.`);
+    return;
+  }
+  // Clear any prior external-dashboard banner.
+  const warnEl = document.getElementById('env-warning');
+  if (warnEl) { warnEl.innerHTML = ''; warnEl.classList.remove('show'); }
+  const btn = document.getElementById('run-btn');
+  if (btn) btn.disabled = false;
   await populateEnvs();
   await populateCheckpoints();
 }
@@ -1452,11 +1518,48 @@ function applyCapabilities(caps) {
     card.style.display = hasPatchEmbed ? '' : 'none';
   }
 
-  // Hide left-col reasoning token preview and h_t history stack for plugin experiments.
+  // The "reasoning token preview" line is exp_001-only — hide for plugin experiments.
   const lcPreview = document.getElementById('lc-reasoning-preview');
-  const lcHistory = document.getElementById('lc-ht-history');
   if (lcPreview) lcPreview.style.display = hasPatchEmbed ? '' : 'none';
-  if (lcHistory) lcHistory.style.display = hasPatchEmbed ? '' : 'none';
+
+  // The h_t history stack now also serves plugin experiments that publish
+  // `latent_vectors` (e.g. exp_006's 4 latents) — show it whenever EITHER:
+  //   • exp_001 case: timesteps carry `reasoning_token` (driven by hasPatchEmbed), OR
+  //   • plugin case: capabilities advertise has_latent_vectors with n_latents > 0.
+  const lcHistory  = document.getElementById('lc-ht-history');
+  const sw         = document.getElementById('lc-ht-latent-switcher');
+  const histLabel  = document.getElementById('lc-ht-label');
+  const nLatents   = (caps.has_latent_vectors && Number.isInteger(caps.n_latents)) ? caps.n_latents : 0;
+  const hasLatents = nLatents > 0;
+  if (lcHistory) lcHistory.style.display = (hasPatchEmbed || hasLatents) ? '' : 'none';
+  if (sw) {
+    sw.style.display = hasLatents ? 'inline-flex' : 'none';
+    // Rebuild the L0..L{n-1} buttons in case n_latents differs from the default 4.
+    sw.innerHTML = '';
+    for (let li = 0; li < nLatents; li++) {
+      const b = document.createElement('button');
+      b.className = 'layer-btn' + (li === (S.selLatent || 0) ? ' active' : '');
+      b.dataset.latent = String(li);
+      b.textContent = `L${li}`;
+      b.addEventListener('click', () => {
+        S.selLatent = li;
+        sw.querySelectorAll('button').forEach(bb => {
+          bb.classList.toggle('active', Number(bb.dataset.latent) === li);
+        });
+        if (histLabel) histLabel.textContent =
+          `h_t[L${li}] HISTORY (newest → oldest, each row = 1 step)`;
+        if (S.ep) drawReasoningStack(S.step);
+      });
+      sw.appendChild(b);
+    }
+  }
+  // Reset selLatent if previous selection is out of range for the new experiment.
+  if (hasLatents && (S.selLatent || 0) >= nLatents) S.selLatent = 0;
+  if (histLabel) {
+    histLabel.textContent = hasLatents
+      ? `h_t[L${S.selLatent || 0}] HISTORY (newest → oldest, each row = 1 step)`
+      : 'h_t HISTORY (newest → oldest, each row = 1 step)';
+  }
 }
 
 function getChangedPatches(t) {

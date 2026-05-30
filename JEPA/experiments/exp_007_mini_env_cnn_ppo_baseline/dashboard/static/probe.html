@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>exp_007 — State Probe</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Menlo','Monaco','Consolas',monospace; font-size: 12px;
+       background: #0d1117; color: #c9d1d9; min-width: 1100px; }
+a { color: #388bfd; }
+
+#hdr { position: sticky; top: 0; z-index: 100; background: #161b22;
+       border-bottom: 1px solid #30363d; padding: 10px 18px;
+       display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#hdr h1 { font-size: 14px; color: #e6edf3; margin-right: 10px; }
+#hdr select { background: #0d1117; border: 1px solid #30363d; color: #c9d1d9;
+              padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+#run-select { min-width: 280px; } #ckpt-select { min-width: 160px; }
+.nav-link { color: #388bfd; text-decoration: none; margin-left: 6px; font-size: 11px; }
+.nav-link:hover { text-decoration: underline; }
+.btn { background: #21262d; border: 1px solid #30363d; color: #c9d1d9;
+       padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+.btn:hover { background: #30363d; }
+.btn-primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+.btn-primary:hover { background: #388bfd; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+#status { font-size: 11px; color: #8b949e; margin-left: 8px; }
+
+.body-grid { display: grid; grid-template-columns: 560px 1fr; gap: 0;
+             padding: 0; min-height: calc(100vh - 60px); }
+
+/* ── Left column: rendered scene ───────────────────────────────────── */
+.scene-col { padding: 18px; border-right: 1px solid #21262d; }
+.scene-wrap { position: relative; width: 512px; height: 512px; margin: 0 auto;
+              background: #161b22; border: 1px solid #30363d; }
+#scene-canvas { position: absolute; left: 0; top: 0; width: 512px; height: 512px;
+                image-rendering: pixelated; image-rendering: crisp-edges; }
+#overlay-canvas { position: absolute; left: 0; top: 0; width: 512px; height: 512px;
+                   pointer-events: auto; cursor: crosshair; }
+.scene-help { margin-top: 12px; font-size: 11px; color: #8b949e; line-height: 1.6; }
+.scene-help kbd { background: #21262d; border: 1px solid #30363d; border-bottom-width: 2px;
+                   border-radius: 3px; padding: 1px 6px; font-family: inherit;
+                   font-size: 10px; color: #e6edf3; }
+.scene-help .row { margin: 4px 0; }
+.scene-toast { position: absolute; top: 8px; left: 8px; background: rgba(13,17,23,0.92);
+                border: 1px solid #30363d; color: #e6edf3; padding: 4px 10px;
+                font-size: 11px; border-radius: 4px; display: none; }
+.scene-toast.warn { border-color: #d29922; color: #d29922; }
+.scene-toast.bad { border-color: #f85149; color: #f85149; }
+.scene-toast.good { border-color: #3fb950; color: #3fb950; }
+
+/* ── Right column: state + outputs ─────────────────────────────────── */
+.right-col { padding: 18px; overflow-y: auto; }
+
+.section { background: #161b22; border: 1px solid #21262d; border-radius: 4px;
+           padding: 12px 14px; margin-bottom: 14px; }
+.section h2 { font-size: 11px; color: #388bfd; letter-spacing: 0.5px;
+              margin-bottom: 8px; text-transform: uppercase; }
+
+/* State editor */
+.state-row { display: grid; grid-template-columns: 120px 1fr; gap: 10px;
+             align-items: center; margin: 6px 0; }
+.state-row .lbl { color: #8b949e; font-size: 11px; }
+.state-row .val { color: #e6edf3; font-variant-numeric: tabular-nums; }
+
+.rotation-buttons { display: flex; gap: 4px; }
+.rotation-buttons button { background: #21262d; border: 1px solid #30363d;
+                            color: #c9d1d9; width: 44px; height: 32px;
+                            border-radius: 4px; cursor: pointer; font-size: 11px;
+                            font-family: inherit; }
+.rotation-buttons button.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+.rotation-buttons button:hover { background: #30363d; }
+.rotation-buttons button.active:hover { background: #388bfd; }
+
+.slider-row { display: flex; align-items: center; gap: 8px; }
+.slider-row input[type=range] { flex: 1; }
+.slider-row .num { width: 40px; text-align: right; color: #e6edf3;
+                    font-variant-numeric: tabular-nums; font-size: 11px; }
+.slider-row .max { color: #8b949e; font-size: 10px; }
+
+input[type=range] { -webkit-appearance: none; height: 6px; background: #21262d;
+                     border-radius: 3px; outline: none; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px;
+                                            border-radius: 50%; background: #388bfd; cursor: pointer; }
+input[type=range]::-moz-range-thumb { width: 14px; height: 14px;
+                                       border-radius: 50%; background: #388bfd;
+                                       cursor: pointer; border: none; }
+
+.state-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+
+/* Policy + value outputs */
+.value-card { display: flex; align-items: center; gap: 16px; padding: 8px 0; }
+.value-card .v-big { font-size: 32px; color: #3fb950; font-weight: bold;
+                      font-variant-numeric: tabular-nums; }
+.value-card .v-meta { font-size: 10px; color: #8b949e; line-height: 1.5; }
+
+.pi-grid { display: grid; grid-template-columns: 60px 1fr 80px; gap: 8px;
+           align-items: center; }
+.pi-grid .arrow { font-size: 22px; color: #c9d1d9; text-align: center; }
+.pi-grid .arrow.argmax { color: #3fb950; font-weight: bold; }
+.pi-grid .label { font-size: 10px; color: #8b949e; }
+.pi-grid .track { background: #21262d; height: 18px; border-radius: 3px;
+                   position: relative; overflow: hidden; }
+.pi-grid .fill { height: 100%; background: #388bfd; transition: width 0.15s ease; }
+.pi-grid .fill.argmax { background: #3fb950; }
+.pi-grid .pct { font-variant-numeric: tabular-nums; color: #e6edf3; font-size: 12px;
+                 text-align: right; }
+.pi-grid .pct .logit { color: #8b949e; font-size: 10px; margin-left: 4px; }
+
+/* History (trail) */
+.trail { max-height: 240px; overflow-y: auto; font-size: 11px; }
+.trail-entry { display: grid; grid-template-columns: 30px 50px 70px 1fr 80px; gap: 6px;
+                padding: 4px 0; border-bottom: 1px solid #21262d;
+                align-items: center; }
+.trail-entry:last-child { border-bottom: none; }
+.trail-entry.win  { background: rgba(63,185,80,0.08); }
+.trail-entry.fail { background: rgba(248,81,73,0.08); }
+.trail-entry .idx  { color: #8b949e; font-variant-numeric: tabular-nums; }
+.trail-entry .act  { color: #c9d1d9; }
+.trail-entry .meta { color: #8b949e; font-variant-numeric: tabular-nums; }
+.trail-entry .pi-trace { display: flex; gap: 2px; align-items: center; height: 12px; }
+.trail-entry .pi-trace .bar { background: #388bfd; height: 100%; }
+.trail-entry .pi-trace .bar.taken { background: #3fb950; }
+.trail-entry .v { color: #e6edf3; text-align: right;
+                   font-variant-numeric: tabular-nums; }
+.trail-clear { font-size: 10px; color: #8b949e; cursor: pointer; }
+.trail-clear:hover { color: #c9d1d9; }
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <h1>exp_007 — State Probe</h1>
+  <a class="nav-link" href="/">← inspector</a>
+  <a class="nav-link" href="/dynamics">dynamics</a>
+  <span>Run:</span><select id="run-select"></select>
+  <span>Checkpoint:</span><select id="ckpt-select"></select>
+  <button class="btn btn-primary" id="reset-btn">Reset to start</button>
+  <span id="status">Pick a run + checkpoint.</span>
+</div>
+
+<div class="body-grid">
+
+<!-- ─────── LEFT: rendered scene + click overlay ─────── -->
+<div class="scene-col">
+  <div class="scene-wrap" id="scene-wrap">
+    <canvas id="scene-canvas" width="32" height="32"></canvas>
+    <canvas id="overlay-canvas" width="512" height="512"></canvas>
+    <div class="scene-toast" id="scene-toast"></div>
+  </div>
+  <div class="scene-help">
+    <div class="row"><b>Click</b> any non-wall cell → teleport player.</div>
+    <div class="row"><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> step the agent (real env mechanics, decrements energy).</div>
+    <div class="row"><kbd>Q</kbd> / <kbd>E</kbd> rotate −90° / +90° (no env step).</div>
+    <div class="row"><kbd>Shift</kbd>+<kbd>↑↓←→</kbd> teleport one cell (no energy cost, ignores walls? respects bounds).</div>
+    <div class="row"><kbd>R</kbd> reset to level start. <kbd>Backspace</kbd> clear trail.</div>
+    <div class="row" style="color:#d29922;">Pink ring = match cue (player rotation matches goal). Yellow bar = energy.</div>
+  </div>
+</div>
+
+<!-- ─────── RIGHT: state editor + π/V outputs + trail ─────── -->
+<div class="right-col">
+
+<div class="section">
+  <h2>State editor</h2>
+  <div class="state-row">
+    <span class="lbl">Position</span>
+    <span class="val" id="state-pos">—</span>
+  </div>
+  <div class="state-row">
+    <span class="lbl">Player rotation</span>
+    <div class="rotation-buttons" id="rot-buttons">
+      <button data-rot="0">0°</button>
+      <button data-rot="90">90°</button>
+      <button data-rot="180">180°</button>
+      <button data-rot="270">270°</button>
+    </div>
+  </div>
+  <div class="state-row">
+    <span class="lbl">Goal rotation</span>
+    <span class="val" id="state-goal-rot">—</span>
+  </div>
+  <div class="state-row">
+    <span class="lbl">Energy (step_counter)</span>
+    <div class="slider-row">
+      <input id="energy-slider" type="range" min="0" max="42" value="42">
+      <span class="num" id="energy-num">42</span>
+      <span class="max" id="energy-max">/ 42</span>
+    </div>
+  </div>
+  <div class="state-row">
+    <span class="lbl">Denial frames</span>
+    <div class="slider-row">
+      <input id="denial-slider" type="range" min="0" max="10" value="0">
+      <span class="num" id="denial-num">0</span>
+    </div>
+  </div>
+  <div class="state-actions">
+    <button class="btn" id="rot-cw-btn">Rotate +90°</button>
+    <button class="btn" id="rot-ccw-btn">Rotate −90°</button>
+    <button class="btn" id="energy-full-btn">Full energy</button>
+    <button class="btn" id="denial-clear-btn">Clear denial</button>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Policy π(a | s)</h2>
+  <div class="pi-grid" id="pi-grid">
+    <!-- populated by JS -->
+  </div>
+</div>
+
+<div class="section">
+  <h2>Value V(s)</h2>
+  <div class="value-card">
+    <div class="v-big" id="value-big">—</div>
+    <div class="v-meta">
+      <div><b>Higher</b> = critic believes this state leads to more future reward.</div>
+      <div>Terminal-only reward: max V ≈ γ^(steps-to-goal).</div>
+      <div id="feat-norm" style="color:#8b949e; margin-top:4px;"></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Trail
+    <span class="trail-clear" id="trail-clear" style="float:right">clear</span>
+  </h2>
+  <div class="trail" id="trail"></div>
+</div>
+
+</div><!-- /right-col -->
+</div><!-- /body-grid -->
+
+<script>
+'use strict';
+
+const ACTION_ARROWS = ['↑','↓','←','→'];
+const ACTION_NAMES = ['up','down','left','right'];
+const KEY_TO_ACTION = { 'ArrowUp': 0, 'ArrowDown': 1, 'ArrowLeft': 2, 'ArrowRight': 3 };
+
+const $ = id => document.getElementById(id);
+
+const STATE = {
+  runs: [],
+  level: null,            // level info from /api/probe/level
+  state: null,            // { player_c, player_r, player_rotation, step_counter, denial_frames }
+  lastResult: null,       // full /eval or /step response (for π/V display)
+  trail: [],              // chronological history of (state, action, result)
+  pending: false,
+};
+
+// ── Run + checkpoint ──────────────────────────────────────────────────
+
+async function fetchRuns() {
+  const res = await fetch('/api/runs').then(r => r.json());
+  STATE.runs = res.runs;
+  const sel = $('run-select'); sel.innerHTML = '';
+  for (const r of STATE.runs) {
+    const o = document.createElement('option');
+    o.value = r.name; o.textContent = r.exp_name || r.name;
+    sel.appendChild(o);
+  }
+  const naive = STATE.runs.find(r => (r.exp_name || '').endsWith('naive'));
+  if (naive) sel.value = naive.name;
+  await onRunChange();
+}
+
+async function onRunChange() {
+  const name = $('run-select').value;
+  const r = STATE.runs.find(x => x.name === name);
+  if (!r) return;
+  const ckSel = $('ckpt-select'); ckSel.innerHTML = '';
+  for (const ck of r.checkpoints) {
+    const o = document.createElement('option');
+    o.value = ck; o.textContent = ck;
+    ckSel.appendChild(o);
+  }
+  if (r.checkpoints.includes('final.pt')) ckSel.value = 'final.pt';
+  else if (r.checkpoints.length) ckSel.value = r.checkpoints[r.checkpoints.length - 1];
+  await resetToStart();
+}
+
+// ── Level info + initial state ────────────────────────────────────────
+
+async function loadLevelFromCheckpoint() {
+  // We don't know the level path without first calling eval, which itself
+  // needs a level. Use /api/probe/reset to bootstrap: it returns level_path.
+  const run = $('run-select').value;
+  const ckpt = $('ckpt-select').value;
+  const resp = await fetch('/api/probe/reset', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ run, checkpoint: ckpt }),
+  });
+  if (!resp.ok) throw new Error(await resp.text());
+  const data = await resp.json();
+  STATE.lastResult = data;
+  // Now load level info.
+  const lvl = await fetch('/api/probe/level?path=' + encodeURIComponent(data.level_path));
+  if (!lvl.ok) throw new Error(await lvl.text());
+  STATE.level = await lvl.json();
+  // initialize sliders
+  $('energy-slider').max = STATE.level.step_limit;
+  $('energy-slider').value = STATE.level.step_limit;
+  $('energy-max').textContent = '/ ' + STATE.level.step_limit;
+  $('state-goal-rot').textContent = STATE.level.goal_rotation + '°';
+  STATE.state = {
+    player_c: data.state.player_c,
+    player_r: data.state.player_r,
+    player_rotation: data.state.player_rotation,
+    step_counter: data.state.step_counter,
+    denial_frames: data.state.denial_frames,
+  };
+}
+
+async function resetToStart() {
+  STATE.pending = true;
+  $('status').textContent = 'loading…';
+  try {
+    await loadLevelFromCheckpoint();
+    STATE.trail = [];
+    renderAll();
+    $('status').textContent = `level: ${STATE.level.level_path} (${STATE.level.cols}×${STATE.level.play_rows}, step_limit=${STATE.level.step_limit})`;
+  } catch (e) {
+    $('status').textContent = 'error: ' + e.message;
+  } finally {
+    STATE.pending = false;
+  }
+}
+
+// ── Eval current state (no env step) ──────────────────────────────────
+
+async function evalCurrentState() {
+  if (STATE.pending || !STATE.state) return;
+  STATE.pending = true;
+  try {
+    const body = {
+      run: $('run-select').value,
+      checkpoint: $('ckpt-select').value,
+      level_path: STATE.level.level_path,
+      ...STATE.state,
+    };
+    const resp = await fetch('/api/probe/eval', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (!resp.ok) {
+      const err = await resp.text();
+      showToast(err, 'bad');
+      return;
+    }
+    STATE.lastResult = await resp.json();
+    renderAll();
+  } catch (e) {
+    showToast(e.message, 'bad');
+  } finally {
+    STATE.pending = false;
+  }
+}
+
+// ── Step (with env mechanics) ─────────────────────────────────────────
+
+async function stepAction(action) {
+  if (STATE.pending || !STATE.state) return;
+  STATE.pending = true;
+  const preState = {...STATE.state};
+  const prePi = STATE.lastResult ? STATE.lastResult.probs : null;
+  try {
+    const body = {
+      run: $('run-select').value,
+      checkpoint: $('ckpt-select').value,
+      level_path: STATE.level.level_path,
+      ...STATE.state,
+      action,
+    };
+    const resp = await fetch('/api/probe/step', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (!resp.ok) {
+      showToast(await resp.text(), 'bad');
+      return;
+    }
+    const data = await resp.json();
+    STATE.lastResult = data;
+    STATE.state = {
+      player_c: data.state.player_c,
+      player_r: data.state.player_r,
+      player_rotation: data.state.player_rotation,
+      step_counter: data.state.step_counter,
+      denial_frames: data.state.denial_frames,
+    };
+    // append trail entry (using pre-step π and pre-state for context)
+    STATE.trail.push({
+      idx: STATE.trail.length + 1,
+      pre: preState,
+      pi: prePi,
+      action,
+      transition: data.transition,
+      post: {...STATE.state},
+      post_value: data.value,
+      done: data.done,
+    });
+    if (STATE.trail.length > 200) STATE.trail.shift();
+    // Toast for terminal events.
+    if (data.transition.won) showToast('✓ WON', 'good');
+    else if (data.transition.done) showToast('✗ energy depleted', 'bad');
+    else if (data.transition.wall_hit) showToast('⊘ wall hit', 'warn');
+    else if (data.transition.rotation_changed) showToast('↻ rotation +90', 'warn');
+    renderAll();
+  } catch (e) {
+    showToast(e.message, 'bad');
+  } finally {
+    STATE.pending = false;
+  }
+}
+
+// ── Teleport (no env step) ────────────────────────────────────────────
+
+function teleportTo(c, r) {
+  if (!STATE.level) return;
+  if (c < 0 || c >= STATE.level.cols || r < 0 || r >= STATE.level.play_rows) return;
+  const cell = STATE.level.cells.find(x => x.c === c && x.r === r);
+  if (!cell) return;
+  if (cell.kind === 'wall') {
+    showToast('⊘ cannot place on wall', 'warn');
+    return;
+  }
+  STATE.state.player_c = c;
+  STATE.state.player_r = r;
+  evalCurrentState();
+}
+
+function rotateBy(delta) {
+  if (!STATE.state) return;
+  STATE.state.player_rotation = ((STATE.state.player_rotation + delta) % 360 + 360) % 360;
+  evalCurrentState();
+}
+
+function setRotation(rot) {
+  if (!STATE.state) return;
+  STATE.state.player_rotation = rot;
+  evalCurrentState();
+}
+
+// ── Rendering ─────────────────────────────────────────────────────────
+
+function renderAll() {
+  if (!STATE.lastResult || !STATE.level) return;
+  renderScene();
+  renderOverlay();
+  renderStateRow();
+  renderRotationButtons();
+  renderSliders();
+  renderPi();
+  renderValue();
+  renderTrail();
+}
+
+function renderScene() {
+  const canvas = $('scene-canvas');
+  const ctx = canvas.getContext('2d');
+  const frame = STATE.lastResult.frame;  // 32x32 RGB
+  const H = frame.length, W = frame[0].length;
+  // Draw at native resolution; CSS upscales via image-rendering: pixelated.
+  const img = ctx.createImageData(W, H);
+  for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
+    const [R, G, B] = frame[r][c];
+    const i = (r * W + c) * 4;
+    img.data[i] = R; img.data[i+1] = G; img.data[i+2] = B; img.data[i+3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function renderOverlay() {
+  const canvas = $('overlay-canvas');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = 512 * dpr; canvas.height = 512 * dpr;
+  ctx.setTransform(1,0,0,1,0,0); ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, 512, 512);
+
+  const cols = STATE.level.cols;
+  const play = STATE.level.play_rows;
+  // Each rendered cell is 4 px in the 32x32 frame → 64 CSS px at 512 size.
+  const cellPx = 512 / 8;  // 64
+
+  // Faint grid + clickable highlight on hover
+  ctx.strokeStyle = 'rgba(139, 148, 158, 0.20)';
+  ctx.lineWidth = 1;
+  for (let c = 0; c <= cols; c++) {
+    ctx.beginPath();
+    ctx.moveTo(c * cellPx, 0); ctx.lineTo(c * cellPx, play * cellPx); ctx.stroke();
+  }
+  for (let r = 0; r <= play; r++) {
+    ctx.beginPath();
+    ctx.moveTo(0, r * cellPx); ctx.lineTo(cols * cellPx, r * cellPx); ctx.stroke();
+  }
+  // UI strip divider
+  ctx.strokeStyle = 'rgba(139, 148, 158, 0.40)';
+  ctx.beginPath();
+  ctx.moveTo(0, play * cellPx); ctx.lineTo(512, play * cellPx); ctx.stroke();
+
+  // Mark special cells (subtle annotation only)
+  for (const cell of STATE.level.cells) {
+    if (cell.kind === 'goal') {
+      ctx.strokeStyle = 'rgba(255, 220, 0, 0.55)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cell.c * cellPx + 2, cell.r * cellPx + 2, cellPx - 4, cellPx - 4);
+    } else if (cell.kind === 'cross') {
+      ctx.strokeStyle = 'rgba(135, 12, 37, 0.55)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cell.c * cellPx + 2, cell.r * cellPx + 2, cellPx - 4, cellPx - 4);
+    }
+  }
+
+  // Highlight current player cell
+  const pc = STATE.state.player_c, pr = STATE.state.player_r;
+  ctx.strokeStyle = '#3fb950';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(pc * cellPx + 1.5, pr * cellPx + 1.5, cellPx - 3, cellPx - 3);
+
+  // Hover cell preview (set by mousemove)
+  if (overlayHover) {
+    const { c, r, kind } = overlayHover;
+    if (r < play) {
+      ctx.fillStyle = (kind === 'wall')
+        ? 'rgba(248, 81, 73, 0.18)' : 'rgba(56, 139, 253, 0.18)';
+      ctx.fillRect(c * cellPx, r * cellPx, cellPx, cellPx);
+    }
+  }
+}
+
+let overlayHover = null;
+
+function renderStateRow() {
+  const s = STATE.state;
+  const pos = `c=${s.player_c}, r=${s.player_r}`;
+  const onCross = STATE.lastResult.state.on_cross ? ' · on cross' : '';
+  $('state-pos').textContent = pos + onCross;
+}
+
+function renderRotationButtons() {
+  for (const btn of $('rot-buttons').children) {
+    if (parseInt(btn.dataset.rot) === STATE.state.player_rotation) btn.classList.add('active');
+    else btn.classList.remove('active');
+  }
+}
+
+function renderSliders() {
+  $('energy-slider').value = STATE.state.step_counter;
+  $('energy-num').textContent = STATE.state.step_counter;
+  $('denial-slider').value = STATE.state.denial_frames;
+  $('denial-num').textContent = STATE.state.denial_frames;
+}
+
+function renderPi() {
+  const grid = $('pi-grid'); grid.innerHTML = '';
+  const probs = STATE.lastResult.probs;
+  const logits = STATE.lastResult.logits;
+  const argmax = probs.indexOf(Math.max(...probs));
+  for (let i = 0; i < 4; i++) {
+    const arrow = document.createElement('div');
+    arrow.className = 'arrow' + (i === argmax ? ' argmax' : '');
+    arrow.textContent = ACTION_ARROWS[i];
+    grid.appendChild(arrow);
+
+    const track = document.createElement('div'); track.className = 'track';
+    const fill = document.createElement('div');
+    fill.className = 'fill' + (i === argmax ? ' argmax' : '');
+    fill.style.width = (probs[i] * 100).toFixed(2) + '%';
+    track.appendChild(fill);
+    grid.appendChild(track);
+
+    const pct = document.createElement('div'); pct.className = 'pct';
+    pct.innerHTML = (probs[i] * 100).toFixed(1) + '%' +
+      `<span class="logit">logit ${logits[i].toFixed(2)}</span>`;
+    grid.appendChild(pct);
+  }
+}
+
+function renderValue() {
+  $('value-big').textContent = STATE.lastResult.value.toFixed(3);
+  // Color V based on sign / magnitude.
+  const v = STATE.lastResult.value;
+  $('value-big').style.color =
+    v > 0.5 ? '#3fb950' : (v > 0.1 ? '#d29922' : (v < -0.05 ? '#f85149' : '#c9d1d9'));
+  $('feat-norm').textContent = `‖h‖₂ = ${STATE.lastResult.feature_norm.toFixed(2)}`;
+}
+
+function renderTrail() {
+  const div = $('trail'); div.innerHTML = '';
+  // newest first
+  for (let i = STATE.trail.length - 1; i >= 0; i--) {
+    const t = STATE.trail[i];
+    const row = document.createElement('div');
+    row.className = 'trail-entry';
+    if (t.transition.won) row.classList.add('win');
+    else if (t.transition.done) row.classList.add('fail');
+    const idx = document.createElement('div'); idx.className = 'idx';
+    idx.textContent = '#' + t.idx;
+    const act = document.createElement('div'); act.className = 'act';
+    act.textContent = ACTION_ARROWS[t.action];
+    const meta = document.createElement('div'); meta.className = 'meta';
+    let mtxt = `e=${t.post.step_counter}`;
+    if (t.transition.wall_hit) mtxt += ' ⊘';
+    if (t.transition.rotation_changed) mtxt += ' ↻';
+    if (t.transition.won) mtxt += ' ✓';
+    else if (t.transition.done) mtxt += ' ✗';
+    meta.textContent = mtxt;
+    const pi = document.createElement('div'); pi.className = 'pi-trace';
+    if (t.pi) {
+      for (let a = 0; a < 4; a++) {
+        const bar = document.createElement('div');
+        bar.className = 'bar' + (a === t.action ? ' taken' : '');
+        bar.style.width = Math.max(1, t.pi[a] * 36) + 'px';
+        pi.appendChild(bar);
+      }
+    }
+    const vv = document.createElement('div'); vv.className = 'v';
+    vv.textContent = 'V=' + t.post_value.toFixed(2);
+    row.appendChild(idx); row.appendChild(act); row.appendChild(meta);
+    row.appendChild(pi); row.appendChild(vv);
+    div.appendChild(row);
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────
+
+let _toastTimer = null;
+function showToast(text, kind = '') {
+  const el = $('scene-toast');
+  el.textContent = text;
+  el.className = 'scene-toast' + (kind ? ' ' + kind : '');
+  el.style.display = 'block';
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.style.display = 'none'; }, 1500);
+}
+
+// ── Event wiring ──────────────────────────────────────────────────────
+
+$('run-select').onchange = onRunChange;
+$('ckpt-select').onchange = resetToStart;
+$('reset-btn').onclick = resetToStart;
+
+for (const btn of $('rot-buttons').children) {
+  btn.onclick = () => setRotation(parseInt(btn.dataset.rot));
+}
+$('rot-cw-btn').onclick  = () => rotateBy(90);
+$('rot-ccw-btn').onclick = () => rotateBy(-90);
+$('energy-full-btn').onclick = () => {
+  STATE.state.step_counter = STATE.level.step_limit;
+  evalCurrentState();
+};
+$('denial-clear-btn').onclick = () => {
+  STATE.state.denial_frames = 0;
+  evalCurrentState();
+};
+$('energy-slider').oninput = e => {
+  STATE.state.step_counter = parseInt(e.target.value);
+  $('energy-num').textContent = STATE.state.step_counter;
+};
+$('energy-slider').onchange = evalCurrentState;
+$('denial-slider').oninput = e => {
+  STATE.state.denial_frames = parseInt(e.target.value);
+  $('denial-num').textContent = STATE.state.denial_frames;
+};
+$('denial-slider').onchange = evalCurrentState;
+
+$('trail-clear').onclick = () => { STATE.trail = []; renderTrail(); };
+
+// Overlay click → teleport
+const overlay = $('overlay-canvas');
+overlay.addEventListener('click', e => {
+  if (!STATE.level) return;
+  const rect = overlay.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  const cellPx = 512 / 8;
+  const c = Math.floor(x / cellPx), r = Math.floor(y / cellPx);
+  if (r >= STATE.level.play_rows) return;  // UI strip; ignore
+  teleportTo(c, r);
+});
+overlay.addEventListener('mousemove', e => {
+  if (!STATE.level) return;
+  const rect = overlay.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  const cellPx = 512 / 8;
+  const c = Math.floor(x / cellPx), r = Math.floor(y / cellPx);
+  if (c < 0 || c >= STATE.level.cols || r < 0 || r >= 8) {
+    if (overlayHover) { overlayHover = null; renderOverlay(); }
+    return;
+  }
+  const cell = STATE.level.cells.find(x => x.c === c && x.r === r);
+  const kind = cell ? cell.kind : 'ui';
+  if (!overlayHover || overlayHover.c !== c || overlayHover.r !== r) {
+    overlayHover = { c, r, kind };
+    renderOverlay();
+  }
+});
+overlay.addEventListener('mouseleave', () => {
+  if (overlayHover) { overlayHover = null; renderOverlay(); }
+});
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (!STATE.state) return;
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) return;
+  if (e.key in KEY_TO_ACTION) {
+    e.preventDefault();
+    const action = KEY_TO_ACTION[e.key];
+    if (e.shiftKey) {
+      // Teleport one cell in that direction
+      const deltas = [[0,-1],[0,1],[-1,0],[1,0]];
+      const [dc, dr] = deltas[action];
+      teleportTo(STATE.state.player_c + dc, STATE.state.player_r + dr);
+    } else {
+      stepAction(action);
+    }
+  } else if (e.key === 'q' || e.key === 'Q') { e.preventDefault(); rotateBy(-90); }
+  else if (e.key === 'e' || e.key === 'E')  { e.preventDefault(); rotateBy(90); }
+  else if (e.key === 'r' || e.key === 'R')  { e.preventDefault(); resetToStart(); }
+  else if (e.key === 'Backspace')           { e.preventDefault(); STATE.trail = []; renderTrail(); }
+});
+
+fetchRuns();
+</script>
+</body>
+</html>

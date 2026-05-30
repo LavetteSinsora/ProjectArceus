@@ -1,0 +1,150 @@
+{
+  "runs": {
+    "hard1__jepa_frozen": {
+      "status": "ok",
+      "run_dir": "/Users/chrishe/Desktop/\u540c\u6b65\u7a7a\u95f4/Chris/Chris/Obsidian Vault/UCSD/Course Notes/CSE 190 Deep RL/Group Project/Code Repo/JEPA/experiments/exp_008_mini_env_jepa_tests/exp_008_3_encoder_transfer/ppo_runs/008_3_transfer__jepa_frozen__hard1_20260529_182815",
+      "steps_to_90pct": null,
+      "steps_to_99pct": null,
+      "final_env_step": 491520,
+      "final_eval_success_rate": 0.4375,
+      "final_avg_steps_to_solve": 19.214285714285715
+    },
+    "hard1__jepa_unfrozen": {
+      "status": "ok",
+      "run_dir": "/Users/chrishe/Desktop/\u540c\u6b65\u7a7a\u95f4/Chris/Chris/Obsidian Vault/UCSD/Course Notes/CSE 190 Deep RL/Group Project/Code Repo/JEPA/experiments/exp_008_mini_env_jepa_tests/exp_008_3_encoder_transfer/ppo_runs/008_3_transfer__jepa_unfrozen__hard1_20260529_182301",
+      "steps_to_90pct": 51200,
+      "steps_to_99pct": 61440,
+      "final_env_step": 102400,
+      "final_eval_success_rate": 1.0,
+      "final_avg_steps_to_solve": 9.0
+    },
+    "hard1__ppo_early_frozen": {
+      "status": "ok",
+      "run_dir": "/Users/chrishe/Desktop/\u540c\u6b65\u7a7a\u95f4/Chris/Chris/Obsidian Vault/UCSD/Course Notes/CSE 190 Deep RL/Group Project/Code Repo/JEPA/experiments/exp_008_mini_env_jepa_tests/exp_008_3_encoder_transfer/ppo_runs/008_3_transfer__ppo_early_frozen__hard1_20260529_143419",
+      "steps_to_90pct": null,
+      "steps_to_99pct": null,
+      "final_env_step": 460800,
+      "final_eval_success_rate": 0.0,
+      "final_avg_steps_to_solve": NaN
+    },
+    "hard1__ppo_early_unfrozen": {
+      "status": "ok",
+      "run_dir": "/Users/chrishe/Desktop/\u540c\u6b65\u7a7a\u95f4/Chris/Chris/Obsidian Vault/UCSD/Course Notes/CSE 190 Deep RL/Group Project/Code Repo/JEPA/experiments/exp_008_mini_env_jepa_tests/exp_008_3_encoder_transfer/ppo_runs/008_3_transfer__ppo_early_unfrozen__hard1_20260529_182436",
+      "steps_to_90pct": 30720,
+      "steps_to_99pct": 30720,
+      "final_env_step": 71680,
+      "final_eval_success_rate": 1.0,
+      "final_avg_steps_to_solve": 9.0
+    },
+    "hard1__ppo_final_frozen": {
+      "status": "ok",
+      "run_dir": "/Users/chrishe/Desktop/\u540c\u6b65\u7a7a\u95f4/Chris/Chris/Obsidian Vault/UCSD/Course Notes/CSE 190 Deep RL/Group Project/Code Repo/JEPA/experiments/exp_008_mini_env_jepa_tests/exp_008_3_encoder_transfer/ppo_runs/008_3_transfer__ppo_final_frozen__hard1_20260529_151220",
+      "steps_to_90pct": null,
+      "steps_to_99pct": null,
+      "final_env_step": 460800,
+      "final_eval_success_rate": 0.0,
+      "final_avg_steps_to_solve": NaN
+    },
+    "hard1__ppo_final_unfrozen": {
+      "status": "ok",
+      "run_dir": "/Users/chrishe/Desktop/\u540c\u6b65\u7a7a\u95f4/Chris/Chris/Obsidian Vault/UCSD/Course Notes/CSE 190 Deep RL/Group Project/Code Repo/JEPA/experiments/exp_008_mini_env_jepa_tests/exp_008_3_encoder_transfer/ppo_runs/008_3_transfer__ppo_final_unfrozen__hard1_20260529_182543",
+      "steps_to_90pct": 30720,
+      "steps_to_99pct": 30720,
+      "final_env_step": 71680,
+      "final_eval_success_rate": 1.0,
+      "final_avg_steps_to_solve": 9.0
+    },
+    "hard1__scratch_unfrozen": {
+      "status": "ok",
+      "run_dir": "/Users/chrishe/Desktop/\u540c\u6b65\u7a7a\u95f4/Chris/Chris/Obsidian Vault/UCSD/Course Notes/CSE 190 Deep RL/Group Project/Code Repo/JEPA/experiments/exp_008_mini_env_jepa_tests/exp_008_3_encoder_transfer/ppo_runs/008_3_transfer__scratch_unfrozen__hard1_20260529_182650",
+      "steps_to_90pct": 51200,
+      "steps_to_99pct": 51200,
+      "final_env_step": 92160,
+      "final_eval_success_rate": 1.0,
+      "final_avg_steps_to_solve": 9.09375
+    },
+    "hard2__jepa_frozen": {
+      "status": "ok",
+      "run_dir": "/Users/chrishe/Desktop/\u540c\u6b65\u7a7a\u95f4/Chris/Chris/Obsidian Vault/UCSD/Course Notes/CSE 190 Deep RL/Group Project/Code Repo/JEPA/experiments/exp_008_mini_env_jepa_tests/exp_008_3_encoder_transfer/ppo_runs/008_3_transfer__jepa_frozen__hard2_20260529_174527",
+      "steps_to_90pct": null,
+      "steps_to_99pct": null,
+      "final_env_step": 491520,
+      "final_eval_success_rate": 0.125,
+      "final_avg_steps_to_solve": 19.75
+    },
+    "hard2__jepa_unfrozen": {
+      "status": "ok",
+      "run_dir": "/Users/chrishe/Desktop/\u540c\u6b65\u7a7a\u95f4/Chris/Chris/Obsidian Vault/UCSD/Course Notes/CSE 190 Deep RL/Group Project/Code Repo/JEPA/experiments/exp_008_mini_env_jepa_tests/exp_008_3_encoder_transfer/ppo_runs/008_3_transfer__jepa_unfrozen__hard2_20260529_180110",
+      "steps_to_90pct": 81920,
+      "steps_to_99pct": 81920,
+      "final_env_step": 122880,
+      "final_eval_success_rate": 1.0,
+      "final_avg_steps_to_solve": 11.0
+    },
+    "hard2__ppo_early_frozen": {
+      "status": "ok",
+      "run_dir": "/Users/chrishe/Desktop/\u540c\u6b65\u7a7a\u95f4/Chris/Chris/Obsidian Vault/UCSD/Course Notes/CSE 190 Deep RL/Group Project/Code Repo/JEPA/experiments/exp_008_mini_env_jepa_tests/exp_008_3_encoder_transfer/ppo_runs/008_3_transfer__ppo_early_frozen__hard2_20260529_180302",
+      "steps_to_90pct": null,
+      "steps_to_99pct": null,
+      "final_env_step": 491520,
+      "final_eval_success_rate": 0.0,
+      "final_avg_steps_to_solve": NaN
+    },
+    "hard2__ppo_early_unfrozen": {
+      "status": "ok",
+      "run_dir": "/Users/chrishe/Desktop/\u540c\u6b65\u7a7a\u95f4/Chris/Chris/Obsidian Vault/UCSD/Course Notes/CSE 190 Deep RL/Group Project/Code Repo/JEPA/experiments/exp_008_mini_env_jepa_tests/exp_008_3_encoder_transfer/ppo_runs/008_3_transfer__ppo_early_unfrozen__hard2_20260529_180920",
+      "steps_to_90pct": 51200,
+      "steps_to_99pct": 61440,
+      "final_env_step": 102400,
+      "final_eval_success_rate": 1.0,
+      "final_avg_steps_to_solve": 11.0
+    },
+    "hard2__ppo_final_frozen": {
+      "status": "ok",
+      "run_dir": "/Users/chrishe/Desktop/\u540c\u6b65\u7a7a\u95f4/Chris/Chris/Obsidian Vault/UCSD/Course Notes/CSE 190 Deep RL/Group Project/Code Repo/JEPA/experiments/exp_008_mini_env_jepa_tests/exp_008_3_encoder_transfer/ppo_runs/008_3_transfer__ppo_final_frozen__hard2_20260529_181055",
+      "steps_to_90pct": null,
+      "steps_to_99pct": null,
+      "final_env_step": 491520,
+      "final_eval_success_rate": 0.0,
+      "final_avg_steps_to_solve": NaN
+    },
+    "hard2__ppo_final_unfrozen": {
+      "status": "ok",
+      "run_dir": "/Users/chrishe/Desktop/\u540c\u6b65\u7a7a\u95f4/Chris/Chris/Obsidian Vault/UCSD/Course Notes/CSE 190 Deep RL/Group Project/Code Repo/JEPA/experiments/exp_008_mini_env_jepa_tests/exp_008_3_encoder_transfer/ppo_runs/008_3_transfer__ppo_final_unfrozen__hard2_20260529_181721",
+      "steps_to_90pct": 51200,
+      "steps_to_99pct": 51200,
+      "final_env_step": 92160,
+      "final_eval_success_rate": 1.0,
+      "final_avg_steps_to_solve": 11.0
+    },
+    "hard2__scratch_unfrozen": {
+      "status": "ok",
+      "run_dir": "/Users/chrishe/Desktop/\u540c\u6b65\u7a7a\u95f4/Chris/Chris/Obsidian Vault/UCSD/Course Notes/CSE 190 Deep RL/Group Project/Code Repo/JEPA/experiments/exp_008_mini_env_jepa_tests/exp_008_3_encoder_transfer/ppo_runs/008_3_transfer__scratch_unfrozen__hard2_20260529_181846",
+      "steps_to_90pct": 215040,
+      "steps_to_99pct": 215040,
+      "final_env_step": 256000,
+      "final_eval_success_rate": 1.0,
+      "final_avg_steps_to_solve": 11.0
+    }
+  },
+  "headline": {
+    "hard1": {
+      "jepa_frozen": null,
+      "jepa_unfrozen": 51200,
+      "ppo_early_frozen": null,
+      "ppo_early_unfrozen": 30720,
+      "ppo_final_frozen": null,
+      "ppo_final_unfrozen": 30720,
+      "scratch_unfrozen": 51200
+    },
+    "hard2": {
+      "jepa_frozen": null,
+      "jepa_unfrozen": 81920,
+      "ppo_early_frozen": null,
+      "ppo_early_unfrozen": 51200,
+      "ppo_final_frozen": null,
+      "ppo_final_unfrozen": 51200,
+      "scratch_unfrozen": 215040
+    }
+  }
+}

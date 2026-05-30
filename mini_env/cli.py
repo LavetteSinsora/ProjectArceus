@@ -1,7 +1,7 @@
 """mini_env CLI — render a level config to a PNG (upscaled 16x).
 
 Usage:
-    python -m mini_env.cli render mini_env/configs/level_01.json --out /tmp/level_01.png
+    python -m mini_env.cli render mini_env/configs/level_01/simple_1_rotation.json --out /tmp/level_01.png
 
 PIL/Pillow is optional. If not installed, the command prints a clear message
 explaining how to install it and exits non-zero, without crashing imports.

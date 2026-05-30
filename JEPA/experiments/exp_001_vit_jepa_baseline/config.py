@@ -39,6 +39,8 @@ class Config:
     jepa_weight_decay: float = 0.01   # L2 regularisation: prevents encoder parameter growth
     policy_lr: float = 1e-4           # Adam for policy
     policy_entropy_lambda: float = 0.10  # raised from 0.02 — keeps policy exploratory long-term
+    policy_attn_gain_init: float = 4.0   # per-dim gain on cross-attn output; >1 to defeat
+                                          # the residual washout induced by encoder L2-norm
     grad_clip_jepa: float = 5.0
     grad_clip_policy: float = 1.0
 

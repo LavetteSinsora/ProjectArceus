@@ -1,0 +1,56 @@
+{
+  "runs": {
+    "1rot__baseline": {
+      "status": "ok",
+      "run_dir": "JEPA/experiments/exp_007_mini_env_cnn_ppo_baseline/runs/exp_007_0_naive_gaefix_20260525_160859",
+      "n_eval_points": 20,
+      "steps_to_90pct": 51200,
+      "steps_to_99pct": 51200,
+      "final_env_step": 972800,
+      "final_eval_success_rate": 1.0,
+      "final_avg_steps_to_solve": 6.0
+    },
+    "1rot__frozen": {
+      "status": "ok",
+      "run_dir": "/Users/chrishe/Desktop/\u540c\u6b65\u7a7a\u95f4/Chris/Chris/Obsidian Vault/UCSD/Course Notes/CSE 190 Deep RL/Group Project/Code Repo/JEPA/experiments/exp_008_mini_env_jepa_tests/exp_008_2_frozen_jepa_ppo/ppo_runs/exp_008_2_frozen_jepa_ppo__1rot_20260526_171045",
+      "n_eval_points": 10,
+      "steps_to_90pct": 102400,
+      "steps_to_99pct": 153600,
+      "final_env_step": 460800,
+      "final_eval_success_rate": 1.0,
+      "final_avg_steps_to_solve": 6.0
+    },
+    "2rot__baseline": {
+      "status": "ok",
+      "run_dir": "/Users/chrishe/Desktop/\u540c\u6b65\u7a7a\u95f4/Chris/Chris/Obsidian Vault/UCSD/Course Notes/CSE 190 Deep RL/Group Project/Code Repo/JEPA/experiments/exp_008_mini_env_jepa_tests/exp_008_2_frozen_jepa_ppo/ppo_runs/exp_008_2_joint_cnn_ppo__2rot_20260526_171805",
+      "n_eval_points": 10,
+      "steps_to_90pct": 51200,
+      "steps_to_99pct": 51200,
+      "final_env_step": 460800,
+      "final_eval_success_rate": 1.0,
+      "final_avg_steps_to_solve": 8.0
+    },
+    "2rot__frozen": {
+      "status": "ok",
+      "run_dir": "/Users/chrishe/Desktop/\u540c\u6b65\u7a7a\u95f4/Chris/Chris/Obsidian Vault/UCSD/Course Notes/CSE 190 Deep RL/Group Project/Code Repo/JEPA/experiments/exp_008_mini_env_jepa_tests/exp_008_2_frozen_jepa_ppo/ppo_runs/exp_008_2_frozen_jepa_ppo__2rot_20260526_171427",
+      "n_eval_points": 10,
+      "steps_to_90pct": 153600,
+      "steps_to_99pct": null,
+      "final_env_step": 460800,
+      "final_eval_success_rate": 0.90625,
+      "final_avg_steps_to_solve": 16.724137931034484
+    }
+  },
+  "headline": {
+    "1rot": {
+      "baseline_steps_to_90pct": 51200,
+      "frozen_steps_to_90pct": 102400,
+      "speedup_steps": -51200
+    },
+    "2rot": {
+      "baseline_steps_to_90pct": 51200,
+      "frozen_steps_to_90pct": 153600,
+      "speedup_steps": -102400
+    }
+  }
+}

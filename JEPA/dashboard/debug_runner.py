@@ -258,7 +258,9 @@ def run_debug_episode(checkpoint_path: str, experiment: str,
         env_name = env
     # Try experiment-specific runner first; force-reload to pick up any code changes
     # without requiring a server restart.
-    mod_name = f"JEPA.experiments.{experiment}.debug_runner"
+    # Nested sub-experiments are surfaced as "parent/child" by the dashboard;
+    # convert the slash to a dot so the module path resolves (e.g. exp_010).
+    mod_name = f"JEPA.experiments.{experiment.replace('/', '.')}.debug_runner"
     try:
         import inspect as _inspect
         import sys as _sys

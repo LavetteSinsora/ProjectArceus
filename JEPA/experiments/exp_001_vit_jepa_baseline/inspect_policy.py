@@ -27,10 +27,14 @@ _repo_root = Path(__file__).parent.parent.parent.parent  # exp_001 → experimen
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
+from JEPA.experiments.exp_001_vit_jepa_baseline import config as _exp_config_mod
 from JEPA.experiments.exp_001_vit_jepa_baseline.config import Config
 from JEPA.experiments.exp_001_vit_jepa_baseline.models.encoder import Encoder
 from JEPA.experiments.exp_001_vit_jepa_baseline.models.policy import PolicyNetwork
 from JEPA.shared.env_wrapper import LS20Env
+
+# Old checkpoints (pre-refactor) were pickled with a top-level `config` module.
+sys.modules.setdefault("config", _exp_config_mod)
 
 _STEP_COUNTER_ROWS = slice(61, 63)   # rows 61-62 always change; mask for exploration tracking
 
@@ -154,6 +158,10 @@ def main():
                         help="Checkpoint path (default: latest in JEPA/checkpoints/)")
     parser.add_argument("--episodes", type=int, default=5,
                         help="Number of episodes to run (default: 5)")
+    parser.add_argument("--attn-gain", type=float, default=None,
+                        help="Override policy.attn_gain in-place after loading. "
+                             "Use to test the cross-attention residual-imbalance fix "
+                             "on legacy checkpoints (try 4.0).")
     args = parser.parse_args()
 
     device = torch.device(
@@ -184,7 +192,12 @@ def main():
     ).to(device)
     policy = PolicyNetwork(cfg.d_model, cfg.n_actions).to(device)
     encoder.load_state_dict(ckpt["encoder"])
-    policy.load_state_dict(ckpt["policy"])
+    # attn_gain (post-fix param) defaults to 1.0 when missing — preserves legacy behavior
+    policy.load_state_dict_with_legacy_gain(ckpt["policy"])
+    if args.attn_gain is not None:
+        with torch.no_grad():
+            policy.attn_gain.fill_(args.attn_gain)
+        print(f"[inspect] attn_gain override → {args.attn_gain}")
     encoder.eval(); policy.eval()
 
     # ── Environment ─────────────────────────────────────────────────────────

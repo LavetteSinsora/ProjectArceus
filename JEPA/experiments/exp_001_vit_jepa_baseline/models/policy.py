@@ -26,7 +26,13 @@ class PolicyNetwork(nn.Module):
         the reasoning token as a better state representation rather than a full RNN.
     """
 
-    def __init__(self, d_model: int = 128, n_actions: int = 4, ffn_dim: int = 256):
+    def __init__(
+        self,
+        d_model: int = 128,
+        n_actions: int = 4,
+        ffn_dim: int = 256,
+        attn_gain_init: float = 4.0,
+    ):
         super().__init__()
         self.d_model = d_model
         self.n_actions = n_actions
@@ -40,6 +46,9 @@ class PolicyNetwork(nn.Module):
         self.k_proj = nn.Linear(d_model, d_model)
         self.v_proj = nn.Linear(d_model, d_model)
         self.out_proj = nn.Linear(d_model, d_model)
+        # Per-dim gate on attn_out to compensate for the L2-norm constraint on z
+        # making ‖attn_out‖ ~ O(1) vs ‖h‖ ~ √d_model. Without this, h is stale.
+        self.attn_gain = nn.Parameter(torch.ones(d_model) * attn_gain_init)
         self.norm1 = nn.LayerNorm(d_model)
 
         # Post-attention FFN
@@ -52,6 +61,17 @@ class PolicyNetwork(nn.Module):
 
         # Action readout
         self.action_head = nn.Linear(d_model, n_actions)
+
+    def load_state_dict_with_legacy_gain(self, state_dict: dict) -> None:
+        """Load a policy state dict, defaulting attn_gain to 1.0 if absent.
+
+        Pre-fix checkpoints have no `attn_gain` parameter; their effective behavior
+        was equivalent to a unit gain. New checkpoints carry the learned vector.
+        """
+        if "attn_gain" not in state_dict:
+            with torch.no_grad():
+                self.attn_gain.fill_(1.0)
+        self.load_state_dict(state_dict, strict=False)
 
     def initial_state(self) -> torch.Tensor:
         """Return a fresh reasoning token (detached, ready for a new episode)."""
@@ -76,7 +96,7 @@ class PolicyNetwork(nn.Module):
         attn_w = F.softmax(Q @ K.T * self.scale, dim=-1)  # (1, 16)
         attn_out = self.out_proj((attn_w @ V).squeeze(0))  # (d_model,)
 
-        h_new = self.norm1(h + attn_out)
+        h_new = self.norm1(h + self.attn_gain * attn_out)
         h_new = self.norm2(h_new + self.ffn(h_new))
         return h_new
 

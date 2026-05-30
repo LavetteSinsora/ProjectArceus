@@ -19,7 +19,7 @@ A_UP, A_DOWN, A_LEFT, A_RIGHT = 0, 1, 2, 3
 
 @pytest.fixture
 def level_01_env():
-    return MiniLS20Env(str(_CONFIGS / "level_01.json"))
+    return MiniLS20Env(str(_CONFIGS / "level_01" / "simple_1_rotation.json"))
 
 
 @pytest.fixture

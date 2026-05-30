@@ -87,16 +87,70 @@ def serve_panel_js(experiment: str):
     return FileResponse(path, media_type="application/javascript")
 
 
+# Experiments that ship their own standalone dashboard. The main JEPA dashboard
+# is built around JEPA-style world models; experiments using a different model
+# family (e.g. exp_007 CNN+PPO) are surfaced here for discoverability but
+# inspection routes the user to their dedicated server.
+_EXTERNAL_DASHBOARDS = {
+    "exp_007_mini_env_cnn_ppo_baseline": "http://127.0.0.1:8789/",
+}
+
+
+def _is_experiment_dir(d: Path) -> bool:
+    """Heuristic: a directory is an inspectable experiment if it has a config.py
+    AND either a train.py or eval.py. Bare `shared/` / `runs/` dirs don't count.
+    """
+    if not d.is_dir() or d.name.startswith((".", "__")):
+        return False
+    if d.name in {"shared", "runs", "checkpoints", "results", "models", "dashboard"}:
+        return False
+    has_config = (d / "config.py").exists()
+    has_entry = (d / "train.py").exists() or (d / "eval.py").exists()
+    return has_config and has_entry
+
+
 @app.get("/api/experiments")
 def list_experiments():
-    """List all experiment directories under JEPA/experiments/."""
+    """List all experiment directories under JEPA/experiments/.
+
+    Discovery is two-level: top-level experiment dirs, AND any sub-directory
+    of a top-level dir that itself looks like an experiment (has config.py +
+    train.py). Sub-experiments are surfaced as "parent/child".
+    """
     if not EXPERIMENTS_DIR.exists():
         return {"experiments": []}
-    exps = sorted(
-        d.name for d in EXPERIMENTS_DIR.iterdir()
-        if d.is_dir() and not d.name.startswith(".") and not d.name.startswith("__")
-    )
-    return {"experiments": exps}
+
+    entries: list[dict] = []
+    for top in sorted(EXPERIMENTS_DIR.iterdir()):
+        if not top.is_dir() or top.name.startswith((".", "__")):
+            continue
+        children = sorted([c for c in top.iterdir() if _is_experiment_dir(c)])
+        ext = _EXTERNAL_DASHBOARDS.get(top.name)
+        if children:
+            # Parent is a container — list each child as its own experiment.
+            for c in children:
+                entries.append({
+                    "name": f"{top.name}/{c.name}",
+                    "external_dashboard": ext,
+                })
+            # Also include the parent itself so its system card / dashboard link is reachable.
+            entries.append({
+                "name": top.name,
+                "is_container": True,
+                "external_dashboard": ext,
+            })
+        else:
+            entries.append({
+                "name": top.name,
+                "external_dashboard": ext,
+            })
+    # Sort: keep alphabetical, but containers come last among siblings.
+    entries.sort(key=lambda e: (e["name"], e.get("is_container", False)))
+    # Back-compat: also expose a flat "experiments" list of names so old clients still work.
+    return {
+        "experiments": [e["name"] for e in entries],
+        "entries": entries,
+    }
 
 
 @app.get("/api/checkpoints")
@@ -119,7 +173,9 @@ def _experiment_trained_envs(experiment: str) -> tuple[list[str], str]:
       3. Fallback                                   → ["ls20"].
     """
     try:
-        cfg_mod = importlib.import_module(f"JEPA.experiments.{experiment}.config")
+        # Nested sub-experiments arrive as "parent/child"; dot the path to import.
+        mod = f"JEPA.experiments.{experiment.replace('/', '.')}.config"
+        cfg_mod = importlib.import_module(mod)
         cfg = cfg_mod.Config()
     except Exception:
         return (["ls20"], "ls20")

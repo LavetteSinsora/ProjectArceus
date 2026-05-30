@@ -1,0 +1,149 @@
+{
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "cells": {
+    "hard1__jepa_frozen": {
+      "n_runs": 0,
+      "n_solved": 0,
+      "steps_to_99_mean": null,
+      "steps_to_99_std": 0.0,
+      "steps_to_99_per_seed": [],
+      "final_eval_mean": null,
+      "final_eval_std": 0.0,
+      "final_eval_per_seed": []
+    },
+    "hard1__jepa_unfrozen": {
+      "n_runs": 0,
+      "n_solved": 0,
+      "steps_to_99_mean": null,
+      "steps_to_99_std": 0.0,
+      "steps_to_99_per_seed": [],
+      "final_eval_mean": null,
+      "final_eval_std": 0.0,
+      "final_eval_per_seed": []
+    },
+    "hard1__ppo_early_frozen": {
+      "n_runs": 0,
+      "n_solved": 0,
+      "steps_to_99_mean": null,
+      "steps_to_99_std": 0.0,
+      "steps_to_99_per_seed": [],
+      "final_eval_mean": null,
+      "final_eval_std": 0.0,
+      "final_eval_per_seed": []
+    },
+    "hard1__ppo_early_unfrozen": {
+      "n_runs": 0,
+      "n_solved": 0,
+      "steps_to_99_mean": null,
+      "steps_to_99_std": 0.0,
+      "steps_to_99_per_seed": [],
+      "final_eval_mean": null,
+      "final_eval_std": 0.0,
+      "final_eval_per_seed": []
+    },
+    "hard1__ppo_final_frozen": {
+      "n_runs": 0,
+      "n_solved": 0,
+      "steps_to_99_mean": null,
+      "steps_to_99_std": 0.0,
+      "steps_to_99_per_seed": [],
+      "final_eval_mean": null,
+      "final_eval_std": 0.0,
+      "final_eval_per_seed": []
+    },
+    "hard1__ppo_final_unfrozen": {
+      "n_runs": 0,
+      "n_solved": 0,
+      "steps_to_99_mean": null,
+      "steps_to_99_std": 0.0,
+      "steps_to_99_per_seed": [],
+      "final_eval_mean": null,
+      "final_eval_std": 0.0,
+      "final_eval_per_seed": []
+    },
+    "hard1__scratch_unfrozen": {
+      "n_runs": 0,
+      "n_solved": 0,
+      "steps_to_99_mean": null,
+      "steps_to_99_std": 0.0,
+      "steps_to_99_per_seed": [],
+      "final_eval_mean": null,
+      "final_eval_std": 0.0,
+      "final_eval_per_seed": []
+    },
+    "hard2__jepa_frozen": {
+      "n_runs": 0,
+      "n_solved": 0,
+      "steps_to_99_mean": null,
+      "steps_to_99_std": 0.0,
+      "steps_to_99_per_seed": [],
+      "final_eval_mean": null,
+      "final_eval_std": 0.0,
+      "final_eval_per_seed": []
+    },
+    "hard2__jepa_unfrozen": {
+      "n_runs": 0,
+      "n_solved": 0,
+      "steps_to_99_mean": null,
+      "steps_to_99_std": 0.0,
+      "steps_to_99_per_seed": [],
+      "final_eval_mean": null,
+      "final_eval_std": 0.0,
+      "final_eval_per_seed": []
+    },
+    "hard2__ppo_early_frozen": {
+      "n_runs": 0,
+      "n_solved": 0,
+      "steps_to_99_mean": null,
+      "steps_to_99_std": 0.0,
+      "steps_to_99_per_seed": [],
+      "final_eval_mean": null,
+      "final_eval_std": 0.0,
+      "final_eval_per_seed": []
+    },
+    "hard2__ppo_early_unfrozen": {
+      "n_runs": 0,
+      "n_solved": 0,
+      "steps_to_99_mean": null,
+      "steps_to_99_std": 0.0,
+      "steps_to_99_per_seed": [],
+      "final_eval_mean": null,
+      "final_eval_std": 0.0,
+      "final_eval_per_seed": []
+    },
+    "hard2__ppo_final_frozen": {
+      "n_runs": 0,
+      "n_solved": 0,
+      "steps_to_99_mean": null,
+      "steps_to_99_std": 0.0,
+      "steps_to_99_per_seed": [],
+      "final_eval_mean": null,
+      "final_eval_std": 0.0,
+      "final_eval_per_seed": []
+    },
+    "hard2__ppo_final_unfrozen": {
+      "n_runs": 0,
+      "n_solved": 0,
+      "steps_to_99_mean": null,
+      "steps_to_99_std": 0.0,
+      "steps_to_99_per_seed": [],
+      "final_eval_mean": null,
+      "final_eval_std": 0.0,
+      "final_eval_per_seed": []
+    },
+    "hard2__scratch_unfrozen": {
+      "n_runs": 0,
+      "n_solved": 0,
+      "steps_to_99_mean": null,
+      "steps_to_99_std": 0.0,
+      "steps_to_99_per_seed": [],
+      "final_eval_mean": null,
+      "final_eval_std": 0.0,
+      "final_eval_per_seed": []
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "n_checkpoints": 21,
+  "final_checkpoint_update": "final(976)",
+  "final": {
+    "trained": {
+      "update": "final(976)",
+      "source": "trained",
+      "action": "all",
+      "n_samples": 50007,
+      "jepa_mse": 2.0498253434197977e-05,
+      "idm_ce": 0.0011116445530205965,
+      "idm_acc": 0.9993600895874577
+    },
+    "random": {
+      "update": "final(976)",
+      "source": "random",
+      "action": "all",
+      "n_samples": 50002,
+      "jepa_mse": 0.019855810329318047,
+      "idm_ce": 1.1586641073226929,
+      "idm_acc": 0.7112915483380665
+    },
+    "jepa_mse_ratio_random_over_trained": 968.658641725635,
+    "idm_acc_drop_trained_minus_random": 0.2880685412493912
+  }
+}

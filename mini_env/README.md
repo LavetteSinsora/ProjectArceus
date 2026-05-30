@@ -12,7 +12,7 @@ trainers run unchanged.
 Matches `BaseArcEnv` minus the arcengine internals:
 
 ```python
-env = MiniLS20Env("mini_env/configs/level_01.json")
+env = MiniLS20Env("mini_env/configs/level_01/simple_1_rotation.json")
 env.reset()           -> np.ndarray (32, 32) uint8
 env.step(action_idx)  -> (np.ndarray, bool)   # action_idx in 0..3
 env.n_actions          # 4
@@ -89,7 +89,7 @@ rows 28-31   UI strip  — masked in frame_diff / patch_weights / detect_moved_c
 ## CLI
 
 ```
-uv run python -m mini_env.cli render mini_env/configs/level_01.json --out /tmp/level_01.png
+uv run python -m mini_env.cli render mini_env/configs/level_01/simple_1_rotation.json --out /tmp/level_01.png
 ```
 
 PIL/Pillow is optional and gated by try/except: omit `--out` to just sanity-
@@ -108,7 +108,7 @@ uv run python -c "
 from mini_env.env import MiniLS20Env
 import numpy as np
 np.save('mini_env/tests/golden/level_01_frame.npy',
-        MiniLS20Env('mini_env/configs/level_01.json').reset())
+        MiniLS20Env('mini_env/configs/level_01/simple_1_rotation.json').reset())
 "
 ```
 
@@ -122,7 +122,7 @@ uv run pytest mini_env/tests -q
 
 ```python
 from claude_automate.framework.env_api import make_mini_env
-env = make_mini_env("mini_env/configs/level_01.json")
+env = make_mini_env("mini_env/configs/level_01/simple_1_rotation.json")
 ```
 
 `claude_automate/solve.py` and `claude_automate/train.py` both accept a

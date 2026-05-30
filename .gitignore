@@ -19,6 +19,14 @@ wheels/
 JEPA/experiments/**/checkpoints/
 JEPA/experiments/**/runs/
 
+# Large/regenerable binary artifacts under other dir names (exp_008 buffers,
+# exp_010 random data + pretrained encoders). Source + metrics stay tracked.
+JEPA/experiments/**/data/
+JEPA/experiments/**/jepa_runs/
+JEPA/experiments/**/jepa_pretrained/
+*.pt
+*.npz
+
 # Stale top-level checkpoints folder (no longer used)
 JEPA/checkpoints/
 

@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Diagnosis — Why the 4 latent slots collapse to one</title>
+<style>
+  :root {
+    --bg:#0d1117; --panel:#161b22; --grid:#21262d; --text:#c9d1d9; --dim:#8b949e;
+    --accent:#388bfd; --red:#f85149; --green:#3fb950; --gold:#f0c040; --purple:#a371f7; --cyan:#79c0ff;
+  }
+  html,body{background:var(--bg);color:var(--text);margin:0;padding:0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size:15px; line-height:1.6;}
+  .container{max-width:980px; margin:0 auto; padding:36px 32px 80px;}
+  h1{color:#fff; font-size:30px; margin:0 0 6px; letter-spacing:-0.3px;}
+  h2{color:var(--accent); font-size:21px; margin:42px 0 10px; padding-bottom:6px;
+     border-bottom:1px solid var(--grid); letter-spacing:0.2px;}
+  h3{color:#fff; font-size:16px; margin:24px 0 8px; letter-spacing:0.1px;}
+  h4{color:var(--gold); font-size:14px; margin:18px 0 6px; text-transform:uppercase; letter-spacing:0.6px;}
+  p{margin:6px 0 12px;}
+  code, .mono{font-family:'Menlo','Monaco','Consolas',monospace; font-size:13px;}
+  code{background:#1f2530; color:var(--cyan); padding:1px 5px; border-radius:3px;}
+  pre{background:#1f2530; color:var(--text); padding:12px 16px; border-radius:6px;
+      overflow-x:auto; border:1px solid var(--grid); font-size:12.5px; line-height:1.5;}
+  .subtitle{color:var(--dim); margin:0 0 30px; font-size:14px;}
+  .fig{margin:18px 0 8px;}
+  .fig img{max-width:100%; border-radius:6px; border:1px solid var(--grid); display:block;}
+  .caption{color:var(--dim); font-size:12px; margin:6px 4px 24px; line-height:1.45;}
+  .tldr{background:#1c2128; border-left:3px solid var(--accent); padding:14px 18px; border-radius:4px;
+        margin:18px 0; font-size:14px;}
+  .tldr strong{color:#fff;}
+  .finding{background:#1c2128; border-left:3px solid var(--gold); padding:12px 18px; border-radius:4px;
+           margin:14px 0;}
+  .finding b{color:var(--gold);}
+  .key{background:#1c2128; border:1px solid var(--grid); padding:10px 16px; border-radius:4px;
+       margin:12px 0; font-size:13.5px;}
+  table{width:100%; border-collapse:collapse; margin:12px 0 18px; font-size:13px;}
+  th, td{border:1px solid var(--grid); padding:7px 10px; text-align:left;}
+  th{background:#1c2128; color:var(--gold); font-weight:600;}
+  td.num{font-family:'Menlo','Monaco',monospace; color:var(--cyan); text-align:right;}
+  .nx{color:var(--red);} .ok{color:var(--green);} .warn{color:var(--gold);}
+  ul{margin:6px 0 14px 20px;} li{margin:3px 0;}
+  .small{font-size:12.5px; color:var(--dim);}
+  .arch{background:var(--panel); border:1px solid var(--grid); border-radius:6px; padding:18px 20px; margin:12px 0;}
+  .arch pre{background:transparent; border:none; padding:0; font-size:12.5px;
+            color:var(--text); line-height:1.45;}
+  .toc{background:var(--panel); border:1px solid var(--grid); border-radius:6px; padding:14px 22px;
+       margin-bottom:30px;}
+  .toc a{color:var(--cyan); text-decoration:none; font-size:13.5px;}
+  .toc a:hover{text-decoration:underline;}
+  .toc ol{margin:6px 0 0 22px; padding:0;}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Why the 4 latent slots collapse to one</h1>
+<p class="subtitle">Diagnosis of representation collapse in <code>exp_006_interleaved_freezing</code>
+(parent: <code>exp_003_3_state_only_reward</code>) — based on the 500k-step run
+<code>run_20260522_004244_fresh</code>. Six experiments + numerical evidence + architectural argument.</p>
+
+<div class="tldr">
+<strong>TL;DR.</strong> The four latent vectors that the encoder produces per
+timestep are <em>supposed</em> to carry distinct information about the
+state, but in practice their mean pairwise cosine-similarity is <code>≈ 0.997</code>
+already after a single forward pass with random weights, and stays there for
+the entire 500k-step training run. We trace the collapse to three independent
+failure modes that all point the same way:
+<ol>
+<li><strong>The placeholder vectors never train.</strong> The training loop
+wraps every encoder forward that touches them in <code>torch.no_grad()</code>,
+and the JEPA forward feeds detached numpy snapshots. Result: the only
+slot-identity signal the encoder ever sees is the random init, and it stays
+that way bit-exactly for all 500,000 steps.</li>
+<li><strong>The perceiver is permutation-equivariant over the 4 query
+slots.</strong> No positional encoding, shared Q/K/V projections, and a
+placeholder init with σ=0.02 that is dwarfed by the cross-attention residual
+on the very first forward pass. Slot identity is washed out architecturally,
+before training even starts.</li>
+<li><strong>Neither loss term penalises within-batch slot uniformity.</strong>
+<code>L_state</code> targets the encoder's own (collapsed) next-step output,
+so identical-across-slots is a global optimum. <code>L_action</code> can
+succeed on a tiny 1-D temporal residual without ever forcing the 4 slots
+to be different. The "anti-collapse" gradient barely reaches the perceiver.</li>
+</ol>
+None of these is a numerical "vanishing gradient" in the classical sense —
+they are gradients that are <em>structurally never connected</em> to the
+parameter that needs to move, or that are aimed at a different part of the
+network entirely.
+</div>
+
+<div class="toc">
+<b>Contents</b>
+<ol>
+  <li><a href="#setup">Setup and notation</a></li>
+  <li><a href="#arch">Architecture at a glance</a></li>
+  <li><a href="#phenom">The phenomenon we are diagnosing</a></li>
+  <li><a href="#hypotheses">Hypotheses</a></li>
+  <li><a href="#exp1">Experiment 1 — When does collapse happen?</a></li>
+  <li><a href="#exp2">Experiment 2 — Do placeholders ever change?</a></li>
+  <li><a href="#exp3">Experiment 3 — Is the collapse already present at init?</a></li>
+  <li><a href="#exp4">Experiment 4 — Are the 4 per-latent MLPs symmetric?</a></li>
+  <li><a href="#exp5">Experiment 5 — Where do encoder gradients come from?</a></li>
+  <li><a href="#exp6">Experiment 6 — Slot specialisation in attention</a></li>
+  <li><a href="#why">Why the reward design <em>cannot</em> incentivise spread</a></li>
+  <li><a href="#conclusion">Diagnosis and implications</a></li>
+</ol>
+</div>
+
+<h2 id="setup">1. Setup and notation</h2>
+
+<p>For readers who haven't seen this codebase: we train a small visual world-model
+on a 64×64 grid puzzle ("LS20 Level 1"). At every timestep <em>t</em> the
+environment shows us a frame (a 64×64 grid of color indices), the agent picks
+one of 4 actions, the environment transitions, and we repeat.</p>
+
+<p><b>Latent vectors.</b> Inside the model, the visual state is summarised by
+<em>4 vectors</em> each of dimension 128. We write this as
+<code>H_t ∈ ℝ<sup>4×128</sup></code>. Each of the 4 "slot" vectors is supposed
+to capture a different piece of information about the scene — e.g.
+agent position, goals, walls, recent change. We denote them
+<code>h_t[0], h_t[1], h_t[2], h_t[3]</code>.</p>
+
+<p><b>Placeholders.</b> At the start of every episode (when the agent has no
+prior state to feed back), the encoder needs <em>initial queries</em> to start
+the recurrent loop. The model owns a learnable parameter
+<code>placeholders ∈ ℝ<sup>4×128</sup></code> for exactly this purpose. After
+one forward pass the encoder produces <code>H_1</code>, and from then on
+<code>H_{t-1}</code> is fed back as the queries for step <em>t</em>. The
+placeholders are therefore "what the model believes a state looks like before
+it has seen anything."</p>
+
+<p><b>Two predictors driving the JEPA loss.</b></p>
+<ul>
+<li><b>State predictor</b>: a flow-matching head that, given
+<code>(H_t, a_t)</code>, predicts <code>H_{t+1}</code>. It has <em>four
+separate MLPs</em> — one per latent slot — so MLP<sub>i</sub> only ever sees
+the <em>i</em>-th slot input. Loss: <code>L_state =
+mean<sub>i</sub>(MSE(MLP<sub>i</sub>(h_t[i]), h_{t+1}[i]))</code>. The target
+<code>H_{t+1}</code> is <code>.detach()</code>-ed (no grad to encoder via
+target).</li>
+<li><b>Action predictor</b>: a single MLP that, given
+<code>flatten(H_t) ‖ flatten(H_{t+1})</code> (a 1024-dim vector), predicts
+which discrete action was taken. Loss: <code>L_action = CE(logits,
+a_t)</code>. No detach on either endpoint — gradient flows back into the
+encoder through both <code>H_t</code> and <code>H_{t+1}</code>.</li>
+</ul>
+
+<p><b>Reward.</b> The agent is rewarded for its own surprise:
+<code>r_t = ||H_{t+1} − predict(H_t, a_t)||²</code> (state-prediction error,
+clamped). No extrinsic reward at all — this is a pure curiosity setup.</p>
+
+<p><b>Cosine similarity</b> is the standard <code>cossim(u,v) = u·v / (|u||v|)</code>:
+<code>+1.0</code> = same direction, <code>0</code> = orthogonal,
+<code>−1</code> = opposite. We use it throughout because the model's LayerNorm
+fixes the magnitude of every slot at <code>√128 ≈ 11.31</code>, so all the
+interesting variation lives in <em>direction</em>.</p>
+
+<h2 id="arch">2. Architecture at a glance</h2>
+
+<div class="arch">
+<pre>
+  ┌────────────────────────────────────────────────────────────────┐
+  │  64×64 color-index frame  (16 colors, 4 colors per dim)        │
+  └────────────────────────────────────────────────────────────────┘
+              │  color embed → flatten 4×4 grid → 16 patches × 128
+              ▼
+  ┌────────────────────────────────────────────────────────────────┐
+  │  STAGE 1 — Patch self-attention (2 blocks, 4 heads, 2D RoPE)   │
+  └────────────────────────────────────────────────────────────────┘
+              │  Z ∈ ℝ<sup>16×128</sup>  patch tokens (have RoPE, so position-aware)
+              ▼
+  ┌────────────────────────────────────────────────────────────────┐
+  │  STAGE 2 — Perceiver Resampler (2 rounds, shared Q/K/V)        │
+  │   • Queries:   placeholders (at t=0)  or  H_{t−1} (recurrent)  │
+  │   • Round = cross-attn(query→patches) + self-attn(among 4)     │
+  │   • Output LayerNorm forces ‖h_t[i]‖ = √128 for every slot     │
+  │   • NO positional encoding for the 4 query slots               │
+  └────────────────────────────────────────────────────────────────┘
+              │  H_t ∈ ℝ<sup>4×128</sup>  (the 4 latent slots)
+              ▼
+        ┌────────────────┬─────────────────┬─────────────────┐
+        │ POLICY MLP     │ STATE PREDICTOR │ ACTION PREDICTOR │
+        │ flatten(H_t)   │ 4 PER-SLOT MLPs │ flatten(H_t,H_{t+1}) │
+        │ → 4 action     │ → predicts each │ → predicts which │
+        │   probabilities│   h_{t+1}[i]    │   action was taken │
+        └────────────────┴─────────────────┴─────────────────┘
+</pre>
+</div>
+
+<p>Two design choices in the perceiver are critical for what follows:</p>
+<ul>
+<li>The 4 query slots have <em>no positional encoding</em>. The cross-attention
+applies the same <code>W<sub>Q</sub></code>, <code>W<sub>K</sub></code>,
+<code>W<sub>V</sub></code> to every slot. The function is
+<em>permutation-equivariant</em> over the 4 slots: shuffle the input slots and
+the output slots shuffle the same way. The <em>only</em> thing that can
+distinguish slot <em>i</em> from slot <em>j</em> is the actual content of the
+input vector being fed into slot <em>i</em>.</li>
+<li>That initial input content is <code>placeholders[i]</code>, sampled from
+<code>N(0, 0.02²)</code>. The cross-attention output is a softmax-weighted sum
+of <code>W<sub>V</sub>·patches</code>, whose norm is several orders of magnitude
+larger than 0.02. The placeholder's slot-identity signal is essentially
+drowned out by the patch-derived residual on the very first attention block.</li>
+</ul>
+
+<h2 id="phenom">3. The phenomenon we are diagnosing</h2>
+
+<p>If we run a debug episode against the final checkpoint and inspect the 4
+latent slots <code>h_t[0..3]</code>, we see that they are visually nearly
+identical — same heatmap pattern, same norm, near-identical attention rows.
+The model has 4 "containers" but is using them as 4 copies of the same
+state.</p>
+
+<p>Quantitatively, three signals all point at this:</p>
+<table>
+<tr><th>Metric</th><th>At init (step 0)</th><th>At step 500k</th><th>What it means</th></tr>
+<tr><td><code>latent_pairwise_cossim_t1</code></td>
+    <td class="num">0.997 (after 1 fwd pass)</td>
+    <td class="num">0.996</td>
+    <td>Mean cossim between the 4 slot vectors of <em>one</em> H_t. 1 = collapsed.</td></tr>
+<tr><td><code>ht_htp1_cossim_rollout</code></td>
+    <td class="num">≈ 0.998 (fully random)</td>
+    <td class="num">0.980</td>
+    <td>Cossim between H_t and H_{t+1}. 1 = encoder ignores frame.</td></tr>
+<tr><td><code>latent_eff_rank</code></td>
+    <td class="num">1.0–1.2</td>
+    <td class="num">1.51</td>
+    <td>Effective rank of the 4×128 matrix. Out of a max of 4. 1 = all slots colinear.</td></tr>
+</table>
+
+<h2 id="hypotheses">4. Hypotheses we tested</h2>
+<ol>
+<li><b>H1: The placeholders never train.</b> If the gradient never reaches
+<code>encoder.perceiver.placeholders</code>, the only per-slot-identity
+information the model ever has is the random init.</li>
+<li><b>H2: The collapse is architectural, not trained-in.</b> Even with random
+weights, the perceiver should drag the 4 slots toward similarity because the
+cross-attention residual swamps the placeholder signal.</li>
+<li><b>H3: The 4 per-latent state-predictor MLPs are functionally
+interchangeable.</b> "Dedicated per-slot MLP" means nothing if the inputs
+the MLPs see are the same distribution.</li>
+<li><b>H4: The action-predictor anti-collapse signal does not reach the
+perceiver.</b> The gradient takes the path of least resistance and lands
+on the earlier patch-SA layer where there is more to gain.</li>
+<li><b>H5: Neither loss term directly penalises within-batch slot
+uniformity.</b> The "collapse attractor" is a global optimum of L_state, and
+L_action is satisfied by a tiny temporal residual.</li>
+</ol>
+
+<h2 id="exp1">5. Experiment 1 — When does collapse happen?</h2>
+
+<p><b>Method.</b> Parse <code>runs/.../metrics.jsonl</code> for
+<code>latent_pairwise_cossim_t1</code> (intra-H_t spread, taken from a fresh
+eval pass), <code>latent_pairwise_cossim_buf</code> (same thing measured on
+buffer samples during training), and <code>ht_htp1_cossim_rollout</code> (the
+temporal version) at 12 milestone steps.</p>
+
+<div class="fig">
+<img src="fig/fig1_collapse_trajectory.png" alt="Collapse trajectory">
+<div class="caption">Fig 1 — All three "diversity" signals saturate near 1.0
+within the first ~1000 env steps (= ~200 JEPA updates after warmup), and stay
+there. The interleaved-freezing schedule produces a small dip around steps
+25k–50k for the <em>temporal</em> cossim (cyan) — that is the only visible
+effect of the entire schedule — but the within-batch slot cossim (red, gold)
+stays at &gt; 0.99 throughout. For reference, random orthogonal vectors have
+pairwise cossim ≈ 0.092 (purple dotted line).</div>
+</div>
+
+<div class="finding"><b>Finding 1.</b> The collapse is not a slow drift over
+training; it is a <em>fast event</em> in the first few hundred JEPA updates.
+By the time we finish warmup and start measuring, the slots are already
+indistinguishable.</div>
+
+<h2 id="exp2">6. Experiment 2 — Do placeholders ever change?</h2>
+
+<p><b>Method.</b> Static check: (a) verify
+<code>encoder.perceiver.placeholders</code> has <code>requires_grad = True</code>,
+is a leaf tensor, is registered under <code>encoder.parameters()</code>, and
+does receive a non-zero gradient under a one-shot forward+backward.
+(b) compare the placeholders parameter from the freshly initialised model
+against the same tensor in <code>step_500000_final.pt</code>.
+(c) inspect the <code>placeholder_drift_from_init_cossim_{i}</code> metrics
+that the training loop already logs.</p>
+
+<h4>2a. Static gradient check</h4>
+<pre>placeholders.shape          = torch.Size([4, 128])
+placeholders.requires_grad  = True
+placeholders.is_leaf        = True
+named under                  = 'perceiver.placeholders'   ← in optimizer
+after a synthetic backward:
+  placeholders.grad          = non-zero
+  per-slot grad norms        = [0.0047, 0.0043, 0.0054, 0.0045]
+</pre>
+<p>So <em>in principle</em> gradients can reach the parameter. There is no
+numerical vanishing, no <code>requires_grad=False</code> mistake, no missing
+optimizer group.</p>
+
+<h4>2b. Direct parameter diff: init vs step 500k</h4>
+<pre>per-slot L2 distance init → final  = [0.0, 0.0, 0.0, 0.0]
+per-slot cossim init → final       = [1.000, 1.000, 1.000, 1.000]
+torch.equal(init, final)           = True   ← element-wise identical
+</pre>
+
+<div class="finding"><b>Finding 2.</b> The placeholders parameter is
+<em>bit-exactly identical</em> between random init and step 500,000. Across
+half a million training steps, AdamW applied zero updates to this 4×128
+tensor.</div>
+
+<div class="fig">
+<img src="fig/fig2_placeholder_frozen.png" alt="Placeholder freeze">
+<div class="caption">Fig 2 — Per-slot cossim(placeholder<sub>t</sub>,
+placeholder<sub>init</sub>) is logged every 200 steps. It is 1.000 ± 1e-7 for
+every slot at every step from 5k → 500k.</div>
+</div>
+
+<h4>2c. Why? Tracing the call graph</h4>
+<p>The placeholder parameter has two ways into the forward graph:</p>
+<ol>
+<li><b>Rollout path (line 496–498 of train.py)</b>: at the start of an episode
+the loop calls <code>encoder.perceiver.get_initial_queries(...)</code>. <em>But
+the entire block is wrapped in</em> <code>with torch.no_grad():</code> — no
+gradient is recorded. Immediately afterwards (line 499) the output is converted
+to <code>numpy</code> and stored. From this point on there is no graph
+connection back to the parameter.</li>
+<li><b>JEPA training path (line 605, 608)</b>: the training forward uses
+<code>batch.h_queries.detach()</code>. The buffer entry came from the
+already-detached numpy snapshot of the rollout. Even if some entries
+originated from a placeholder forward, they are no longer connected to the
+parameter.</li>
+</ol>
+<p>So the JEPA backward has <em>nothing to back-propagate into</em>
+<code>self.placeholders</code>. AdamW skips parameters whose <code>.grad</code>
+is <code>None</code> (decoupled weight decay is not applied either) → the
+parameter is frozen at random init forever. This is not a bug per se; it is a
+consequence of the recurrent design where the placeholders are only used at
+episode-start, combined with the rollout-time-only access pattern of that
+codepath.</p>
+
+<h2 id="exp3">7. Experiment 3 — Is the collapse already present at init?</h2>
+
+<p><b>Method.</b> Build a freshly-initialised model (no checkpoint loaded),
+reset the LS20 environment, and walk 10 timesteps using <em>random actions
+and zero training updates</em>. Measure
+<code>mean_pairwise_cossim(H_t[0..3])</code> at each step.</p>
+
+<table>
+<tr><th>Step</th><th>Per-slot L2 norm</th><th>Pairwise cossim</th><th>Comment</th></tr>
+<tr><td>0 (placeholders)</td><td class="num">[0.24, 0.24, 0.22, 0.21]</td><td class="num warn">+0.092</td><td>Near-orthogonal random init, as expected</td></tr>
+<tr><td>1 (one fwd pass)</td><td class="num">[11.31, 11.31, 11.31, 11.31]</td><td class="num nx">+0.997</td><td>Collapsed already</td></tr>
+<tr><td>3 (recurrent)</td><td class="num">[11.31, …]</td><td class="num nx">+0.999</td><td></td></tr>
+<tr><td>10 (recurrent)</td><td class="num">[11.31, …]</td><td class="num nx">+1.000</td><td>Pure colinearity</td></tr>
+</table>
+
+<div class="finding"><b>Finding 3.</b> The collapse is not learned. It is
+present after exactly <em>one</em> encoder forward pass with random weights.
+Training doesn't <em>cause</em> the collapse — training inherits it from the
+architectural fixed point at initialisation.</div>
+
+<div class="fig">
+<img src="fig/fig6_init_vs_trained.png" alt="Init vs trained slot diversity">
+<div class="caption">Fig 6 — The placeholders themselves are near-orthogonal
+(cossim ≈ 0.09). After a single forward pass through the random-init encoder
+the slot cossim is already 0.997. After 500,000 training steps it is 0.996.
+The training delta is essentially noise; everything is decided in step one.</div>
+</div>
+
+<h4>Why does one forward pass collapse everything?</h4>
+<p>Three superimposed reasons:</p>
+<ol>
+<li><b>Magnitude mismatch.</b> Placeholders are <code>N(0, 0.02²)</code> →
+<code>||p_i|| ≈ 0.23</code>. The cross-attention residual is roughly
+<code>softmax(QKᵀ/√d)·V</code> where V is <code>W_V · patches</code> with V's
+entries on the order of <code>O(1)</code>; the residual norm is typically
+many times larger than 0.23. So <em>even before</em> a non-linearity, the
+placeholder's slot-identity signal is dominated by the attention output.</li>
+<li><b>Permutation-equivariant attention.</b> With shared Q/K/V projections
+and no positional encoding for the 4 query slots, the function from input
+queries to output queries is <em>permutation-equivariant</em>. If you permute
+the 4 input slots, the 4 output slots permute the same way. There is no
+slot-specific bias inside the attention. So the only way for the outputs to
+differ across slots is if the inputs differ. At init they differ only by the
+tiny placeholder signal, which gets absorbed.</li>
+<li><b>Output LayerNorm.</b> The perceiver applies
+<code>LayerNorm(d=128)</code> per-slot at the output. This forces
+<code>||h_t[i]|| ≈ √128 = 11.3137</code> for every slot — observable in our
+table above where every slot has exactly the same norm to four decimal places.
+Once magnitudes are equalised, the remaining variation is direction only.
+At random init, that direction is near-identical across slots.</li>
+</ol>
+
+<h2 id="exp4">8. Experiment 4 — Are the 4 per-latent MLPs symmetric?</h2>
+
+<p>The system card claims each latent has a "dedicated" state-predictor MLP.
+<em>In code</em> that is true:</p>
+<pre>self.mlps = nn.ModuleList([
+    _LatentMLP(d_model, d_action, time_proj_dim, hidden_dim)
+    for _ in range(n_latents)            # ← 4 independent MLPs
+])
+
+def _predict_clean(self, x_tau, tau, action_emb):
+    return torch.cat([
+        mlp(x_tau[:, i, :], action_emb, time_feat).unsqueeze(1)
+        for i, mlp in enumerate(self.mlps)    # ← MLP_i sees slot i only
+    ], dim=1)</pre>
+
+<p>The question is whether this <em>structural</em> separation produces any
+<em>functional</em> separation. We measure two things:</p>
+
+<h4>4a. Per-slot loss</h4>
+<div class="fig">
+<img src="fig/fig3_per_latent_mse.png" alt="Per-latent MSE">
+<div class="caption">Fig 3 — The 4 lines are on top of each other for the entire
+run. Maximum relative spread between the highest and lowest per-slot MSE is
+0.025 at step 5k, 0.008 at step 25k, and 0.142 at step 500k. The 4 MLPs are
+solving 4 essentially-identical regression problems.</div>
+</div>
+
+<h4>4b. MLP weight cossim</h4>
+<table>
+<tr><th>Pair</th><th>cos(W<sub>i</sub>·W<sub>j</sub>) at init</th><th>cos(W<sub>i</sub>·W<sub>j</sub>) at 500k</th></tr>
+<tr><td>L0-L1</td><td class="num">−0.001</td><td class="num">+0.009</td></tr>
+<tr><td>L0-L2</td><td class="num">+0.002</td><td class="num">+0.008</td></tr>
+<tr><td>L0-L3</td><td class="num">−0.000</td><td class="num">+0.014</td></tr>
+<tr><td>L1-L2</td><td class="num">−0.000</td><td class="num">+0.019</td></tr>
+<tr><td>L1-L3</td><td class="num">−0.002</td><td class="num">+0.022</td></tr>
+<tr><td>L2-L3</td><td class="num">+0.003</td><td class="num">+0.017</td></tr>
+</table>
+
+<div class="finding"><b>Finding 4.</b> The 4 MLPs do <em>not</em> collapse to
+identical weights (cossims stay ≈ 0.01), but they collapse to <em>functionally
+identical</em> mappings. There are many distinct weight configurations that
+realise the same input-output function; the optimiser found 4 of them. Whether
+the MLPs are "separate" is a code-organisation question, not an
+information-flow question. Since they all receive the same input distribution
+and target the same output distribution, slot-separate MLPs do not produce
+slot-separate behaviour. The architectural choice is decorative under
+collapse.</div>
+
+<h2 id="exp5">9. Experiment 5 — Where do encoder gradients come from?</h2>
+
+<p>The system card argues that the action predictor (<code>L_action =
+CE(predict_action(h_t, h_{t+1}), a_t)</code>) is the explicit anti-collapse
+mechanism, because it back-propagates into both <code>h_t</code> and
+<code>h_{t+1}</code> with no detach. To verify whether that gradient actually
+reaches the perceiver (which is the module that <em>owns</em> the 4-slot
+identity), we use the gradient-source-decomposition probe that's already
+plumbed into the training loop.</p>
+
+<p><b>Method.</b> Every 25 JEPA updates the loop computes
+<code>autograd.grad(loss, encoder_sub_block_params)</code> separately for three
+losses: <code>L_state</code>, <code>L_action_via_H_t</code>, and
+<code>L_action_via_H_{t+1}</code>, and records the gradient L2-norm per
+sub-block (patch SA = Stage 1, perceiver = Stage 2).</p>
+
+<div class="fig">
+<img src="fig/fig4_grad_decomp.png" alt="Gradient source decomposition">
+<div class="caption">Fig 4 — Gradient flowing into the encoder from each of
+the three loss-source paths. Left: into the patch-SA layer (Stage 1). Right:
+into "perc_other" (the Perceiver's Q/K/V and FFN weights, where slot identity
+lives).</div>
+</div>
+
+<table>
+<tr><th>Step</th><th>patch SA, from state</th><th>patch SA, from L_action (H_t)</th><th>patch SA, from L_action (H_{t+1})</th><th>perc., from state</th><th>perc., from L_action (H_t)</th><th>perc., from L_action (H_{t+1})</th></tr>
+<tr><td>25k</td><td class="num">0.19</td><td class="num">0.65</td><td class="num">1.22</td><td class="num">0.01</td><td class="num">0.04</td><td class="num">0.04</td></tr>
+<tr><td>100k</td><td class="num">0.10</td><td class="num">0.70</td><td class="num">1.31</td><td class="num">0.01</td><td class="num">0.05</td><td class="num">0.08</td></tr>
+<tr><td>500k</td><td class="num">0.02</td><td class="num">0.24</td><td class="num">0.27</td><td class="num">0.02</td><td class="num">0.05</td><td class="num">0.05</td></tr>
+</table>
+
+<div class="finding"><b>Finding 5.</b> The action predictor's gradient
+<em>does</em> dominate over state-prediction gradient — but almost all of it
+lands on the <strong>patch-SA layer (Stage 1)</strong>, not the perceiver.
+Gradients into "perc_other" (the layer where slot identity is produced) are
+<em>an order of magnitude smaller</em>. The action predictor learns to detect
+temporal change from the early patch features; it doesn't need to push the
+perceiver to use its 4 slots differently.</div>
+
+<h2 id="exp6">10. Experiment 6 — Slot specialisation in attention</h2>
+
+<p>If the 4 latent slots really specialised over training, we should see the
+per-slot attention patterns <em>diverge</em>. We measure that with row-JSD —
+the Jensen-Shannon divergence averaged over all pairs of the 4 attention
+rows. JSD = 0 means the 4 rows are identical (no specialisation); positive
+JSD means the 4 slots attend to different things.</p>
+
+<div class="fig">
+<img src="fig/fig5_row_jsd.png" alt="Row JSD across slots">
+<div class="caption">Fig 5 — Row-JSD across the 4 latent queries inside the
+perceiver's self-attention. Both rounds stay essentially flat at zero (round
+0 climbs from 0 → 0.017 over 500k steps; round 1 barely moves). For
+calibration, the patch SA layer (cyan) reaches JSD ≈ 0.19 — meaning patch
+tokens <em>do</em> attend to different things. The 4 perceiver slots do
+not.</div>
+</div>
+
+<div class="finding"><b>Finding 6.</b> Across the entire run the 4 latent
+slots never develop distinct attention patterns. The patch-SA layer learns
+some token-level specialisation (different patches attend to different
+neighbours, JSD ≈ 0.19) but the perceiver's 4 query slots remain virtually
+indistinguishable.</div>
+
+<h2 id="why">11. Why the reward design <em>cannot</em> incentivise spread</h2>
+
+<p>This is the central question and the most important takeaway. We have two
+losses (<code>L_state</code>, <code>L_action</code>) and an extrinsic reward
+that is just <code>L_state</code>'s magnitude. Let us ask, term by term:
+"does any of these go up if the 4 slots become identical?"</p>
+
+<h4>11.1 L_state under collapse</h4>
+<p>L_state is the per-slot MSE between the predictor output and the encoder's
+own next-step output:</p>
+<pre>L_state = (1/4) Σ_i ‖ MLP_i(h_t[i], a_t) − h_{t+1}[i].detach() ‖²
+</pre>
+<p>Suppose the encoder collapses: <code>h_t[0] = h_t[1] = h_t[2] = h_t[3] = h̄_t</code>.
+Then <em>by construction</em> <code>h_{t+1}[0..3] = h̄_{t+1}</code> too,
+because the encoder is the same on either side. Each MLP_i now solves the
+same regression problem
+<code>MLP_i(h̄_t, a_t) → h̄_{t+1}</code>. There exist weights that achieve
+zero loss (an MLP can fit one input-output pair perfectly), and indeed the
+trivial solution <code>MLP_i = identity</code> gives
+<code>‖h̄_t − h̄_{t+1}‖²</code> which goes to zero whenever the encoder
+ignores the frame.</p>
+
+<p><b>So under collapse, L_state has a global optimum.</b> The loss does not
+"want" the encoder to spread; it actively prefers it not to (less spread =
+fewer directions to predict = easier loss).</p>
+
+<h4>11.2 L_action under collapse</h4>
+<p>The action predictor sees a 1024-dim input formed by concatenating
+<code>flatten(H_t)</code> and <code>flatten(H_{t+1})</code>. Under collapse,
+<code>flatten(H_t) = [h̄_t, h̄_t, h̄_t, h̄_t]</code> — the first 128 dims are
+the same as the next 128, and so on. The action predictor's first linear
+layer can simply ignore the redundancy and read the relevant 256 dims
+<code>[h̄_t, h̄_{t+1}]</code>. As long as <code>h̄_t ≠ h̄_{t+1}</code> (some
+temporal change), the predictor can recover <em>a_t</em> from that 1-D
+direction. Even with <code>cossim(h̄_t, h̄_{t+1}) = 0.98</code> the residual
+<code>h̄_{t+1} − cos·h̄_t</code> can encode a 4-class signal.</p>
+
+<p>Empirically, in our run at step 500k:
+<code>ht_htp1_cossim_rollout = 0.98</code> (nearly aligned) and yet
+<code>L_action = 0.045</code> ≪ <code>ln 4 = 1.386</code>. The action
+predictor is succeeding from a tiny temporal residual.</p>
+
+<p><b>So L_action also has a global optimum under collapse</b> — as long as
+that small temporal residual exists.</p>
+
+<h4>11.3 The state-only reward under collapse</h4>
+<p>The intrinsic reward is just <code>L_state</code>. So the policy is
+rewarded for visiting states where the predictor is wrong. Under collapse,
+the predictor is wrong by an amount governed by the temporal change of
+<code>h̄_t</code> — i.e. the 1-D direction that survives the
+<code>h̄_t ≈ h̄_{t+1}</code> bottleneck. The reward gradient pushes the policy
+to maximise <em>that single direction</em>, not to encourage the encoder to
+spread.</p>
+
+<p>Worse: the policy update is <em>decoupled</em> from the encoder update.
+Rewards do not back-propagate through the encoder; they update only the
+policy MLP. So the policy's pressure on the encoder is zero. Any encoder
+spread has to come from L_state or L_action, both of which we've just shown
+are happy under collapse.</p>
+
+<h4>11.4 What would actually break collapse?</h4>
+<p>A loss with one of the following properties:</p>
+<ul>
+<li>An explicit <em>diversity</em> term: <code>L_div = − mean_{i≠j}
+‖h_t[i] − h_t[j]‖²</code> (or its cossim equivalent). This puts a
+non-trivial cost on slot collapse.</li>
+<li>A <em>slot-specific target</em>: e.g. ask slot 0 to predict the agent
+position, slot 1 the goal, slot 2 walls, slot 3 reward. Then collapse
+catastrophically destroys every target. This is what assignment-based
+methods like SLATE / SLOTS do.</li>
+<li>A <em>per-slot positional encoding</em> inside the perceiver, plus a
+per-slot loss-weighting. Even with the same target, distinguishable slot
+identity breaks the permutation-equivariance.</li>
+<li>An <em>EMA target encoder</em> (BYOL-style). The encoder's targets stop
+moving so it cannot just track them by collapsing onto a constant.</li>
+</ul>
+
+<h2 id="conclusion">12. Diagnosis and implications</h2>
+
+<div class="key">
+<b>The collapse has three causes operating in parallel, none of which is a
+"vanishing gradient" in the classical sense:</b>
+<ol>
+<li><b>Causal:</b> The placeholders never receive a gradient. The training
+loop wraps every encoder forward that touches them in
+<code>torch.no_grad()</code>, and the JEPA forward feeds detached numpy
+snapshots. We verified this both by code-trace and by direct parameter
+comparison (init vs 500k are bit-equal).</li>
+<li><b>Architectural:</b> Even if the placeholders did update, the perceiver
+is permutation-equivariant over its 4 query slots (shared Q/K/V, no positional
+encoding) and the cross-attention residual on the first forward dominates the
+placeholder signal by 1–2 orders of magnitude. The output LayerNorm then
+forces all 4 slots to identical norms. Experimentally, the collapse is
+present after exactly one untrained forward pass.</li>
+<li><b>Loss-design:</b> Neither L_state nor L_action goes up under collapse.
+Collapse is a <em>global optimum</em> of the joint loss. The action-predictor
+gradient that <em>could</em> in principle push for spread is being absorbed
+by the patch-SA layer at the input side of the encoder, not by the perceiver
+where slot identity is produced.</li>
+</ol>
+The role of the dedicated per-latent state-predictor MLPs is purely
+decorative: they cannot create slot diversity, they can only consume it. With
+no diversity in inputs, the 4 separate MLPs converge to the same input-output
+function (different weights, same behaviour).
+</div>
+
+<h4>What this means for next steps</h4>
+<p>The interleaved-freezing experiment was designed to break collapse by
+alternating the encoder and the predictors as moving targets. Our 500k-step
+result <code>n_exits = 0</code> (no JOINT exit ever fired) reflects exactly
+the diagnosis above: alternating who-trains-when does not change the global
+optimum of either L_state or L_action under collapse, and does not unfreeze
+the placeholders. The next experiments should attack at least one of the
+three causes — most cleanly an EMA target encoder + a positional encoding /
+small explicit diversity term inside the perceiver. Fixing the placeholder
+freeze alone (e.g. by letting them receive grad through the rollout forward)
+is necessary but probably not sufficient, because the architectural collapse
+on the very first forward pass would still need to be undone by training.</p>
+
+<p class="small" style="margin-top:30px">Generated by automated analysis on
+the 500k run <code>run_20260522_004244_fresh</code>. All figures are
+deterministic outputs of <code>JEPA/experiments/exp_006_interleaved_freezing/
+runs/run_20260522_004244_fresh/metrics.jsonl</code> and one re-instantiation
+of the encoder with seed 42 (Experiment 3). Raw script: see git history
+adjacent to this file.</p>
+
+</div>
+</body>
+</html>

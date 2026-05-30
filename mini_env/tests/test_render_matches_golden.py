@@ -26,9 +26,9 @@ def test_level_01_render_matches_golden():
             "`uv run python -c \"from mini_env.env import MiniLS20Env; "
             "import numpy as np; "
             "np.save('mini_env/tests/golden/level_01_frame.npy', "
-            "MiniLS20Env('mini_env/configs/level_01.json').reset())\"`"
+            "MiniLS20Env('mini_env/configs/level_01/simple_1_rotation.json').reset())\"`"
         )
-    env = MiniLS20Env(str(_CONFIGS / "level_01.json"))
+    env = MiniLS20Env(str(_CONFIGS / "level_01" / "simple_1_rotation.json"))
     frame = env.reset()
     golden = np.load(_GOLDEN)
     assert frame.shape == golden.shape
