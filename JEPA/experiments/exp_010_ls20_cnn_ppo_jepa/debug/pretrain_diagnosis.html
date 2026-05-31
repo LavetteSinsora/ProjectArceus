@@ -1,0 +1,142 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>Diagnosing the exp_010_2 JEPA pre-training</title><style>
+body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:900px;
+margin:30px auto;padding:0 20px;color:#1a1a1a;line-height:1.55}
+h1{font-size:23px;margin-bottom:2px} h2{font-size:17px;margin-top:28px;border-bottom:2px solid #eee;padding-bottom:4px}
+.sub{color:#666;font-size:13.5px} .tldr{background:#f7f7f9;border-left:4px solid #7570b3;padding:12px 16px;border-radius:4px;font-size:14px}
+.k{background:#eef7f1;border-left:4px solid #1b9e77;padding:9px 14px;border-radius:4px;margin:12px 0;font-size:13.8px}
+.w{background:#fdf2ef;border-left:4px solid #c0392b;padding:9px 14px;border-radius:4px;margin:12px 0;font-size:13.8px}
+.cav{background:#fbf7ec;border-left:4px solid #d4a017;padding:9px 14px;border-radius:4px;margin:12px 0;font-size:13px}
+table{border-collapse:collapse;width:100%;font-size:13px;margin:10px 0} th,td{border:1px solid #ddd;padding:5px 9px;text-align:center} th{background:#f3f3f6}
+code{background:#f0f0f3;padding:1px 5px;border-radius:3px;font-size:12.5px}
+.fail{color:#c0392b;font-weight:600} .ok{color:#1b9e77;font-weight:600} figcaption{font-size:12px;color:#555;margin-top:4px;text-align:center}
+ul{font-size:14px}</style></head><body>
+
+<h1>Diagnosing the JEPA pre-training run (exp_010_2_jepa_random_pretrain)</h1>
+<div class="sub">A research-scientist post-mortem of the offline JEPA encoder pre-train. <b>Every number here is
+read directly from two committed artifacts that cross-validate each other</b>: the logged
+<code>runs/jepa_pretrain_20260530_035358/metrics.jsonl</code> and <code>jepa_pretrained/encoder_final.pt</code>.
+Loss = <code>MSE(pred(h<sub>t</sub>,a), sg(h<sub>t+1</sub>))</code> + <code>CE(IDM(h<sub>t</sub>,h<sub>t+1</sub>),a)</code>,
+trunk_dim 256, 4 actions, Adam 3e-4, batch 256, stop-grad target, encoder output post-ReLU. Early-stop on
+<code>val_jepa</code> (patience 4, min_delta 0.002, cap 40 epochs).</div>
+
+<div class="tldr"><b>TL;DR — the pre-training is essentially a no-op, killed after one epoch by a brittle criterion.</b>
+The forward (state-prediction) validation loss <b>rises</b> right after epoch&nbsp;1
+(1.35&nbsp;&rarr;&nbsp;2.23&nbsp;&rarr;&nbsp;2.31) and never gets back below its epoch-1 value, so the
+patience-4 early-stop fires at epoch&nbsp;5 and the saved <code>encoder_final.pt</code> is literally the
+<b>epoch-1 model</b> (verified: its stored <code>epoch=1</code>, <code>best_val_jepa=1.3513</code>). One epoch
+moves the encoder only <b>~29%</b> (relative L2) off random init, and almost entirely in <i>direction</i>: its
+<code>fc.weight</code> norm barely changes (22.6&rarr;23.8) and its <code>fc.bias</code> stays essentially zero
+(0&rarr;0.045). So the "JEPA-pretrained" encoder handed to PPO is a
+lightly-perturbed random network — which is the most likely upstream reason JEPA-init &asymp; random-init in
+the downstream phantom-advantages report.</div>
+
+<h2>1 · The premise check: does validation loss rise early?  Yes — and that's the whole story.</h2>
+<p>The user recalled val loss <i>increasing</i> after a few updates. The logged curve confirms it for the
+<b>dominant</b> (forward) term. The full run is only 5 epochs long because it early-stopped:</p>
+<table>
+<tr><th>epoch</th><th>train_jepa</th><th>val_jepa (MSE, state-pred)</th><th>val_idm (CE, action-pred)</th><th>val_idm_acc</th></tr>
+<tr><td>1</td><td>1.291</td><td class="ok"><b>1.351</b> &nbsp;&larr; min &rarr; <code>encoder_final</code> saved here</td><td>0.152</td><td>0.915</td></tr>
+<tr><td>2</td><td>1.694</td><td class="fail">2.228</td><td>0.167</td><td>0.918</td></tr>
+<tr><td>3</td><td>2.453</td><td class="fail">2.309</td><td>0.137</td><td>0.917</td></tr>
+<tr><td>4</td><td>1.852</td><td>1.695</td><td>0.155</td><td>0.916</td></tr>
+<tr><td>5</td><td>1.511</td><td>1.479</td><td>0.136</td><td>0.916</td></tr>
+</table>
+
+<figure>
+<svg viewBox="0 0 600 300" width="100%" style="max-width:640px;border:1px solid #eee;border-radius:4px;background:#fff">
+<!-- gridlines + y labels (loss 0..2.5 -> y 270..30) -->
+<g stroke="#eee"><line x1="60" y1="270" x2="585" y2="270"/><line x1="60" y1="222" x2="585" y2="222"/>
+<line x1="60" y1="174" x2="585" y2="174"/><line x1="60" y1="126" x2="585" y2="126"/>
+<line x1="60" y1="78" x2="585" y2="78"/><line x1="60" y1="30" x2="585" y2="30"/></g>
+<g font-size="10" fill="#888" text-anchor="end">
+<text x="55" y="273">0.0</text><text x="55" y="225">0.5</text><text x="55" y="177">1.0</text>
+<text x="55" y="129">1.5</text><text x="55" y="81">2.0</text><text x="55" y="33">2.5</text></g>
+<!-- shaded "loss rises" region epochs 1-3 -->
+<rect x="70" y="30" width="240" height="240" fill="#c0392b" opacity="0.05"/>
+<text x="190" y="22" font-size="10.5" fill="#c0392b" text-anchor="middle">forward loss RISES while training "improves"</text>
+<!-- x labels -->
+<g font-size="10" fill="#888" text-anchor="middle">
+<text x="70" y="285">ep1</text><text x="190" y="285">ep2</text><text x="310" y="285">ep3</text><text x="430" y="285">ep4</text><text x="550" y="285">ep5</text></g>
+<!-- val_jepa (orange solid) -->
+<polyline fill="none" stroke="#d95f02" stroke-width="2.5" points="70,140 190,56 310,48 430,107 550,128"/>
+<g fill="#d95f02"><circle cx="70" cy="140" r="4"/><circle cx="190" cy="56" r="3"/><circle cx="310" cy="48" r="3"/><circle cx="430" cy="107" r="3"/><circle cx="550" cy="128" r="3"/></g>
+<!-- train_jepa (orange dashed) -->
+<polyline fill="none" stroke="#d95f02" stroke-width="1.4" stroke-dasharray="4 3" points="70,146 190,107 310,34 430,92 550,125"/>
+<!-- val_idm (green) -->
+<polyline fill="none" stroke="#1b9e77" stroke-width="2.2" points="70,255 190,254 310,257 430,255 550,257"/>
+<g fill="#1b9e77"><circle cx="70" cy="255" r="3"/><circle cx="550" cy="257" r="3"/></g>
+<!-- best marker -->
+<line x1="70" y1="30" x2="70" y2="270" stroke="#1b9e77" stroke-width="1" stroke-dasharray="2 2"/>
+<!-- legend -->
+<g font-size="11"><rect x="360" y="40" width="14" height="3" fill="#d95f02"/><text x="380" y="44" fill="#333">val_jepa (state-pred MSE)</text>
+<rect x="360" y="56" width="14" height="3" fill="#d95f02" opacity="0.7"/><text x="380" y="60" fill="#333">train_jepa</text>
+<rect x="360" y="72" width="14" height="3" fill="#1b9e77"/><text x="380" y="76" fill="#333">val_idm (action-pred CE)</text></g>
+</svg>
+<figcaption>The forward state-prediction loss (orange) nearly doubles after epoch 1 — for <b>both</b> train and
+val, so it is not over-fitting — and never returns below epoch 1. The action-prediction loss (green) is
+~10&times; smaller and dead flat from the start.</figcaption>
+</figure>
+
+<h2>2 · Consequence: the deployed encoder is a one-epoch model</h2>
+<p>The early-stop watches <code>val_jepa</code>: epoch&nbsp;1 (1.351) is the global minimum; epochs 2–5 are all
+above it, so the "bad" counter hits patience&nbsp;4 and training halts at epoch&nbsp;5. <code>_save_encoder</code>
+only runs on an improvement, i.e. only at epoch&nbsp;1.</p>
+<div class="k"><b>Verified directly from <code>encoder_final.pt</code>:</b> <code>epoch = 1</code>,
+<code>best_val_jepa = 1.3513</code> (identical to the epoch-1 row above). The two artifacts agree, so this is
+not a logging quirk — the shipped encoder really is the epoch-1 snapshot.</div>
+
+<h2>3 · What did that one epoch actually change? (the "norm" question)</h2>
+<p>Comparing <code>encoder_final.pt</code> to a fresh seed-0 init (the same init the run used):</p>
+<table><tr><th></th><th>‖fc.weight‖</th><th>‖fc.bias‖</th><th>whole-encoder relative change</th></tr>
+<tr><td>random init</td><td>22.63</td><td>0.00</td><td>—</td></tr>
+<tr><td><b>encoder_final (epoch 1)</b></td><td>23.77</td><td>0.045</td><td class="fail">~0.29 (rel. L2)</td></tr></table>
+<div class="w"><b>No weight-space norm explosion at this checkpoint.</b> The output-layer weight norm
+barely moves (22.6&rarr;23.8) and the bias stays essentially <i>zero</i> (0.045). The change is ~29% but it is
+almost pure rotation, not growth — the encoder is a direction-perturbed random network. If the
+representation does have a large <i>feature</i>-space norm in practice, it is inherited from the orthogonal
+init / conv stack, not grown by pre-training — at least not by the single epoch that was kept.</div>
+
+<h2>4 · The two predictors interact badly (the real failure mode)</h2>
+<ul>
+<li><b>The action-predictor (IDM) saturates instantly.</b> <code>val_idm_acc</code> is already 0.915 at epoch 1
+and stays 0.915–0.918 forever; its loss is ~0.14 and flat. After epoch 1 it supplies essentially <b>no new
+gradient</b> to the encoder.</li>
+<li><b>The state-predictor (forward JEPA) dominates and is unstable.</b> Its loss is ~10&times; the IDM loss
+and it <i>increases</i> for two epochs. And it is the <b>sole early-stop criterion</b>.</li>
+<li><b>Net effect:</b> the one objective that could keep shaping the encoder (forward prediction) is the one
+that misbehaves and then trips the kill-switch, while the satisfied action head can't rescue it. Pre-training
+stops before the encoder learns anything substantial.</li>
+</ul>
+
+<h2>5 · Why does the forward val loss rise? (hypothesis — not confirmed)</h2>
+<p>The target is a <b>stop-gradient of the encoder's own next-state embedding</b> with <b>no EMA target and no
+normalization</b>. As the encoder reorganizes in the first epochs, that target is non-stationary (its scale and
+geometry drift), so the raw MSE to it can grow even while the predictor is tracking it — a classic moving-target
+JEPA instability. A raw-MSE patience criterion then mistakes target drift for "no progress."</p>
+<div class="cav"><b>Honestly, this cannot be confirmed from the committed artifacts.</b> Epochs 2–4 weights were
+never saved (the early-stop only saves on improvement), and the random buffer + the LS20 env are not committed
+(<code>third_party.ls20</code> lived only on Colab; <code>data/random_buffer.npz</code> is absent). So I could
+measure neither the per-epoch feature norm ‖h‖ nor effective rank that would prove/refute the target-drift
+mechanism.</div>
+
+<h2>6 · Recommended experiment to settle it</h2>
+<ul>
+<li>Re-run the pre-train logging, per epoch, the mean ‖h‖, the per-dim std, and the effective rank of the
+encoder features on the val split (the missing measurements above).</li>
+<li>Replace the raw-MSE early-stop with a <b>scale-invariant</b> target (EMA / stop-grad-normalized target, or a
+variance-/covariance-regularized loss à la VICReg), or at least make the stop criterion a normalized/cosine
+metric — then check whether val "loss" still rises.</li>
+<li>Ablate: drop the IDM head, drop the forward head — see which one drives any norm growth and which one the
+early-stop should track.</li>
+</ul>
+
+<div class="cav" style="margin-top:22px"><b>Process note (for full transparency).</b> An earlier pass of this
+analysis ran against the wrong files (a different, VICReg-style JEPA that does not exist in this experiment) and
+several intermediate statistics could not be reproduced on this cloud-synced working volume. <b>This report was
+rebuilt from scratch using only <code>encoder_final.pt</code> and the 5-row <code>metrics.jsonl</code>, which
+agree with each other.</b> Any feature-space norm / effective-rank / collapse figures are deliberately omitted
+because they could not be verified here.</div>
+<div class="sub" style="margin-top:10px">Distinct from the existing <code>debug/report.html</code> ("Phantom
+Advantages"), which diagnoses the downstream PPO phase. This page diagnoses the pre-training phase itself.</div>
+</body></html>
