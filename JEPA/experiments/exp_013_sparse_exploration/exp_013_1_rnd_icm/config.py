@@ -47,10 +47,11 @@ class Config:
     vf_clip_eps: float = 0.2
     c_value: float = 1.0             # raised 0.5→1.0 = "faster value" (the value-lr knob under
                                      # a shared actor-critic optimiser) to reduce the value lag.
-    c_entropy: float = 0.05    # raised from 0.01: at 0.01 the actor collapsed to a
-                               # deterministic loop on some seeds (entropy→0) and went
-                               # worse-than-random; 0.05 flipped the worst seed
-                               # censored→solved (see probes/occ_power_limits.md).
+    c_entropy: float = 0.10    # 0.01→0.05→0.10: at 0.01 the actor collapsed to a
+                               # deterministic loop (entropy→0, worse-than-random); 0.05
+                               # flipped the worst ls20-L1 seed (occ_power_limits.md); raised
+                               # to 0.10 because long frontier-length runs still collapsed
+                               # onto a frozen-φ degenerate signal (run_diagnosis.md).
     grad_clip: float = 0.5
     epochs: int = 4
     minibatches: int = 4
@@ -64,7 +65,10 @@ class Config:
 
     # φ-freeze: freeze the ICM encoder once it separates states (inverse_acc high),
     # giving RND a STATIONARY ruler. Adaptive trigger + a hard fallback.
-    phi_freeze_inverse_acc: float = 0.90
+    phi_freeze_inverse_acc: float = 0.70  # lowered 0.90→0.70: held-out inv_acc maxes ~0.72-0.76
+                                          # on ls20/g50t, so 0.90 was unreachable and freeze always
+                                          # fell to the update-100 fallback (often on a chance-level
+                                          # φ). 0.70 lets it fire ADAPTIVELY near φ's peak (run_diagnosis.md).
     phi_freeze_patience: int = 3        # consecutive updates ≥ threshold
     phi_freeze_max_updates: int = 100   # freeze by here regardless (~200k env steps)
     # Which inverse_acc the freeze trigger reads. "holdout" = a FIXED uniform-random

@@ -47,11 +47,11 @@ def main():
     ap.add_argument("--levels", type=int, nargs="+", default=[0], help="levels (0-indexed) for the A/B/C/D comparison")
     ap.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
     ap.add_argument("--transfer", dest="transfer", action="store_true", default=True,
-                    help="run the ls20 L1->L2 φ-transfer pair (only if ls20 in --games)")
+                    help="run the ls20 L1->L2 φ-transfer pair (only if ls20 in --games & B in --methods)")
     ap.add_argument("--no-transfer", dest="transfer", action="store_false")
-    ap.add_argument("--run-d", dest="run_d", action="store_true", default=True)
-    ap.add_argument("--no-d", dest="run_d", action="store_false")
-    ap.add_argument("--run-disagree", action="store_true")
+    ap.add_argument("--methods", nargs="+", default=["A", "B", "C", "D"], choices=["A", "B", "C", "D", "E"],
+                    help="A=frozen-φ RND, B=icm-φ RND, C=additive, D=lookahead, E=disagreement")
+    ap.add_argument("--cap", type=int, default=None, help="uniform max-env-steps override for every cell")
     ap.add_argument("--concurrency", type=int, default=1)
     ap.add_argument("--n-envs", type=int, default=None)
     ap.add_argument("--save-dir", default=None, help="zip results here (e.g. a mounted Drive dir)")
@@ -61,11 +61,13 @@ def main():
 
     SEEDS = args.seeds
     games = args.games
-    do_transfer = args.transfer and ("ls20" in games)
+    M = set(args.methods)
+    do_transfer = args.transfer and ("ls20" in games) and ("B" in M)
     cells = [(g, l) for g in games for l in args.levels]
 
     def base_args(g, l):
-        a = ["--game", g, "--level", str(l), "--max-env-steps", str(CAPS.get((g, l), DEFAULT_CAP))]
+        cap = args.cap if args.cap is not None else CAPS.get((g, l), DEFAULT_CAP)
+        a = ["--game", g, "--level", str(l), "--max-env-steps", str(cap)]
         if args.n_envs:
             a += ["--n-envs", str(args.n_envs)]
         return a
@@ -82,7 +84,9 @@ def main():
         cks = sorted(glob.glob(f"{RUNS1}/{exp_name}_*/checkpoints/step_*.pt"))
         return cks[-1] if cks else None
 
-    print(f"sweep: games={games} levels={args.levels} seeds={SEEDS} transfer={do_transfer} D={args.run_d}", flush=True)
+    cap_str = f"cap={args.cap}" if args.cap is not None else "cap=per-cell"
+    print(f"sweep: games={games} levels={args.levels} seeds={SEEDS} methods={sorted(M)} "
+          f"transfer={do_transfer} {cap_str}", flush=True)
     t0 = time.time()
 
     # Phase 1 — ls20 transfer source: B (icm) on ls20 L1 FIRST (sequential; φ ckpts for Phase 2).
@@ -98,13 +102,15 @@ def main():
     for (g, l) in cells:
         for s in SEEDS:
             sd = ["--seed", str(s)]
-            jobs.append((f"A_frozen_{g}_L{l+1}_s{s}", EXP1, ["--phi-mode", "frozen"] + base_args(g, l) + sd))
-            jobs.append((f"C_additive_{g}_L{l+1}_s{s}", EXP2, base_args(g, l) + sd))
-            if args.run_d:
+            if "A" in M:
+                jobs.append((f"A_frozen_{g}_L{l+1}_s{s}", EXP1, ["--phi-mode", "frozen"] + base_args(g, l) + sd))
+            if "C" in M:
+                jobs.append((f"C_additive_{g}_L{l+1}_s{s}", EXP2, base_args(g, l) + sd))
+            if "D" in M:
                 jobs.append((f"D_lookahead_{g}_L{l+1}_s{s}", EXP5, base_args(g, l) + sd))
-            if args.run_disagree:
+            if "E" in M:
                 jobs.append((f"E_disagree_{g}_L{l+1}_s{s}", EXP4, base_args(g, l) + sd))
-            if not (do_transfer and (g, l) == ("ls20", 0)):     # B on ls20 L1 already ran in Phase 1
+            if "B" in M and not (do_transfer and (g, l) == ("ls20", 0)):  # B on ls20 L1 already ran in Phase 1
                 jobs.append((f"B_icm_{g}_L{l+1}_s{s}", EXP1, base_args(g, l) + sd))
     if do_transfer:
         for s in SEEDS:
@@ -112,7 +118,7 @@ def main():
             jobs.append((f"B_random_ls20_L2_s{s}", EXP1, base_args("ls20", 1) + sd))
             if src.get(s):
                 jobs.append((f"B_xfer_ls20_L2_s{s}", EXP1, base_args("ls20", 1) + sd + ["--init-phi-ckpt", src[s]]))
-            if args.run_d:
+            if "D" in M:
                 jobs.append((f"D_lookahead_ls20_L2_s{s}", EXP5, base_args("ls20", 1) + sd))
 
     with ThreadPoolExecutor(max_workers=args.concurrency) as ex:

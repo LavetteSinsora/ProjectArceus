@@ -34,7 +34,7 @@ class Config:
     stop_on_first_reward: bool = True
 
     # Lookahead control
-    tau: float = 1.0                 # softmax temperature over standardised per-state Q
+    tau: float = 0.25                # softmax temperature over standardised per-state Q (0.25 → max-prob~0.85, entropy~0.36; τ=1.0 was ~uniform/random-walk)
     gamma: float = 0.95              # intrinsic horizon (value bootstrap in Q + GAE)
     gae_lambda: float = 0.95
     intrinsic_episodic: bool = False
@@ -52,7 +52,7 @@ class Config:
     icm_lr: float = 1e-3
     icm_hidden: int = 256
     icm_epochs: int = 1
-    phi_freeze_inverse_acc: float = 0.90
+    phi_freeze_inverse_acc: float = 0.70  # lowered 0.90→0.70 (holdout maxes ~0.76; adaptive freeze)
     phi_freeze_patience: int = 3
     phi_freeze_max_updates: int = 100
     freeze_metric: str = "holdout"
