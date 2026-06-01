@@ -86,6 +86,14 @@ class Config:
     # (e.g. an L1-trained run) → cross-level representation TRANSFER. None = random init.
     init_phi_ckpt: str | None = None
 
+    # Timer/observation-confound fix (Option A). The env feeds a marching step-timer in
+    # the frame, so every frame is fake-unique (1073 vs 43 TRUE board states) and the
+    # novelty signal is anti-informative (probes/frontier_analysis.md, signal_redundancy.md).
+    # Mask these rows in the φ/novelty path ONLY (the policy's separate encoder is untouched)
+    # so novelty is computed on the true board. Patched onto φ.encode in the trainer.
+    mask_timer: bool = True
+    timer_mask_rows: tuple = (60, 63)        # inclusive row range zeroed before φ
+
     # RND-on-φ + leak
     rnd_feature_dim: int = 256
     rnd_hidden: int = 256

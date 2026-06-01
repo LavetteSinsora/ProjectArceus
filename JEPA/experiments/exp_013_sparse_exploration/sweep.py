@@ -21,7 +21,9 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
 import time
+import zipfile
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
@@ -55,9 +57,34 @@ def main():
     ap.add_argument("--concurrency", type=int, default=1)
     ap.add_argument("--n-envs", type=int, default=None)
     ap.add_argument("--save-dir", default=None, help="zip results here (e.g. a mounted Drive dir)")
+    ap.add_argument("--zip-each", action="store_true",
+                    help="re-zip results to --save-dir after EVERY run (crash/disconnect-safe progress)")
     ap.add_argument("--logdir", default="/tmp/exp013_sweep_logs")
     args = ap.parse_args()
     os.makedirs(args.logdir, exist_ok=True)
+    ziplock = threading.Lock()
+
+    def zip_progress(tag=""):
+        """Re-zip ONLY the lightweight results (result.json / metrics.jsonl / config / figs);
+        skip model checkpoints (*.pt, ~11MB each) so the incremental zip stays small + fast."""
+        if not args.save_dir:
+            return
+        os.makedirs(args.save_dir, exist_ok=True)
+        out = os.path.join(args.save_dir, "exp013_progress.zip")
+        root_parent = os.path.dirname(BASE.rstrip("/"))
+        with ziplock:
+            tmp = out + ".tmp"
+            with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zf:
+                for root, _dirs, files in os.walk(BASE):
+                    if "checkpoints" in root.split(os.sep) or "__pycache__" in root:
+                        continue
+                    for fn in files:
+                        if fn.endswith((".pt", ".pyc")):
+                            continue
+                        fp = os.path.join(root, fn)
+                        zf.write(fp, os.path.relpath(fp, root_parent))
+            os.replace(tmp, out)
+        print(f"     ↳ progress zip updated -> {out}  ({os.path.getsize(out)/1e6:.1f} MB, {tag})", flush=True)
 
     SEEDS = args.seeds
     games = args.games
@@ -78,6 +105,8 @@ def main():
             rc = subprocess.run([sys.executable, "-m", module] + extra,
                                 stdout=f, stderr=subprocess.STDOUT).returncode
         print(f"[{'ok ' if rc == 0 else 'FAIL'}] {name:44s} {(time.time()-t0)/60:5.1f} min", flush=True)
+        if args.zip_each:
+            zip_progress(name)
         return rc
 
     def latest_ckpt(exp_name):

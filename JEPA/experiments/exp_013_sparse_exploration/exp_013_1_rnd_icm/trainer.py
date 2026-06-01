@@ -172,6 +172,23 @@ def _save_ckpt(run_dir: Path, model, icm, rndphi, cfg, global_step, frozen):
     return path
 
 
+def _apply_timer_mask(phi_enc, rows):
+    """Option-A timer-confound fix: mask the marching step-timer rows in the φ-ENCODER's
+    input only. Every novelty/ICM/holdout path routes through `.encode`, so patching it
+    makes φ see the TRUE board (43 states, not 1073 timer-stamped frames); the policy's
+    SEPARATE encoder is untouched. See probes/frontier_analysis.md."""
+    r0, r1 = int(rows[0]), int(rows[1])
+    orig = phi_enc.encode
+
+    def masked_encode(obs):
+        obs = obs.clone()
+        obs[..., r0:r1 + 1, :] = 0          # zero the timer rows → constant → no fake novelty
+        return orig(obs)
+
+    phi_enc.encode = masked_encode
+    return phi_enc
+
+
 def train(cfg, smoke: bool = False) -> dict:
     if smoke:
         cfg = cfg.smoke()
@@ -218,6 +235,11 @@ def train(cfg, smoke: bool = False) -> dict:
         phi_enc = icm
     rndphi = RNDPhi(dim=cfg.trunk_dim, hidden=cfg.rnd_hidden, out=cfg.rnd_feature_dim,
                     leak=cfg.leak).to(device)
+
+    if getattr(cfg, "mask_timer", False):
+        _apply_timer_mask(phi_enc, cfg.timer_mask_rows)
+        print(f"[exp013_1]   TIMER-MASK rows {tuple(cfg.timer_mask_rows)} on φ/novelty path "
+              f"(policy input untouched)")
 
     ppo_opt = torch.optim.Adam(model.parameters(), lr=cfg.learning_rate)
     icm_opt = torch.optim.Adam(icm.parameters(), lr=cfg.icm_lr) if icm is not None else None

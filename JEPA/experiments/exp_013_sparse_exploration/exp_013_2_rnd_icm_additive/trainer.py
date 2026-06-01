@@ -38,7 +38,7 @@ from JEPA.experiments.exp_012_ls20_rnd.shared.rnd import RewardForwardFilter
 from JEPA.experiments.exp_013_sparse_exploration.exp_013_1_rnd_icm.rnd_phi import RNDPhi
 from JEPA.experiments.exp_013_sparse_exploration.exp_013_1_rnd_icm.trainer import (
     _EMAStd, _phi_and_novelty, _rnd_update, _gae_nonepisodic, _gae_episodic,
-    _collect_holdout, _eval_holdout_inv_acc, _save_ckpt,
+    _collect_holdout, _eval_holdout_inv_acc, _save_ckpt, _apply_timer_mask,
 )
 
 
@@ -101,6 +101,11 @@ def train(cfg, smoke: bool = False) -> dict:
                     hidden=cfg.icm_hidden).to(device)
     rndphi = RNDPhi(dim=cfg.trunk_dim, hidden=cfg.rnd_hidden, out=cfg.rnd_feature_dim,
                     leak=cfg.leak).to(device)
+
+    if getattr(cfg, "mask_timer", False):
+        _apply_timer_mask(icm, cfg.timer_mask_rows)
+        print(f"[exp013_2]   TIMER-MASK rows {tuple(cfg.timer_mask_rows)} on φ/novelty path "
+              f"(policy input untouched)")
 
     ppo_opt = torch.optim.Adam(model.parameters(), lr=cfg.learning_rate)
     icm_opt = torch.optim.Adam(icm.parameters(), lr=cfg.icm_lr)

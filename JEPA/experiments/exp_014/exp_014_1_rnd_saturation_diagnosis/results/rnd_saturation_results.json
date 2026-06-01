@@ -1,0 +1,254 @@
+{
+  "timestamp": "2026-06-01T13:38:24",
+  "device": "cpu",
+  "game": "ls20",
+  "level_index": 1,
+  "level_human": 2,
+  "n_envs": 16,
+  "rollout_steps": 128,
+  "seed": 0,
+  "mu_values": [
+    0.0,
+    0.001,
+    0.01,
+    0.05
+  ],
+  "proj_dim": 256,
+  "rnd_lr": 0.0001,
+  "timer_rows_masked": [
+    60,
+    63
+  ],
+  "n_chosen_states": 4,
+  "total_env_steps": 512000,
+  "n_updates": 250,
+  "all_chosen_passed_1000_at_update": 12,
+  "final_chosen_visits": {
+    "0": 129499,
+    "1": 21871,
+    "2": 33838,
+    "3": 97360
+  },
+  "chosen_state_descriptions": {
+    "0": {
+      "color_hist": {
+        "0": 3,
+        "1": 2,
+        "3": 1356,
+        "4": 2111,
+        "5": 301,
+        "9": 41,
+        "11": 16,
+        "12": 10
+      },
+      "rarest_color": 1,
+      "rarest_color_mean_loc_yx": [
+        47,
+        50
+      ],
+      "pattern_centroid_yx": [
+        27.4,
+        30.2
+      ],
+      "pattern_bbox_yxyx": [
+        0,
+        0,
+        59,
+        58
+      ],
+      "n_distinct_colors": 8
+    },
+    "1": {
+      "color_hist": {
+        "0": 3,
+        "1": 2,
+        "3": 1356,
+        "4": 2111,
+        "5": 301,
+        "9": 41,
+        "11": 16,
+        "12": 10
+      },
+      "rarest_color": 1,
+      "rarest_color_mean_loc_yx": [
+        47,
+        50
+      ],
+      "pattern_centroid_yx": [
+        27.4,
+        30.2
+      ],
+      "pattern_bbox_yxyx": [
+        0,
+        0,
+        59,
+        58
+      ],
+      "n_distinct_colors": 8
+    },
+    "2": {
+      "color_hist": {
+        "0": 3,
+        "1": 2,
+        "3": 1356,
+        "4": 2111,
+        "5": 301,
+        "9": 41,
+        "11": 16,
+        "12": 10
+      },
+      "rarest_color": 1,
+      "rarest_color_mean_loc_yx": [
+        47,
+        50
+      ],
+      "pattern_centroid_yx": [
+        27.4,
+        30.2
+      ],
+      "pattern_bbox_yxyx": [
+        0,
+        0,
+        59,
+        58
+      ],
+      "n_distinct_colors": 8
+    },
+    "3": {
+      "color_hist": {
+        "0": 3,
+        "1": 2,
+        "3": 1356,
+        "4": 2111,
+        "5": 301,
+        "9": 41,
+        "11": 16,
+        "12": 10
+      },
+      "rarest_color": 1,
+      "rarest_color_mean_loc_yx": [
+        47,
+        50
+      ],
+      "pattern_centroid_yx": [
+        27.4,
+        30.2
+      ],
+      "pattern_bbox_yxyx": [
+        0,
+        0,
+        59,
+        58
+      ],
+      "n_distinct_colors": 8
+    }
+  },
+  "key_numbers": {
+    "0.0": {
+      "state_0": {
+        "nov_at_~100": 0.11205296963453293,
+        "count_used_100": 1,
+        "nov_at_~1000": 0.0011465917341411114,
+        "count_used_1000": 1010
+      },
+      "state_1": {
+        "nov_at_~100": 0.007729179225862026,
+        "count_used_100": 84,
+        "nov_at_~1000": 0.00020681554451584816,
+        "count_used_1000": 1009
+      },
+      "state_2": {
+        "nov_at_~100": 0.008643257431685925,
+        "count_used_100": 159,
+        "nov_at_~1000": 0.0006495291017927229,
+        "count_used_1000": 949
+      },
+      "state_3": {
+        "nov_at_~100": 0.11602252721786499,
+        "count_used_100": 1,
+        "nov_at_~1000": 0.000754991197027266,
+        "count_used_1000": 1187
+      }
+    },
+    "0.001": {
+      "state_0": {
+        "nov_at_~100": 0.11205296963453293,
+        "count_used_100": 1,
+        "nov_at_~1000": 0.0011515350779518485,
+        "count_used_1000": 1010
+      },
+      "state_1": {
+        "nov_at_~100": 0.007751566357910633,
+        "count_used_100": 84,
+        "nov_at_~1000": 0.00020305882208049297,
+        "count_used_1000": 1009
+      },
+      "state_2": {
+        "nov_at_~100": 0.008665411733090878,
+        "count_used_100": 159,
+        "nov_at_~1000": 0.000646416621748358,
+        "count_used_1000": 949
+      },
+      "state_3": {
+        "nov_at_~100": 0.11602252721786499,
+        "count_used_100": 1,
+        "nov_at_~1000": 0.0007543318206444383,
+        "count_used_1000": 1187
+      }
+    },
+    "0.01": {
+      "state_0": {
+        "nov_at_~100": 0.11205296963453293,
+        "count_used_100": 1,
+        "nov_at_~1000": 0.0012075448175892234,
+        "count_used_1000": 1010
+      },
+      "state_1": {
+        "nov_at_~100": 0.007964338175952435,
+        "count_used_100": 84,
+        "nov_at_~1000": 0.0002486918237991631,
+        "count_used_1000": 1009
+      },
+      "state_2": {
+        "nov_at_~100": 0.008872441947460175,
+        "count_used_100": 159,
+        "nov_at_~1000": 0.0006796353845857084,
+        "count_used_1000": 949
+      },
+      "state_3": {
+        "nov_at_~100": 0.11602252721786499,
+        "count_used_100": 1,
+        "nov_at_~1000": 0.0007726526819169521,
+        "count_used_1000": 1187
+      }
+    },
+    "0.05": {
+      "state_0": {
+        "nov_at_~100": 0.11205296963453293,
+        "count_used_100": 1,
+        "nov_at_~1000": 0.0017829070566222072,
+        "count_used_1000": 1010
+      },
+      "state_1": {
+        "nov_at_~100": 0.009096812456846237,
+        "count_used_100": 84,
+        "nov_at_~1000": 0.0009156613959930837,
+        "count_used_1000": 1009
+      },
+      "state_2": {
+        "nov_at_~100": 0.010000282898545265,
+        "count_used_100": 159,
+        "nov_at_~1000": 0.0013542319647967815,
+        "count_used_1000": 949
+      },
+      "state_3": {
+        "nov_at_~100": 0.11602252721786499,
+        "count_used_100": 1,
+        "nov_at_~1000": 0.0012572028208523989,
+        "count_used_1000": 1187
+      }
+    }
+  },
+  "headline_figure": "/Users/chrishe/Desktop/\u540c\u6b65\u7a7a\u95f4/Chris/Chris/Obsidian Vault/UCSD/Course Notes/CSE 190 Deep RL/Group Project/Code Repo/JEPA/experiments/exp_014/exp_014_1_rnd_saturation_diagnosis/figures/rnd_saturation_vs_visits.png",
+  "supporting_figure": "/Users/chrishe/Desktop/\u540c\u6b65\u7a7a\u95f4/Chris/Chris/Obsidian Vault/UCSD/Course Notes/CSE 190 Deep RL/Group Project/Code Repo/JEPA/experiments/exp_014/exp_014_1_rnd_saturation_diagnosis/figures/rnd_saturation_overlay.png"
+}
