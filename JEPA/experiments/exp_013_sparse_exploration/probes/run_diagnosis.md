@@ -1,5 +1,14 @@
 # exp_013 — Run Diagnosis: new exploration methods vs icm/rnd baselines
 
+> ⚠️ **CORRECTION (see `collapse_verdict.md`).** Two claims in this doc were overturned by a
+> later evidence-grounded review:
+> 1. The **"separate ext/int value heads protect icm from collapse"** framing is **wrong** — the
+>    baseline `rnd` runs (which *have* dual heads, c_entropy=0.01, no φ) collapse *harder* (6/8 → ~0)
+>    than our methods. What separates collapse from non-collapse is **time spent on a dead reward
+>    field**, not architecture: runs that solve fast (<~60 updates) exit before the entropy bleed.
+> 2. "mean(ret−V)≈0 ⇒ not value-lag" is correct *for re86*, but value-lag **is** real on ls20
+>    (in a reconstructed-loop probe). Collapse has **two distinct mechanisms on two cells** — see verdict.
+
 **Scope:** analysis of EXISTING `metrics.jsonl` / `result.json` only (no method code modified, no new training runs). Real runs filtered by `total_env_steps > 1000` (tiny 256-step smokes excluded). Method ↔ label map:
 - **A** = `exp_013_1_rnd_icm`, `phi_mode=frozen` (frozen-φ + RND-on-φ)
 - **B** = `exp_013_1_rnd_icm`, `phi_mode=icm` (trainable φ via ICM inverse model + RND-on-φ)

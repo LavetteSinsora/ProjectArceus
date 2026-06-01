@@ -1,5 +1,13 @@
 # exp_013_1 (OCC / RND+ICM) — Why does the pure-exploration actor's entropy collapse to ~0?
 
+> ⚠️ **SCOPE CORRECTION (see `collapse_verdict.md`).** The value-lag / phantom-advantage story
+> below is **real but cell-specific**: it is demonstrated on the *reconstructed ls20-L1 loop probe*
+> here (mean Ret−V = +0.78; +2.59 in the 6 updates before entropy falls), **not** on any shipped
+> run, and it is **absent on re86** (the cell where the new methods actually regressed: mean(Ret−V)≈0).
+> The dominant collapse mode on real runs is **reward-field starvation** (novelty decays to a flat
+> ~0 field → slow PPO entropy bleed over hundreds of updates), not a value-lag spike. Treat this doc
+> as the value-lag mechanism on ONE cell, not the universal cause.
+
 *Research-scientist diagnosis. Skeptical read; the generic-PPO null is on the table. Every
 number is from a probe under `probes/` (logs + `*.json` in `probes/results/`). All runs:
 ls20 L1, seed 0, MPS, the shipped `Config` loop reconstructed in
