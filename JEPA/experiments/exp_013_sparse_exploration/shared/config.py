@@ -71,13 +71,19 @@ class Config:
     #       that tracks the CURRENT novelty scale, not a frozen cumulative one;
     #   (3) never subtract the mean (keep the bonus ≥ 0, RND-faithful);
     #   (4) optionally CLIP the normalised bonus as a value-target safety rail.
-    # norm_warmup_updates: how many updates to give ZERO intrinsic reward while the
-    # bonus net trains. METHOD-SPECIFIC: warm up only until the method's own error
-    # is informative — ICM's untrained forward model has a ~700× startup transient
-    # (needs ~3), RND's frozen-random target gives a mild ~3× transient (needs ~1).
-    # Left None -> the per-method default below; set an int to override.
+    # METHOD-SPECIFIC normalisation (left None -> per-method default in __post_init__):
+    #   * int_norm_mode: how the intrinsic-return std is tracked.
+    #       "cumulative" = RND-paper-faithful running RMS (TESTED-good for RND; its
+    #                      novelty is small + stationary, so the cumulative std is fine).
+    #       "ema"        = decaying std that tracks the CURRENT scale (needed for ICM,
+    #                      whose untrained-model error has a ~700× startup transient
+    #                      that a cumulative RMS bakes in forever -> bonus collapse).
+    #   * norm_warmup_updates: updates of ZERO intrinsic reward while the bonus net
+    #     trains (ICM=3 to skip its transient; RND=0 — its target is informative at t=0).
+    # RND therefore runs byte-for-byte its tested config (cumulative RMS, no warm-up).
+    int_norm_mode: str | None = None       # "cumulative" | "ema"
     norm_warmup_updates: int | None = None
-    int_norm_decay: float = 0.99
+    int_norm_decay: float = 0.99           # used only when int_norm_mode == "ema"
     int_reward_clip: float | None = None   # cap on the normalised bonus (None = off)
 
     # ── RND-specific (Burda et al. 2018) ─────────────────────────────────────
@@ -103,8 +109,10 @@ class Config:
     save_every: int = 0                 # checkpoints not needed for the metric
 
     def __post_init__(self):
+        if self.int_norm_mode is None:
+            self.int_norm_mode = "ema" if self.method == "icm" else "cumulative"
         if self.norm_warmup_updates is None:
-            self.norm_warmup_updates = 3 if self.method == "icm" else 1
+            self.norm_warmup_updates = 3 if self.method == "icm" else 0
 
     @property
     def exp_name(self) -> str:

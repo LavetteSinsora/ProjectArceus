@@ -29,7 +29,7 @@ from JEPA.experiments.exp_010_ls20_cnn_ppo_jepa.shared.metrics import MetricsWri
 from JEPA.experiments.exp_011_ls20_icm.shared.ls20_vec_env_level import VecLS20EnvLevel
 from JEPA.experiments.exp_012_ls20_rnd.shared.model import ActorCriticRND
 from JEPA.experiments.exp_012_ls20_rnd.shared.rollout import collect_rollout, compute_gae
-from JEPA.experiments.exp_012_ls20_rnd.shared.rnd import RewardForwardFilter
+from JEPA.experiments.exp_012_ls20_rnd.shared.rnd import RewardForwardFilter, RunningMeanStd
 from JEPA.experiments.exp_012_ls20_rnd.shared.evaluator import evaluate
 
 from .intrinsic import make_bonus
@@ -58,6 +58,22 @@ class _EMAStd:
     @property
     def std(self) -> float:
         return float(np.sqrt(self.var)) if self.var is not None else 1.0
+
+
+class _CumStd:
+    """Cumulative running std of the intrinsic returns — the RND-paper-faithful
+    normaliser (exp_012's RunningMeanStd). Good for RND's small stationary signal;
+    NOT for ICM (a startup transient pins it forever) — use _EMAStd there."""
+
+    def __init__(self):
+        self._rms = RunningMeanStd()
+
+    def update(self, x) -> None:
+        self._rms.update(x)
+
+    @property
+    def std(self) -> float:
+        return float(np.sqrt(self._rms.var))
 
 
 def train(cfg, smoke: bool = False) -> dict:
@@ -97,7 +113,10 @@ def train(cfg, smoke: bool = False) -> dict:
     bonus = make_bonus(cfg, device)
 
     rff = RewardForwardFilter(cfg.gamma_int)
-    int_ret_std = _EMAStd(cfg.int_norm_decay)
+    int_ret_std = (_EMAStd(cfg.int_norm_decay) if cfg.int_norm_mode == "ema"
+                   else _CumStd())
+    print(f"[exp013]   intrinsic norm: mode={cfg.int_norm_mode} "
+          f"warmup={cfg.norm_warmup_updates}")
 
     global_step = 0
     first_reward_step: int | None = None
