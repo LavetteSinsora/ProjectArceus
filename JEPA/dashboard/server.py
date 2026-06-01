@@ -155,12 +155,20 @@ def list_experiments():
 
 @app.get("/api/checkpoints")
 def list_checkpoints(experiment: str):
-    """List checkpoints for a given experiment (newest first)."""
+    """List checkpoints for a given experiment (newest first).
+
+    Recursive: multi-seed experiments (e.g. exp_011) write per-run subdirs
+    `checkpoints/<run>/step_*.pt` so parallel seeds don't overwrite each other.
+    We return each checkpoint's path *relative to* `checkpoints/` — for the flat
+    single-run layout that's just `step_*.pt` (unchanged), and for nested layouts
+    it's `<run>/step_*.pt`, which `/api/run_episode` joins back transparently.
+    """
     ckpt_dir = EXPERIMENTS_DIR / experiment / "checkpoints"
     if not ckpt_dir.exists():
         return {"checkpoints": []}
-    ckpts = sorted(ckpt_dir.glob("step_*.pt"), reverse=True)
-    return {"checkpoints": [p.name for p in ckpts]}
+    ckpts = sorted(ckpt_dir.rglob("step_*.pt"),
+                   key=lambda p: (p.parent.name, p.name), reverse=True)
+    return {"checkpoints": [str(p.relative_to(ckpt_dir)) for p in ckpts]}
 
 
 def _experiment_trained_envs(experiment: str) -> tuple[list[str], str]:

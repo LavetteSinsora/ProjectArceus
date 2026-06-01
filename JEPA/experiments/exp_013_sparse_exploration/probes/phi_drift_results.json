@@ -1,0 +1,283 @@
+{
+  "n_probe_states": 1500,
+  "level_index": 0,
+  "probe_seed": 12345,
+  "device": "mps",
+  "per_seed": {
+    "exp_011_0_icm_seed0_20260531_091849": {
+      "steps": [
+        102400,
+        204800,
+        307200,
+        409600
+      ],
+      "phi_inter_state_l2": [
+        1.0567374229431152,
+        1.0666429996490479,
+        1.067536473274231,
+        1.0170314311981201
+      ],
+      "phi_intervals": [
+        {
+          "step_from": 102400,
+          "step_to": 204800,
+          "cos_mean": 0.9873575568199158,
+          "cos_std": 0.01207825355231762,
+          "l2_mean": 0.14527639746665955,
+          "l2_std": 0.06467200070619583,
+          "inter_state_l2_at_to": 1.0666429996490479,
+          "drift_over_resolution": 0.13619964459941997
+        },
+        {
+          "step_from": 204800,
+          "step_to": 307200,
+          "cos_mean": 0.9660523533821106,
+          "cos_std": 0.03967009857296944,
+          "l2_mean": 0.23056717216968536,
+          "l2_std": 0.12142455577850342,
+          "inter_state_l2_at_to": 1.067536473274231,
+          "drift_over_resolution": 0.2159806038874859
+        },
+        {
+          "step_from": 307200,
+          "step_to": 409600,
+          "cos_mean": 0.9592087268829346,
+          "cos_std": 0.04853750392794609,
+          "l2_mean": 0.25370800495147705,
+          "l2_std": 0.13124868273735046,
+          "inter_state_l2_at_to": 1.0170314311981201,
+          "drift_over_resolution": 0.24945935510822392
+        }
+      ],
+      "policy_encoder_intervals": [
+        {
+          "step_from": 102400,
+          "step_to": 204800,
+          "cos_mean": 0.9909752011299133,
+          "l2_mean": 0.13018764555454254,
+          "inter_state_l2_at_to": 0.8501380681991577,
+          "drift_over_resolution": 0.15313706140735261
+        },
+        {
+          "step_from": 204800,
+          "step_to": 307200,
+          "cos_mean": 0.9830021858215332,
+          "l2_mean": 0.1737765371799469,
+          "inter_state_l2_at_to": 0.8649200201034546,
+          "drift_over_resolution": 0.20091630802945362
+        },
+        {
+          "step_from": 307200,
+          "step_to": 409600,
+          "cos_mean": 0.9963017702102661,
+          "l2_mean": 0.08131875842809677,
+          "inter_state_l2_at_to": 0.8401174545288086,
+          "drift_over_resolution": 0.09679451127902766
+        }
+      ]
+    },
+    "exp_011_0_icm_seed1_20260531_092042": {
+      "steps": [
+        102400,
+        204800,
+        307200,
+        409600
+      ],
+      "phi_inter_state_l2": [
+        0.8739051818847656,
+        0.9396533966064453,
+        0.9710777997970581,
+        0.9567556381225586
+      ],
+      "phi_intervals": [
+        {
+          "step_from": 102400,
+          "step_to": 204800,
+          "cos_mean": 0.9646565914154053,
+          "cos_std": 0.029396411031484604,
+          "l2_mean": 0.24722272157669067,
+          "l2_std": 0.09784859418869019,
+          "inter_state_l2_at_to": 0.9396533966064453,
+          "drift_over_resolution": 0.2630999073376786
+        },
+        {
+          "step_from": 204800,
+          "step_to": 307200,
+          "cos_mean": 0.952060878276825,
+          "cos_std": 0.037833698093891144,
+          "l2_mean": 0.2907223105430603,
+          "l2_std": 0.10661289840936661,
+          "inter_state_l2_at_to": 0.9710777997970581,
+          "drift_over_resolution": 0.29938106978021456
+        },
+        {
+          "step_from": 307200,
+          "step_to": 409600,
+          "cos_mean": 0.9180023074150085,
+          "cos_std": 0.05430004000663757,
+          "l2_mean": 0.3847823441028595,
+          "l2_std": 0.12628765404224396,
+          "inter_state_l2_at_to": 0.9567556381225586,
+          "drift_over_resolution": 0.40217410671121606
+        }
+      ],
+      "policy_encoder_intervals": [
+        {
+          "step_from": 102400,
+          "step_to": 204800,
+          "cos_mean": 0.954883873462677,
+          "l2_mean": 0.28087279200553894,
+          "inter_state_l2_at_to": 0.8909406065940857,
+          "drift_over_resolution": 0.3152542267427543
+        },
+        {
+          "step_from": 204800,
+          "step_to": 307200,
+          "cos_mean": 0.9398710131645203,
+          "l2_mean": 0.3235568404197693,
+          "inter_state_l2_at_to": 0.863622784614563,
+          "drift_over_resolution": 0.37465065325270863
+        },
+        {
+          "step_from": 307200,
+          "step_to": 409600,
+          "cos_mean": 0.8690643906593323,
+          "l2_mean": 0.4776701331138611,
+          "inter_state_l2_at_to": 0.785423755645752,
+          "drift_over_resolution": 0.6081686856047981
+        }
+      ]
+    },
+    "exp_011_0_icm_seed2_20260531_092043": {
+      "steps": [
+        102400,
+        204800,
+        307200,
+        409600
+      ],
+      "phi_inter_state_l2": [
+        1.0742506980895996,
+        1.1154417991638184,
+        1.1297783851623535,
+        1.130516767501831
+      ],
+      "phi_intervals": [
+        {
+          "step_from": 102400,
+          "step_to": 204800,
+          "cos_mean": 0.9164947271347046,
+          "cos_std": 0.062457259744405746,
+          "l2_mean": 0.3818790316581726,
+          "l2_std": 0.14557841420173645,
+          "inter_state_l2_at_to": 1.1154417991638184,
+          "drift_over_resolution": 0.3423567522253918
+        },
+        {
+          "step_from": 204800,
+          "step_to": 307200,
+          "cos_mean": 0.9711074233055115,
+          "cos_std": 0.024149440228939056,
+          "l2_mean": 0.2277284413576126,
+          "l2_std": 0.0769989937543869,
+          "inter_state_l2_at_to": 1.1297783851623535,
+          "drift_over_resolution": 0.20156912572272936
+        },
+        {
+          "step_from": 307200,
+          "step_to": 409600,
+          "cos_mean": 0.9998699426651001,
+          "cos_std": 0.00017950266192201525,
+          "l2_mean": 0.014079779386520386,
+          "l2_std": 0.007864397019147873,
+          "inter_state_l2_at_to": 1.130516767501831,
+          "drift_over_resolution": 0.012454286208981489
+        }
+      ],
+      "policy_encoder_intervals": [
+        {
+          "step_from": 102400,
+          "step_to": 204800,
+          "cos_mean": 0.6016668677330017,
+          "l2_mean": 0.8775438666343689,
+          "inter_state_l2_at_to": 0.9531523585319519,
+          "drift_over_resolution": 0.9206753346190787
+        },
+        {
+          "step_from": 204800,
+          "step_to": 307200,
+          "cos_mean": 0.7156843543052673,
+          "l2_mean": 0.7359323501586914,
+          "inter_state_l2_at_to": 0.9165429472923279,
+          "drift_over_resolution": 0.8029436616503346
+        },
+        {
+          "step_from": 307200,
+          "step_to": 409600,
+          "cos_mean": 0.998765766620636,
+          "l2_mean": 0.045044951140880585,
+          "inter_state_l2_at_to": 0.9148257374763489,
+          "drift_over_resolution": 0.04923883237603505
+        }
+      ]
+    }
+  },
+  "caveat": "Checkpoints start at step 102400; the first ~100k env steps of phi drift are NOT captured.",
+  "averaged_phi": [
+    {
+      "step_from": 102400,
+      "step_to": 204800,
+      "n_seeds": 3,
+      "cos_mean": 0.9561696251233419,
+      "l2_mean": 0.25812605023384094,
+      "inter_state_l2_at_to": 1.0405793984731038,
+      "drift_over_resolution": 0.24721876805416346
+    },
+    {
+      "step_from": 204800,
+      "step_to": 307200,
+      "n_seeds": 3,
+      "cos_mean": 0.9630735516548157,
+      "l2_mean": 0.2496726413567861,
+      "inter_state_l2_at_to": 1.0561308860778809,
+      "drift_over_resolution": 0.23897693313014326
+    },
+    {
+      "step_from": 307200,
+      "step_to": 409600,
+      "n_seeds": 3,
+      "cos_mean": 0.9590269923210144,
+      "l2_mean": 0.2175233761469523,
+      "inter_state_l2_at_to": 1.0347679456075032,
+      "drift_over_resolution": 0.22136258267614048
+    }
+  ],
+  "averaged_policy_encoder": [
+    {
+      "step_from": 102400,
+      "step_to": 204800,
+      "n_seeds": 3,
+      "cos_mean": 0.8491753141085306,
+      "l2_mean": 0.4295347680648168,
+      "inter_state_l2_at_to": 0.8980770111083984,
+      "drift_over_resolution": 0.46302220758972856
+    },
+    {
+      "step_from": 204800,
+      "step_to": 307200,
+      "n_seeds": 3,
+      "cos_mean": 0.8795191844304403,
+      "l2_mean": 0.4110885759194692,
+      "inter_state_l2_at_to": 0.8816952506701151,
+      "drift_over_resolution": 0.45950354097749896
+    },
+    {
+      "step_from": 307200,
+      "step_to": 409600,
+      "n_seeds": 3,
+      "cos_mean": 0.9547106424967448,
+      "l2_mean": 0.20134461422761282,
+      "inter_state_l2_at_to": 0.8467889825503031,
+      "drift_over_resolution": 0.2514006764199536
+    }
+  ]
+}

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why ICM fails on LS20 Level 2</title>
+<style>
+  :root { --ink:#1a1a1a; --mut:#666; --red:#c0392b; --grn:#1e8449; --bg:#fafafa; --card:#fff; }
+  * { box-sizing:border-box; }
+  body { font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+         color:var(--ink); background:var(--bg); margin:0; line-height:1.5; }
+  .wrap { max-width:980px; margin:0 auto; padding:32px 24px 64px; }
+  h1 { font-size:1.55rem; margin:0 0 4px; }
+  .sub { color:var(--mut); font-size:.92rem; margin-bottom:20px; }
+  .headline { background:#fff3f0; border-left:5px solid var(--red); padding:14px 18px;
+              border-radius:6px; font-size:1.08rem; margin:18px 0 26px; }
+  .headline b { color:var(--red); }
+  figure { background:var(--card); border:1px solid #e6e6e6; border-radius:10px;
+           padding:16px 16px 8px; margin:0 0 26px; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+  figure img { width:100%; display:block; border-radius:4px; }
+  figcaption { font-size:.9rem; color:var(--mut); margin-top:10px; }
+  figcaption b { color:var(--ink); }
+  h2 { font-size:1.05rem; margin:30px 0 8px; }
+  .grn { color:var(--grn); } .red { color:var(--red); }
+  table { border-collapse:collapse; width:100%; font-size:.84rem; margin:6px 0 4px; }
+  th,td { border:1px solid #e2e2e2; padding:5px 8px; text-align:right; }
+  th:first-child,td:first-child { text-align:left; }
+  th { background:#f1f1f1; }
+  .mech { background:#eef7ff; border-left:5px solid #2980b9; padding:14px 18px;
+          border-radius:6px; margin:24px 0; }
+  code { background:#eee; padding:1px 5px; border-radius:4px; font-size:.86em; }
+  .note { font-size:.82rem; color:var(--mut); margin-top:30px; border-top:1px solid #e0e0e0; padding-top:14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Why the Intrinsic Curiosity Module (ICM) fails to explore LS20 Level 2</h1>
+<div class="sub">exp_011 · faithful Pathak-2017 ICM + CNN/PPO · real LS20 · terminal-only reward ·
+3 seeds/level · evidence from saved metrics &amp; checkpoints (seed0 for checkpoint probes).</div>
+
+<div class="headline">
+<b>ICM fails on L2 not because the forward model becomes perfect, but because the
+auto-calibrated curiosity gain <code>η</code> is frozen against the huge UNTRAINED forward error;
+once the model learns (error drops ~60×), <code>r^i</code> is permanently <b>~60–100× smaller than the PPO
+entropy bonus</b>, so a weak-but-still-present novelty signal can never restructure a policy that
+keeps dying at a fixed ~66-step depth.</b> The novelty contrast survives — it is just too small to matter.
+</div>
+
+<h2>1 · The collapse is real but identical on the level ICM SOLVED — so collapse alone is not the cause</h2>
+<figure>
+  <img src="figures/fig1_timeline.png" alt="L1 vs L2 training curves">
+  <figcaption>
+  <b>Proves:</b> the headline "curiosity collapse" (<span class="grn">L1</span> vs <span class="red">L2</span>)
+  is <b>not</b> what differentiates success from failure. <code>r^i</code> drops below <code>1e-3</code> by
+  <b>step 2048 (update 2) in <em>every</em> run of both levels</b>; forward error falls from ~7–25 to ~0.05–0.5 in both.
+  The only behavioural divergence is policy entropy: <span class="grn">L1</span> collapses to ≈0 (it found reward
+  and committed), while <span class="red">L2</span> stays high (0.34–0.87 nats) — it never finds reward, so it
+  keeps wandering. First extrinsic reward: L1 at 17k / 29k / 225k steps (solved 3/3); L2 <b>never</b> (0/3).
+  </figcaption>
+</figure>
+
+<h2>2 · There IS a novelty contrast on L2 — the model is not perfect, and it is not flat</h2>
+<figure>
+  <img src="figures/fig2_contrast.png" alt="first-seen vs revisited forward error">
+  <figcaption>
+  <b>Proves:</b> on fresh on-policy rollouts (UI rows 61–62 masked for exact frame-hashing),
+  <span class="red">L2</span> forward error on <b>first-seen</b> states stays a real
+  <b>1.2–2.5×</b> above <b>revisited</b> states (e.g. step 307k: 2.78 vs 1.14, contrast 2.45×), and the per-step
+  <code>r^i</code> max is 8e-4–1.6e-2 — clearly nonzero. This <b>rules out</b> "perfect forward model everywhere
+  (error→0)" and "nonzero error but zero contrast." On <span class="grn">L1</span> the model genuinely
+  saturates (error 0.001–0.17, contrast ≈1.0) because the agent revisits the same 12-state solution path —
+  but L1 had already won, so saturation there is harmless.
+  </figcaption>
+</figure>
+
+<table>
+<tr><th>L2 checkpoint (step)</th><th>η</th><th>r^i mean</th><th>r^i mean ÷ c_ent(0.01)</th><th>first-seen/revisit contrast</th><th>unique states</th></tr>
+<tr><td>102,400</td><td>2.98e-4</td><td>4.5e-4</td><td>0.045×</td><td>1.34×</td><td>30</td></tr>
+<tr><td>204,800</td><td>2.98e-4</td><td>1.0e-3</td><td>0.101×</td><td>1.18×</td><td>36</td></tr>
+<tr><td>307,200</td><td>2.98e-4</td><td>1.8e-4</td><td>0.017×</td><td>2.45×</td><td>40</td></tr>
+<tr><td>409,600</td><td>2.98e-4</td><td>1.1e-4</td><td>0.011×</td><td>2.48×</td><td>44</td></tr>
+<tr><td>460,800</td><td>2.98e-4</td><td>6.5e-5</td><td>0.007×</td><td>1.40×</td><td>30</td></tr>
+</table>
+
+<h2>3 · The mechanism: η is frozen against the untrained error, so r^i lives below the PPO floor</h2>
+<figure>
+  <img src="figures/fig4_eta_squeeze.png" alt="r^i vs entropy-bonus yardstick">
+  <figcaption>
+  <b>Proves:</b> η is calibrated <b>once</b>, on the first rollout, to make
+  <code>r^i ≈ 0.01</code> when the forward error is still ~23 (untrained), giving
+  <code>η = 2.98e-4</code> (frozen for the whole run). When the model learns and error falls ~61×
+  (23.1→0.38), <code>r^i</code> falls the same 61× to <b>~6e-5</b> — <b>0.007–0.10× of the entropy-bonus
+  scale c_ent=0.01</b> and <b>~1e-4 of the +1 terminal reward</b>. So <code>r^i</code> permanently sits
+  <b>1–2 orders of magnitude below</b> the dashed PPO yardstick: the gradient that should push exploration is
+  dominated by the entropy regulariser and noise. (On L1, <code>r^i</code> crashes even lower, to 1e-7, because the
+  solved policy's world is fully predictable — confirming low <code>r^i</code> is a symptom, not the discriminator.)
+  </figcaption>
+</figure>
+
+<h2>4 · Behavioural ground truth: the policy is trapped at a fixed depth and barely out-explores random</h2>
+<figure>
+  <img src="figures/fig5_death_depth.png" alt="mean episode length over training">
+  <figcaption>
+  <b>Proves:</b> <span class="red">L2</span> eval episodes terminate at a <b>fixed ~66 steps with
+  truncation_rate = 0</b> across all of training — i.e. the agent <em>dies</em> at the same in-game point every
+  episode, never even reaching the 200-step cap. The too-weak <code>r^i</code> never reshapes the policy to push
+  past that death point (L2 needs ~60 correct actions through a deep puzzle). For coverage:
+  the L2 ICM policy reaches only <b>30–44 unique states</b> per ~1,600-transition budget vs <b>15</b> for
+  uniform-random — so ICM explores ~2× more than random yet stays far short of L2's depth.
+  φ is healthy throughout (feat_effective_rank rises 4.9→15.3, no representation collapse), so the failure is in
+  the <em>reward scale</em>, not the encoder.
+  </figcaption>
+</figure>
+
+<div class="mech">
+<b>Precise mechanism.</b> (1) ICM's <code>r^i = (η/2)‖φ̂(s')−φ(s')‖²</code>; η is auto-set on the
+<em>first</em> rollout against the <em>untrained</em> forward error (~23), then frozen
+(<code>η=2.98e-4</code>). (2) The forward model learns within a couple of updates, dropping the error ~60×, which
+mechanically drops <code>r^i</code> ~60× to ~6e-5 — <b>far below</b> the PPO entropy bonus (0.01) and the +1 goal
+reward. (3) A weak per-step novelty bonus that still <em>has</em> contrast (first-seen 1.2–2.5× revisited) but is
+<b>two orders of magnitude too small</b> cannot generate enough advantage to drive the policy past the ~66-step
+death point of a ~60-action puzzle, so coverage plateaus at ≤44 states and the agent never sees its first reward.
+This <b>refines</b> the project's prior note: the culprit is η-renormalisation crushing the <em>magnitude</em>, not a
+literally perfect model and not a literal loss of contrast.
+<br><br>
+<b>Implication.</b> What would work on L2 is exploration whose drive does <b>not</b> decay with the learner's own
+accuracy and is scaled to the task: either re-normalising/annealing η to a fixed fraction of the policy objective,
+or count/coverage-based novelty (episodic, e.g. RND or Go-Explore-style state archiving) that rewards reaching
+<em>new depth</em> rather than transient prediction error — consistent with the prior project finding that only
+Go-Explore cracked L2.
+</div>
+
+<div class="note">
+Scripts (under <code>analysis/curiosity_failure/</code>): <code>01_curve_forensics.py</code> (metrics curves),
+<code>02_contrast_and_coverage.py</code> (checkpoint rollouts: first-seen/revisited error + coverage vs random,
+writes <code>results_02.json</code>), <code>03_yardstick.py</code> (r^i vs PPO yardsticks),
+<code>04_mechanism_fig.py</code> (η-squeeze + death-depth figures).
+Checkpoint probes use seed0 of each level, fresh on-policy rollouts of 8 envs × 200 steps, UI rows 61–62 masked for
+exact-frame state identity. Caveats: contrast/coverage probes are single-seed (seed0) snapshots — the metrics-based
+claims (§1, §3, §4 plateau) hold across all 3 seeds; first-seen counts per rollout are small (1.9–2.8% of transitions),
+so the contrast ratios are directionally robust but not high-precision.
+</div>
+
+</div>
+</body>
+</html>
