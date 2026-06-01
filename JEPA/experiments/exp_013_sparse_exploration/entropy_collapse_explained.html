@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why the exploration policy collapses to deterministic</title>
+<style>
+  :root{--ink:#1b2230;--mut:#5a6577;--line:#e4e8ef;--accent:#3b6cff;--soft:#f6f8fc;--bad:#c0392b;--good:#1a8a52;}
+  *{box-sizing:border-box}
+  body{margin:0;background:#fbfcfe;color:var(--ink);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:780px;margin:0 auto;padding:44px 24px 80px}
+  h1{font-size:27px;line-height:1.2;margin:0 0 4px;letter-spacing:-.02em}
+  .sub{color:var(--mut);margin:0 0 30px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin:34px 0 8px}
+  p{margin:0 0 12px}
+  code{background:var(--soft);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font:13.5px/1 "SF Mono",ui-monospace,Menlo,Consolas,monospace}
+  .eq{background:var(--soft);border:1px solid var(--line);border-radius:9px;padding:12px 16px;margin:14px 0;font:15px/1.5 "SF Mono",ui-monospace,Menlo,monospace;text-align:center}
+  .step{border-left:3px solid var(--accent);background:#f7f9ff;padding:10px 16px;border-radius:0 8px 8px 0;margin:10px 0}
+  .step b{color:var(--accent)}
+  .ev{background:#f3fbf6;border:1px solid #cdeed8;border-radius:9px;padding:12px 16px;margin:14px 0}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+  th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+  th{background:var(--soft)}
+  .tag{font-size:11px;font-weight:700;padding:1px 7px;border-radius:20px}
+  .meas{background:#e7f5ec;color:var(--good)} .interp{background:#fff3e0;color:#b06a00}
+  .key{font-size:18px;font-weight:600;border-top:2px solid var(--ink);padding-top:16px;margin-top:28px;line-height:1.5}
+  em{color:var(--mut)}
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>Why a pure-exploration policy collapses to deterministic</h1>
+<p class="sub">A self-contained explanation of the entropy collapse in the intrinsic-reward PPO agent.</p>
+
+<h2>The setup (everything you need)</h2>
+<p>The agent has a <b>policy</b> <code>π(a|s)</code> (probabilities over actions) and a <b>critic</b>
+<code>V(s)</code> (a learned estimate of future reward from state <code>s</code>). There is <b>no task
+reward</b> — the only reward is an <b>intrinsic novelty</b> signal <code>r</code> (high in unfamiliar
+states). PPO improves the policy by the <b>advantage</b>:</p>
+<div class="eq">A(s,a) = R(s,a) − V(s),&nbsp;&nbsp; R = Σ<sub>l</sub> γ<sup>l</sup> r<sub>t+l</sub> &nbsp;(the discounted return)</div>
+<p>Read <code>A</code> as “was this action <b>better than the critic expected</b>?” PPO <b>raises</b>
+<code>π(a|s)</code> for actions with <b>positive</b> advantage and lowers it for negative — and adds an
+<b>entropy bonus</b> that pushes the policy back toward uniform/random. Whether the policy stays random
+or collapses to one action is the tug-of-war between these two.</p>
+<p>Two more facts about <i>this</i> setup that matter a lot:</p>
+<ul>
+<li><b>Advantages are normalised per mini-batch</b>: PPO subtracts the batch mean, <code>A ← (A−mean)/std</code>.
+So a <i>uniform</i> positive bias is removed — only the <b>relative</b> structure of advantages drives learning.</li>
+<li><b>Returns are non-episodic</b> with <code>γ=0.99</code>: the sum <code>R</code> is <i>not</i> reset at
+death, so it accumulates over a ~<b>100-step</b> effective horizon. Returns are therefore <b>~100× the
+per-step reward</b> — large, and spiky when novelty bursts.</li>
+</ul>
+
+<h2>The paradox</h2>
+<p>Novelty reward is <i>supposed</i> to keep the agent exploring. Yet the policy entropy crashes from
+maximum (ln 4 ≈ 1.386, i.e. uniform over 4 actions) to ≈ 0 — it commits to a deterministic loop and stops
+exploring. Why?</p>
+
+<h2>The evidence: it's the novelty signal, not PPO-on-anything</h2>
+<div class="ev">
+Controls (identical loop, only the reward swapped):
+<table>
+<tr><th>reward</th><th>entropy outcome</th></tr>
+<tr><td>≡ 0</td><td>floors ~1.0 (mild drift, self-stabilises) — <b>no collapse</b></td></tr>
+<tr><td>random noise</td><td>stays ~1.36 (uniform) — <b>no collapse</b></td></tr>
+<tr><td><b>real novelty</b></td><td><b>collapses to ~0</b></td></tr>
+</table>
+So generic “PPO with weak entropy” is <b>not</b> the cause. Something about the novelty signal's
+<i>return structure</i> is. <span class="tag meas">measured</span>
+</div>
+
+<h2>The mechanism, step by step</h2>
+<div class="step"><b>1. Returns spike.</b> Novelty is bursty and non-stationary (it jumps when the agent
+reaches a new region, or as features shift). Because returns accumulate over the long non-episodic horizon,
+a burst makes <code>R</code> jump hard (measured: <code>R</code> ran 3.9 → 8.4 → 14.0). <span class="tag meas">measured</span></div>
+
+<div class="step"><b>2. The critic lags — and lags <i>unevenly</i>.</b> <code>V(s)</code> was fit to the
+<i>past</i>, lower returns, so it <b>under-predicts</b> the spike: <code>R − V &gt; 0</code> (measured mean
+<code>R − V = +0.76</code>, positive on 71% of updates). Crucially it under-predicts <b>most</b> in the
+high-novelty region the agent is currently visiting. <span class="tag meas">measured</span></div>
+
+<div class="step"><b>3. Per-batch normalisation removes the offset but keeps the structure.</b>
+Subtracting the batch mean kills the <i>uniform</i> part of that +0.76. What survives is <b>relative</b>:
+transitions in the high-novelty region have <b>above-average</b> advantage → <b>positive after normalisation</b>;
+everything else → negative. <span class="tag interp">mechanism</span></div>
+
+<div class="step"><b>4. This is the answer to “how does a return spike collapse the policy?”</b>
+PPO now <b>raises the probability of the actions that led into the high-novelty region</b> (positive
+relative advantage) and <b>lowers all others</b>. The policy concentrates toward that region.</div>
+
+<div class="step"><b>5. Rich-get-richer feedback.</b> A more concentrated policy <b>samples that region
+even more</b> → the critic keeps lagging the (sustained, bursty) novelty there → those same actions keep
+getting above-average advantage → probability keeps rising → <b>entropy → 0</b>. The entropy bonus opposes
+this, but at <code>c_entropy=0.01</code> it is too weak to overcome the structured advantage. (Raising it to
+<code>0.05</code> stops the collapse — <span class="tag meas">measured</span>, but it's a band-aid: a big
+enough spike still wins.)</div>
+
+<div class="step"><b>6. Trapped, then slow recovery.</b> Once near-deterministic, the agent <b>cannot
+sample alternatives</b>, so it cannot discover that other actions are now more novel — the advantage signal
+can't redirect a policy that isn't exploring. Only when the fixated region's novelty finally decays does
+<code>R − V</code> flip negative, slowly re-injecting randomness (the partial entropy recovery we saw). </div>
+
+<p><em>Net: bursty non-stationary return + a lagging, single critic → a structured (region-specific)
+positive advantage → the policy commits to the region it happened to find → exploration dies. The reward
+being “novelty” is incidental; what matters is that it is bursty and the critic can't track it.</em></p>
+
+<h2>What “value estimate” and “clip” mean here — and why clip alone isn't enough</h2>
+<p><b>“Value estimate” = <code>V(s)</code></b>, and the regression target it chases, the return <code>R</code>.
+The spike is in <code>R</code>; the lag is <code>V</code> failing to track it.</p>
+<table>
+<tr><th>lever</th><th>what it bounds / fixes</th><th>does it cure the lag?</th></tr>
+<tr><td><b>reward clip</b> (cap per-step <code>r</code>)</td><td>tames <i>transient</i> per-step spikes
+(e.g. a feature reorganisation)</td><td>Partly. <b>It does NOT bound <code>R</code></b>: non-episodic
+<code>γ=0.99</code> sums even clipped rewards over ~100 steps, so a <i>sustained</i> elevated reward still
+makes <code>R</code> large. You're right to suspect this.</td></tr>
+<tr><td><b>shorter intrinsic horizon</b> (smaller <code>γ</code>) or <b>episodic</b> returns</td>
+<td>shrinks <code>R</code>'s magnitude directly (episodic resets the accumulation at death — non-episodic
+was measured to ~double <code>V</code>)</td><td>Yes, at the source — smaller <code>R</code> → smaller lag.</td></tr>
+<tr><td><b>return normalisation</b> (we already divide <code>r</code> by a running return-std)</td>
+<td>sets the <i>scale</i> so <code>R</code> ~ unit-variance</td><td>No — scale ≠ trackability; the
+<i>relative</i> lag survives.</td></tr>
+<tr><td><b>faster critic</b> (more value epochs / higher value lr)</td><td>lets <code>V</code> catch the
+spike within the update</td><td>Yes, directly attacks the lag.</td></tr>
+<tr><td><b>entropy floor / KL-to-uniform</b></td><td>forces the policy to keep sampling</td>
+<td>No (doesn't fix the lag) but <b>prevents the collapse regardless</b> — robust insurance.</td></tr>
+</table>
+<p>So your instinct is correct on both counts: <b>(a)</b> a reward clip helps with <i>transient</i> spikes
+but cannot stop a <i>sustained</i> region's reward from accumulating into a large return under the long
+non-episodic horizon; and <b>(b)</b> the non-episodic GAE <i>is</i> a prime amplifier — it extends the
+horizon across episodes, inflating <code>R</code> and therefore the lag. The clean fixes target the return
+magnitude (shorter/episodic horizon), the critic's tracking speed, or — as insurance — the entropy floor.</p>
+
+<p class="key">One-line summary: the intrinsic return is bursty and (under non-episodic γ=0.99) large; a
+single critic lags it <em>unevenly</em>; per-batch advantage normalisation turns that uneven lag into a
+<em>relative</em> positive advantage for whatever region the agent is in; PPO reinforces the path there,
+the policy concentrates, samples it more, and the loop closes — entropy → 0. Clipping the per-step reward
+only tames transient spikes; bounding the <em>return</em> (shorter/episodic horizon) and an entropy floor
+are what actually break the loop.</p>
+
+</div></body></html>

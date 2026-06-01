@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>exp_013 — Exploration as Q + bonus</title>
+<style>
+  :root { --ink:#1c2230; --muted:#5c6678; --line:#e3e7ee; --accent:#3b6cff; --soft:#f6f8fc; --good:#1a8a52; --bad:#c0392b; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#fbfcfe; color:var(--ink);
+         font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:760px; margin:0 auto; padding:48px 24px 80px; }
+  h1 { font-size:30px; line-height:1.2; margin:0 0 6px; letter-spacing:-.02em; }
+  .sub { color:var(--muted); font-size:16px; margin:0 0 36px; }
+  h2 { font-size:14px; text-transform:uppercase; letter-spacing:.08em; color:var(--accent);
+       margin:38px 0 10px; }
+  p { margin:0 0 14px; }
+  .eq { background:var(--soft); border:1px solid var(--line); border-radius:10px;
+        padding:14px 18px; margin:16px 0; font-size:18px; text-align:center;
+        font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; }
+  .eq small { color:var(--muted); font-size:12.5px; display:block; margin-top:6px;
+              font-family:inherit; }
+  code { background:var(--soft); border:1px solid var(--line); border-radius:5px;
+         padding:1px 5px; font-size:13.5px; font-family:"SF Mono",ui-monospace,Menlo,monospace; }
+  .card { border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin:16px 0;
+          background:#fff; }
+  .card b { color:var(--ink); }
+  .lead { font-size:16px; }
+  .tag { display:inline-block; font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px;
+         vertical-align:middle; margin-left:6px; }
+  .tag.have { background:#e7f5ec; color:var(--good); }
+  .tag.later { background:#fdeceb; color:var(--bad); }
+  ol.ladder { padding-left:0; counter-reset:step; list-style:none; margin:16px 0; }
+  ol.ladder li { position:relative; padding:12px 0 12px 44px; border-top:1px solid var(--line); }
+  ol.ladder li:before { counter-increment:step; content:counter(step);
+        position:absolute; left:0; top:12px; width:28px; height:28px; border-radius:50%;
+        background:var(--accent); color:#fff; text-align:center; line-height:28px; font-weight:600; }
+  .ko { background:#fff7f5; border-left:3px solid var(--bad); padding:10px 16px; border-radius:0 8px 8px 0; margin:14px 0; }
+  .ok { background:#f3fbf6; border-left:3px solid var(--good); padding:10px 16px; border-radius:0 8px 8px 0; margin:14px 0; }
+  .tl { font-size:19px; font-weight:600; line-height:1.5; border-top:2px solid var(--ink);
+        padding-top:18px; margin-top:30px; }
+  em { color:var(--muted); font-style:italic; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Exploration = <span style="color:var(--accent)">Q</span> + <span style="color:var(--accent)">bonus</span></h1>
+  <p class="sub">exp_013 — reaching the first reward in a sparse world, as one clean idea.</p>
+
+  <h2>The problem</h2>
+  <p class="lead">No reward signal to chase — almost everywhere the reward is 0. We only care about
+  <b>how few environment steps until the first positive reward</b>. So there's nothing to <em>exploit</em> yet;
+  the whole game is shaping an <b>intrinsic</b> signal that gets us to a first success fastest.</p>
+
+  <h2>The lens: every step is a bandit pull</h2>
+  <p>At each state we choose an action under uncertainty — exactly the setting UCT/UCB was built for.
+  Act on value <em>plus</em> an optimism term:</p>
+  <div class="eq">a* = argmax<sub>a</sub> [ &nbsp;Q(s,a) &nbsp;+&nbsp; bonus(s,a)&nbsp; ]
+    <small>UCB1: bonus = c·√( ln N(s) / N(s,a) ) — a <b>confidence width</b> on Q, shrinking like 1/√(visits)</small></div>
+
+  <h2>What Q is — the backup, learned for free</h2>
+  <p>Train a value head on the <b>intrinsic reward</b> by TD. It backs the discounted future novelty up into
+  <code>Q_int(s,a)</code> = "expected future novelty if I go this way." That <b>is</b> the MCTS backup, amortized into a
+  network — and acting on it <b>is</b> the tree policy. No tree to grow; the value function already carries it.</p>
+
+  <h2>What the bonus is — RND, in its native form</h2>
+  <p>The UCB bonus is fundamentally a width that <b>shrinks as you visit</b> (∝ 1/√N). <b>RND prediction error is
+  already exactly that</b> — it falls as a region gets visited — so we use the error <em>directly</em> as the bonus,
+  count-free. We do <b>not</b> try to reverse-engineer an integer count <code>N̂</code> to plug into √(ln N/n).</p>
+
+  <div class="ko"><b>Why no real counts?</b> We measured it: on raw pixels, a state seen <b>1×</b> and one seen
+  <b>2000×</b> land on the same error floor, and a <b>never-seen</b> state's error still dropped <b>99.9%</b>.
+  Maze frames are near-identical (one cell changes), so the random target is smooth and the predictor
+  <em>interpolates novelty everywhere</em>. RND on pixels has no count resolution — so don't treat it as a count.</p>
+
+  <h2>If we want real resolution: count in φ-space, then freeze</h2>
+  <p>The inverse-dynamics encoder <code>φ</code> is trained to <b>separate</b> states that pixels conflate (it must, to
+  predict the action between them). That de-smooths the manifold, so RND-on-φ regains resolution.
+  Catch: φ keeps <b>drifting</b> (it never fully stabilizes), which moves the ruler. Fix: let φ separate (fast),
+  then <b>freeze it</b> — resolution <em>and</em> a stationary ruler.</p>
+
+  <h2>One scale, not three</h2>
+  <p>Q, an RND error, and a kNN density live in <b>different units</b> — adding them means tuning weights while one
+  swamps the others. So we don't hand-mix bonuses at decision time. <b>Route novelty through the reward, let TD learn
+  its scale, and act on <code>Q_int</code>.</b> One channel, no scale-matching.</p>
+
+  <h2>Won't it loop? — only if the policy is deterministic</h2>
+  <p>A deterministic env does <em>not</em> force "go right, go left, repeat." That loop needs a <b>deterministic
+  policy</b>. Keep the policy <b>stochastic</b> (entropy) and the same situation becomes a <b>random walk that diffuses
+  outward</b>, with <code>Q_int</code> biasing it toward the unexplored. So the cheapest loop-breaker is the entropy we
+  already have — no within-episode counter required.</p>
+
+  <h2>Build it simplest-first</h2>
+  <ol class="ladder">
+    <li><b>RND-error-as-reward → Q_int, stochastic PPO.</b> This <em>is</em> the UCT emulation (Q = backup,
+        entropy = exploration, RND = optimism). Already in the harness; it solved LS20 L1. <span class="tag have">have it</span></li>
+    <li><b>If the data shows within-episode looping wastes budget</b> → a recurrent (GRU) policy: an implicit, learned
+        episodic memory. No hashing, no kNN, no scale-mixing. <span class="tag later">only if needed</span></li>
+    <li><b>Only then</b> reach for explicit episodic memory (kNN-over-frozen-φ) or frontier-return (Go-Explore).
+        <span class="tag later">heavy</span></li>
+  </ol>
+
+  <p class="tl">Act on <b>Q_int + RND-optimism</b>. Push novelty through the <b>reward</b> channel so one value
+  function learns the scale. Keep the policy <b>stochastic</b> so determinism becomes a random walk, not a loop.
+  Add counts (in <b>frozen controllable-φ</b>) or memory <b>only when measurement says we need them</b>.</p>
+
+</div>
+</body>
+</html>
