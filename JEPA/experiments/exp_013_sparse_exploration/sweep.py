@@ -1,15 +1,15 @@
-"""Run the exp_013 new-methods sweep as a SCRIPT (for Colab chaining / unattended runs).
+"""Run the exp_013 new-methods sweep as a SCRIPT — Colab-chainable and SPLITTABLE across machines.
 
-Mirrors colab_sweep_exp013.ipynb but as one CLI, so you can queue it behind a still-running
-notebook with a tiny cell and save results to Drive (no interactive download needed):
+Methods per cell: A (frozen-φ), B (icm-φ), C (additive control), D (lookahead). Plus the
+ls20 L1->L2 φ-TRANSFER pair (B-random vs B-xfer) when ls20 is in --games. ICM/RND baselines
+are NOT re-run. Stop-on-first-reward; per-cell caps; intrinsic-only.
 
-    from google.colab import drive; drive.mount('/content/drive')
-    %cd /content/ProjectArceus
-    !git pull --ff-only -q && pip -q install -e . --no-deps
-    !python -m JEPA.experiments.exp_013_sparse_exploration.sweep --save-dir /content/drive/MyDrive/exp013_results
-
-Methods: A (frozen-φ), B (icm-φ), B-xfer (L1→L2 transfer), C (additive control), D (lookahead).
-ICM/RND baselines are NOT re-run. Stop-on-first-reward; per-cell caps; intrinsic-only.
+Split the work across two machines by environment, e.g.:
+    # Colab (forward envs):
+    !python -m JEPA.experiments.exp_013_sparse_exploration.sweep --games ls20 tu93 --save-dir /content/drive/MyDrive/exp013_results
+    # Mac (last envs):
+    uv run python -m JEPA.experiments.exp_013_sparse_exploration.sweep --games g50t re86 --save-dir ~/exp013_results
+Aggregate later by merging both machines' result.json / CSV.
 """
 
 from __future__ import annotations
@@ -34,28 +34,38 @@ EXP5 = "JEPA.experiments.exp_013_sparse_exploration.exp_013_5_lookahead.run"
 BASE = "JEPA/experiments/exp_013_sparse_exploration"
 RUNS1 = f"{BASE}/exp_013_1_rnd_icm/runs"
 
-CAPS = {("ls20", 0): 200_000, ("ls20", 1): 300_000, ("tu93", 0): 600_000, ("re86", 0): 1_000_000}
-RANDOM_E = {("ls20", 0): "~50k", ("ls20", 1): "inf", ("tu93", 0): "~500k", ("re86", 0): "~2.0M"}
+CAPS = {("ls20", 0): 200_000, ("ls20", 1): 300_000, ("tu93", 0): 600_000,
+        ("re86", 0): 1_000_000, ("g50t", 0): 300_000}
+DEFAULT_CAP = 300_000
+RANDOM_E = {("ls20", 0): "~50k", ("ls20", 1): "inf", ("tu93", 0): "~500k",
+            ("re86", 0): "~2.0M", ("g50t", 0): "inf"}
 
 
 def main():
-    ap = argparse.ArgumentParser(description="exp_013 new-methods sweep driver")
+    ap = argparse.ArgumentParser(description="exp_013 new-methods sweep (splittable across machines)")
+    ap.add_argument("--games", nargs="+", default=["ls20"], choices=["ls20", "tu93", "re86", "g50t"])
+    ap.add_argument("--levels", type=int, nargs="+", default=[0], help="levels (0-indexed) for the A/B/C/D comparison")
     ap.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
-    ap.add_argument("--concurrency", type=int, default=1)
-    ap.add_argument("--n-envs", type=int, default=None)
+    ap.add_argument("--transfer", dest="transfer", action="store_true", default=True,
+                    help="run the ls20 L1->L2 φ-transfer pair (only if ls20 in --games)")
+    ap.add_argument("--no-transfer", dest="transfer", action="store_false")
     ap.add_argument("--run-d", dest="run_d", action="store_true", default=True)
     ap.add_argument("--no-d", dest="run_d", action="store_false")
     ap.add_argument("--run-disagree", action="store_true")
+    ap.add_argument("--concurrency", type=int, default=1)
+    ap.add_argument("--n-envs", type=int, default=None)
     ap.add_argument("--save-dir", default=None, help="zip results here (e.g. a mounted Drive dir)")
     ap.add_argument("--logdir", default="/tmp/exp013_sweep_logs")
     args = ap.parse_args()
     os.makedirs(args.logdir, exist_ok=True)
 
     SEEDS = args.seeds
-    TRANSFER_SRC, TRANSFER_DST, COMPARE = ("ls20", 0), ("ls20", 1), [("ls20", 0)]
+    games = args.games
+    do_transfer = args.transfer and ("ls20" in games)
+    cells = [(g, l) for g in games for l in args.levels]
 
     def base_args(g, l):
-        a = ["--game", g, "--level", str(l), "--max-env-steps", str(CAPS[(g, l)])]
+        a = ["--game", g, "--level", str(l), "--max-env-steps", str(CAPS.get((g, l), DEFAULT_CAP))]
         if args.n_envs:
             a += ["--n-envs", str(args.n_envs)]
         return a
@@ -72,17 +82,20 @@ def main():
         cks = sorted(glob.glob(f"{RUNS1}/{exp_name}_*/checkpoints/step_*.pt"))
         return cks[-1] if cks else None
 
+    print(f"sweep: games={games} levels={args.levels} seeds={SEEDS} transfer={do_transfer} D={args.run_d}", flush=True)
     t0 = time.time()
-    # Phase 1 — transfer source: B (icm) on ls20 L1, sequential (φ ckpts needed for Phase 2).
-    sg, sl = TRANSFER_SRC
-    for s in SEEDS:
-        run_proc(f"B_{sg}_L{sl+1}_s{s}", EXP1, base_args(sg, sl) + ["--seed", str(s)])
-    src = {s: latest_ckpt(f"exp013_1_rndicm_icm_{sg}_L{sl+1}_seed{s}") for s in SEEDS}
-    print("source φ ckpts:", {s: (p is not None) for s, p in src.items()}, flush=True)
 
-    # Phase 2 — A / C / D on compare cells; B-random + B-xfer (+ D) on the transfer-dst cell.
+    # Phase 1 — ls20 transfer source: B (icm) on ls20 L1 FIRST (sequential; φ ckpts for Phase 2).
+    src = {}
+    if do_transfer:
+        for s in SEEDS:
+            run_proc(f"B_ls20_L1_s{s}", EXP1, base_args("ls20", 0) + ["--seed", str(s)])
+        src = {s: latest_ckpt(f"exp013_1_rndicm_icm_ls20_L1_seed{s}") for s in SEEDS}
+        print("source φ ckpts:", {s: (p is not None) for s, p in src.items()}, flush=True)
+
+    # Phase 2 — A / B / C / D on each cell (+ the ls20 L1->L2 transfer pair).
     jobs = []
-    for (g, l) in COMPARE:
+    for (g, l) in cells:
         for s in SEEDS:
             sd = ["--seed", str(s)]
             jobs.append((f"A_frozen_{g}_L{l+1}_s{s}", EXP1, ["--phi-mode", "frozen"] + base_args(g, l) + sd))
@@ -91,14 +104,17 @@ def main():
                 jobs.append((f"D_lookahead_{g}_L{l+1}_s{s}", EXP5, base_args(g, l) + sd))
             if args.run_disagree:
                 jobs.append((f"E_disagree_{g}_L{l+1}_s{s}", EXP4, base_args(g, l) + sd))
-    dg, dl = TRANSFER_DST
-    for s in SEEDS:
-        sd = ["--seed", str(s)]
-        jobs.append((f"B_random_{dg}_L{dl+1}_s{s}", EXP1, base_args(dg, dl) + sd))
-        if src.get(s):
-            jobs.append((f"B_xfer_{dg}_L{dl+1}_s{s}", EXP1, base_args(dg, dl) + sd + ["--init-phi-ckpt", src[s]]))
-        if args.run_d:
-            jobs.append((f"D_lookahead_{dg}_L{dl+1}_s{s}", EXP5, base_args(dg, dl) + sd))
+            if not (do_transfer and (g, l) == ("ls20", 0)):     # B on ls20 L1 already ran in Phase 1
+                jobs.append((f"B_icm_{g}_L{l+1}_s{s}", EXP1, base_args(g, l) + sd))
+    if do_transfer:
+        for s in SEEDS:
+            sd = ["--seed", str(s)]
+            jobs.append((f"B_random_ls20_L2_s{s}", EXP1, base_args("ls20", 1) + sd))
+            if src.get(s):
+                jobs.append((f"B_xfer_ls20_L2_s{s}", EXP1, base_args("ls20", 1) + sd + ["--init-phi-ckpt", src[s]]))
+            if args.run_d:
+                jobs.append((f"D_lookahead_ls20_L2_s{s}", EXP5, base_args("ls20", 1) + sd))
+
     with ThreadPoolExecutor(max_workers=args.concurrency) as ex:
         list(ex.map(lambda j: run_proc(*j), jobs))
     print(f"\nSWEEP DONE in {(time.time()-t0)/60:.1f} min", flush=True)
