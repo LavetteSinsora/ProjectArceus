@@ -287,6 +287,10 @@ def train(cfg, smoke: bool = False) -> dict:
         warming = update <= cfg.norm_warmup_updates
         if warming:
             norm_i = np.zeros_like(raw_i)
+        elif raw_mean_pre < getattr(cfg, "novelty_dead_eps", 0.0):
+            # field is dead-flat → don't amplify noise by dividing through a shrinking return-std
+            # (that drove the slow entropy bleed); emit the tiny raw signal so a dead field ≈ 0 reward.
+            norm_i = raw_i.astype(np.float32)
         else:
             # raw-novelty clip BEFORE the normalizer (caps spikes; protects ret_std).
             if cfg.reward_clip_k is not None:
@@ -323,7 +327,9 @@ def train(cfg, smoke: bool = False) -> dict:
             inv_streak = inv_streak + 1 if trig_inv >= cfg.phi_freeze_inverse_acc else 0
             hit_thresh = inv_streak >= cfg.phi_freeze_patience
             hit_fallback = update >= cfg.phi_freeze_max_updates
-            if hit_thresh or hit_fallback:
+            chance = 1.0 / cfg.n_actions
+            controllable = last_holdout_inv >= cfg.phi_uncontrollable_factor * chance
+            if (hit_thresh or hit_fallback) and controllable:
                 for p in icm.phi.parameters():
                     p.requires_grad_(False)
                 icm.phi.eval()
@@ -333,12 +339,12 @@ def train(cfg, smoke: bool = False) -> dict:
                 print(f"[exp013_1] φ FROZEN ({reason}) at update {update} "
                       f"(holdout_inv={last_holdout_inv:.3f}, onpolicy_inv={last_inv_acc:.3f}, "
                       f"~{freeze_step} env steps)")
-                # Postmortem clarity: a fallback-freeze with low HELD-OUT inv_acc means φ
-                # never became controllable → RND rules over a near-random space (§9).
-                if hit_fallback and not hit_thresh and last_holdout_inv < cfg.phi_freeze_inverse_acc:
-                    print(f"[exp013_1] WARNING: φ frozen by FALLBACK with held-out inv_acc="
-                          f"{last_holdout_inv:.3f} < {cfg.phi_freeze_inverse_acc} — φ is NOT "
-                          f"controllable; the RND ruler is near-random (see SYSTEM_CARD §9).")
+            elif (hit_thresh or hit_fallback) and not controllable and update % 25 == 0:
+                # GUARD: φ uncontrollable (held-out inv_acc ≈ chance, e.g. re86). Freezing it gives a
+                # degenerate RND ruler → entropy→0. Keep training φ (probes/method_improvements.md).
+                print(f"[exp013_1] φ NOT frozen @u{update}: holdout {last_holdout_inv:.3f} < "
+                      f"{cfg.phi_uncontrollable_factor}×chance ({cfg.phi_uncontrollable_factor * chance:.2f}) "
+                      f"— uncontrollable; keep training (no degenerate frozen ruler).")
 
         # RND predictor update (+ leak) on the cached φ(next_obs).
         rnd_loss = _rnd_update(rndphi, rnd_opt, phi_cached, rollout.dones, cfg, device)

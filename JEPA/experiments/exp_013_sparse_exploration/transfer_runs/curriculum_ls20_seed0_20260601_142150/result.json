@@ -1,0 +1,28 @@
+{
+  "run": "curriculum_ls20_seed0_20260601_142150",
+  "game": "ls20",
+  "seed": 0,
+  "levels": [
+    0,
+    1,
+    2
+  ],
+  "caps": [
+    8192,
+    8192,
+    8192
+  ],
+  "mask_timer": true,
+  "stages": [
+    {
+      "level": 0,
+      "solved": false,
+      "cum_step_to_reward": null,
+      "stage_steps": null,
+      "cap": 8192,
+      "holdout_inv_acc": 0.2535
+    }
+  ],
+  "total_env_steps": 8192,
+  "wall_seconds": 49.00136685371399
+}

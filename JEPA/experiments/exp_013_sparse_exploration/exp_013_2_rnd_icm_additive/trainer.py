@@ -170,7 +170,9 @@ def train(cfg, smoke: bool = False) -> dict:
             inv_streak = inv_streak + 1 if trig_inv >= cfg.phi_freeze_inverse_acc else 0
             hit_thresh = inv_streak >= cfg.phi_freeze_patience
             hit_fallback = update >= cfg.phi_freeze_max_updates
-            if hit_thresh or hit_fallback:
+            chance = 1.0 / cfg.n_actions
+            controllable = last_holdout_inv >= cfg.phi_uncontrollable_factor * chance
+            if (hit_thresh or hit_fallback) and controllable:
                 for p in icm.phi.parameters():
                     p.requires_grad_(False)
                 icm.phi.eval()
@@ -179,10 +181,11 @@ def train(cfg, smoke: bool = False) -> dict:
                 reason = f"{cfg.freeze_metric} inv_acc plateau" if hit_thresh else "MAX-UPDATES FALLBACK"
                 print(f"[exp013_2] φ FROZEN ({reason}) @u{update} "
                       f"holdout_inv={last_holdout_inv:.3f} onpolicy_inv={last_inv_acc:.3f}")
-                if hit_fallback and not hit_thresh and last_holdout_inv < cfg.phi_freeze_inverse_acc:
-                    print(f"[exp013_2] WARNING: φ frozen by FALLBACK with held-out inv_acc="
-                          f"{last_holdout_inv:.3f} < {cfg.phi_freeze_inverse_acc} — φ NOT controllable; "
-                          f"RND ruler near-random (SYSTEM_CARD §9).")
+            elif (hit_thresh or hit_fallback) and not controllable and update % 25 == 0:
+                # GUARD: φ uncontrollable (holdout ≈ chance) → freezing → degenerate ruler → entropy→0.
+                print(f"[exp013_2] φ NOT frozen @u{update}: holdout {last_holdout_inv:.3f} < "
+                      f"{cfg.phi_uncontrollable_factor}×chance ({cfg.phi_uncontrollable_factor * chance:.2f}) "
+                      f"— uncontrollable; keep training φ.")
 
         rnd_loss = _rnd_update(rndphi, rnd_opt, phi_cached, rollout.dones, cfg, device)
         global_step += cfg.rollout_steps * cfg.n_envs

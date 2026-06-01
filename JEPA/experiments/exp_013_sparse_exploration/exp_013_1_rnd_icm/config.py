@@ -77,6 +77,10 @@ class Config:
     # (see probes/inv_acc_causality.md) → default to held-out.
     freeze_metric: str = "holdout"      # "holdout" | "onpolicy"
     holdout_size: int = 2000            # # transitions in the held-out inv_acc set
+    # NEVER freeze φ while held-out inv_acc < this × chance (chance = 1/n_actions). Freezing a
+    # chance-level φ (re86: holdout ~0.22 vs 0.20 chance) gives a degenerate RND ruler → entropy→0.
+    # Below this we keep training φ (no stationary-but-degenerate ruler). See probes/method_improvements.md.
+    phi_uncontrollable_factor: float = 1.5
 
     # φ source for the RND ruler:
     #   "icm"    = ICM inverse-dynamics features (learned, controllable; the default).
@@ -99,12 +103,19 @@ class Config:
     rnd_hidden: int = 256
     rnd_lr: float = 1e-4
     rnd_epochs: int = 1
-    leak: float = 0.01                  # μ: predictor shrink-to-init per update (forget rate)
+    leak: float = 0.05                  # μ: predictor shrink-to-init per update (forget rate). raised
+                                        # 0.01→0.05: at 0.01 the novelty floor saturates on long runs
+                                        # (exp_014_1 + the 999k frozen_re86 flat floor); 0.05 holds a
+                                        # live, μ-dependent floor so the signal isn't spent by ~80k steps.
 
     # Intrinsic-reward normalisation (warm-up + EMA std of returns, no centring)
     int_norm_decay: float = 0.99
     norm_warmup_updates: int = 2
     int_norm_eps: float = 1e-8
+    # Floor-aware normalization: if mean raw novelty < this, the field is "dead" (flat) → skip the
+    # std-divide (which amplifies noise as int_return_std shrinks → slow entropy bleed); emit the tiny
+    # raw signal instead, so a dead field yields ~0 reward, not amplified noise. (probes/method_improvements.md)
+    novelty_dead_eps: float = 0.01
     # Raw-novelty clip (robustness): cap per-step raw novelty at reward_clip_k ×
     # running-mean-raw BEFORE the normalizer, so a transient spike poisons neither
     # ret_std nor the reward. φ-scale-robust (relative to running mean). None = off.

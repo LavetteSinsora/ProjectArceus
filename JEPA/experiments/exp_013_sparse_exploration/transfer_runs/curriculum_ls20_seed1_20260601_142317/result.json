@@ -1,0 +1,36 @@
+{
+  "run": "curriculum_ls20_seed1_20260601_142317",
+  "game": "ls20",
+  "seed": 1,
+  "levels": [
+    0,
+    1,
+    2
+  ],
+  "caps": [
+    200000,
+    300000,
+    300000
+  ],
+  "mask_timer": true,
+  "stages": [
+    {
+      "level": 0,
+      "solved": true,
+      "cum_step_to_reward": 135744,
+      "stage_steps": 135744,
+      "cap": 200000,
+      "holdout_inv_acc": 0.707
+    },
+    {
+      "level": 1,
+      "solved": false,
+      "cum_step_to_reward": null,
+      "stage_steps": null,
+      "cap": 300000,
+      "holdout_inv_acc": 0.397
+    }
+  ],
+  "total_env_steps": 436224,
+  "wall_seconds": 2334.8035521507263
+}

@@ -446,6 +446,34 @@ def main():
     plt.close(fig2)
     print(f"[exp_014_1] wrote supporting figure: {supp_fig}")
 
+    # raw-RND-ONLY figure (μ=0; the "problem" figure — no leak lines)
+    fig3, ax3 = plt.subplots(figsize=(7.4, 4.8))
+    for j in range(N_CHOSEN_STATES):
+        rec = records[0.0][j]
+        if not rec:
+            continue
+        arr = np.array(rec)
+        y = np.clip(arr[:, 1], 1e-16, None)
+        ax3.plot(arr[:, 0], y, lw=1.7, color="#c0392b", alpha=0.8,
+                 label=f"state {j} (final visits={final_visits[j]})")
+    ax3.set_yscale("log")
+    ax3.set_xlabel("cumulative visits to this state")
+    ax3.set_ylabel("RND novelty  ½·mean (P−T)²")
+    ax3.set_title("Standard RND (no leak): novelty collapses toward zero as a state is re-visited\n"
+                  "real LS20 L2 visitation — the saturation problem")
+    ax3.grid(True, which="both", alpha=0.25)
+    ax3.legend(fontsize=8, loc="upper right")
+    raw_fig = FIG_DIR / "rnd_saturation_standard_only.png"
+    fig3.tight_layout()
+    fig3.savefig(raw_fig, dpi=140)
+    plt.close(fig3)
+    print(f"[exp_014_1] wrote raw-RND-only figure: {raw_fig}")
+
+    # save the raw per-(μ,state) series so any subset can be re-plotted instantly (no re-roam)
+    series = {str(mu): {str(j): records[mu][j] for j in range(N_CHOSEN_STATES)} for mu in MU_VALUES}
+    (RES_DIR / "raw_series.json").write_text(json.dumps(series))
+    print(f"[exp_014_1] wrote raw series -> {RES_DIR / 'raw_series.json'}")
+
     # ── 7. dump results json ───────────────────────────────────────────────
     summary = {
         "timestamp": datetime.now().isoformat(timespec="seconds"),
