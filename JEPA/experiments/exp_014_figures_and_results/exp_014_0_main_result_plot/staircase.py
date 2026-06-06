@@ -31,10 +31,11 @@ NLEV = 3
 RANDOM_E = {"ls20": [49_843, inf, inf], "tu93": [500_000, 2_173, inf],
             "re86": [inf, inf, inf], "g50t": [inf, inf, inf]}   # re86: random never clears L1
 COLORS = {"random": "#7f8c8d", "icm": "#e67e22", "rnd": "#2e86de",
-          "A": "#8e44ad", "B": "#27ae60", "C": "#16a085"}
+          "A": "#8e44ad", "B": "#27ae60", "C": "#16a085", "goose": "#c0392b"}
 LABELS = {"random": "random", "icm": "ICM", "rnd": "RND",
-          "A": "leaky RND", "B": "leaky RND on ICM-φ", "C": "additive RND+ICM"}
-DIR = {"A": "leaky_rnd", "B": "leaky_rnd_on_icm_phi", "C": "additive_rnd_icm"}
+          "A": "leaky RND", "B": "leaky RND on ICM-φ", "C": "additive RND+ICM",
+          "goose": "Stochastic Goose"}
+DIR = {"A": "leaky_rnd", "B": "leaky_rnd_on_icm_phi", "C": "additive_rnd_icm", "goose": "goose"}
 
 
 def _load(method):
@@ -48,7 +49,7 @@ def _load(method):
     return [json.load(open(f)) for f in glob.glob(str(DATA / DIR[method] / "runs" / "*" / "result.json"))]
 
 
-RESULTS = {m: _load(m) for m in ["icm", "rnd", "A", "B", "C"]}
+RESULTS = {m: _load(m) for m in ["icm", "rnd", "A", "B", "C", "goose"]}
 
 
 def cell(method, game, lv):
@@ -130,7 +131,7 @@ def plot_env(game, methods, outname):
     ax.set_ylim(-0.45, NLEV + 0.5)
     ax.set_yticks(range(NLEV + 1))
     ax.set_yticklabels(["L1", "L2", "L3", "✓ all"])
-    ax.set_xlabel("cumulative environment steps")
+    ax.set_xlabel(f"cumulative environment steps ({game})")
     rt = [v for v in ax.get_xticks() if 0 <= v <= x_break]
     ax.set_xticks(rt + [x_inf])
     ax.set_xticklabels([(f"{v/1e6:.1f}M" if v >= 1e6 else f"{int(v/1000)}k") if v > 0 else "0" for v in rt] + ["∞"])
@@ -146,9 +147,14 @@ def plot_env(game, methods, outname):
 
 
 def main():
+    # Goose appears once its result.json land in data/goose/runs/ (written directly by the runner).
+    has_goose = len(RESULTS["goose"]) > 0
+    methods = ["random", "icm", "rnd", "A", "B"] + (["goose"] if has_goose else [])
     for g in GAMES:
         print(plot_env(g, ["random", "icm", "rnd"], f"{g}_baselines.png"))
-        print(plot_env(g, ["random", "icm", "rnd", "A", "B"], f"{g}_with_methods.png"))
+        print(plot_env(g, methods, f"{g}_with_methods.png"))
+    # RND vs. random only (LS20): RND buys no edge over the uniform-random baseline.
+    print(plot_env("ls20", ["random", "rnd"], "ls20_rnd_vs_random.png"))
 
 
 if __name__ == "__main__":
