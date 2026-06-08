@@ -189,6 +189,70 @@ def _apply_timer_mask(phi_enc, rows):
     return phi_enc
 
 
+class PixelPhi(nn.Module):
+    """NO-encoder 'raw pixels' ruler: φ(s) = the frame flattened + normalised to [0,1].
+    Stands in for ICMModule/FrozenPhi.encode so RND counts novelty directly in pixel
+    space (dim = frame_size²). The timer mask still patches `.encode`, so the ONLY
+    thing this ablation changes vs the learned/random encoders is the representation."""
+
+    def __init__(self, n_colors: int, frame_size: int):
+        super().__init__()
+        self.n_colors = n_colors
+        self.frame_size = frame_size
+        self.trunk_dim = frame_size * frame_size      # so it can stand in for ICMModule
+
+    @torch.no_grad()
+    def encode(self, obs_uint8: torch.Tensor) -> torch.Tensor:
+        """(B,H,W) palette indices → (B, H*W) float in [0,1]."""
+        b = obs_uint8.shape[0]
+        return obs_uint8.float().reshape(b, -1) / float(self.n_colors - 1)
+
+
+def _warmup_icm(icm, icm_opt, cfg, device) -> int:
+    """Pretrain φ (inverse+forward) on cfg.icm_warmup_episodes episodes of uniform-RANDOM
+    transitions BEFORE the PPO loop, so RND starts on a controllable φ rather than a noise
+    encoder. Uses icm.encode (timer-masked, like the loop). Returns env steps consumed."""
+    env = VecLS20EnvLevel(env_name=cfg.game, n_envs=cfg.n_envs,
+                          max_episode_steps=cfg.max_episode_steps, seed=cfg.seed + 7777,
+                          level_index=cfg.level_index)
+    obs = env.current_obs()
+    O, A, NO = [], [], []
+    eps = 0
+    steps = 0
+    while eps < cfg.icm_warmup_episodes:
+        a = np.random.randint(0, env.n_actions, size=env.n_envs).astype(np.int64)
+        nobs, _r, dones, _i = env.step(a)
+        steps += env.n_envs
+        for i in range(env.n_envs):
+            if not dones[i]:                       # s' on a done step is a reset frame
+                O.append(obs[i].copy()); A.append(int(a[i])); NO.append(nobs[i].copy())
+        eps += int(dones.sum())
+        obs = nobs
+    obs_t = torch.from_numpy(np.stack(O))
+    act_t = torch.from_numpy(np.array(A, dtype=np.int64))
+    nob_t = torch.from_numpy(np.stack(NO))
+    n = obs_t.shape[0]
+    mb = max(1, min(cfg.icm_warmup_batch, n))
+    idx = np.arange(n)
+    il = fl = ia = 0.0
+    nstep = 0
+    for _ in range(cfg.icm_warmup_epochs):
+        np.random.shuffle(idx)
+        for s in range(0, n, mb):
+            sel = idx[s:s + mb]
+            o = obs_t[sel].to(device); no = nob_t[sel].to(device); ac = act_t[sel].to(device)
+            l_inv, l_fwd, acc, _err = icm.losses_on_batch(o, no, ac)
+            loss = (1.0 - cfg.beta) * l_inv + cfg.beta * l_fwd
+            icm_opt.zero_grad(); loss.backward()
+            nn.utils.clip_grad_norm_(icm.parameters(), cfg.grad_clip); icm_opt.step()
+            il += l_inv.item(); fl += l_fwd.item(); ia += acc; nstep += 1
+    print(f"[exp013_1]   ICM WARM-UP {cfg.icm_warmup_episodes} eps → {n} transitions, "
+          f"{cfg.icm_warmup_epochs} epochs ({steps} env steps); "
+          f"inv_loss={il/max(1,nstep):.3f} fwd_loss={fl/max(1,nstep):.3f} inv_acc={ia/max(1,nstep):.3f}")
+    del env
+    return steps
+
+
 def train(cfg, smoke: bool = False) -> dict:
     if smoke:
         cfg = cfg.smoke()
@@ -217,12 +281,17 @@ def train(cfg, smoke: bool = False) -> dict:
     model = ActorCritic(n_actions=cfg.n_actions, n_colors=cfg.n_colors,
                         frame_size=cfg.frame_size, trunk_dim=cfg.trunk_dim).to(device)
 
-    # φ encoder for the RND ruler: learned ICM features ("icm") or a fixed random
-    # encoder ("frozen" = plain RND+leak, no inverse-dynamics).
+    # φ encoder for the RND ruler: learned ICM features ("icm"), a fixed random
+    # encoder ("frozen" = plain RND+leak), or raw flattened pixels ("pixel", no encoder).
     if cfg.phi_mode == "frozen":
         icm = None
         phi_enc = FrozenPhi(n_colors=cfg.n_colors, frame_size=cfg.frame_size,
                             trunk_dim=cfg.trunk_dim).to(device)
+        rnd_dim = cfg.trunk_dim
+    elif cfg.phi_mode == "pixel":
+        icm = None
+        phi_enc = PixelPhi(n_colors=cfg.n_colors, frame_size=cfg.frame_size).to(device)
+        rnd_dim = cfg.frame_size * cfg.frame_size
     else:
         icm = ICMModule(n_actions=cfg.n_actions, n_colors=cfg.n_colors,
                         frame_size=cfg.frame_size, trunk_dim=cfg.trunk_dim,
@@ -233,7 +302,8 @@ def train(cfg, smoke: bool = False) -> dict:
             icm.phi.load_state_dict(phi_sd)
             print(f"[exp013_1]   φ INIT-FROM-CKPT {cfg.init_phi_ckpt} (transfer)")
         phi_enc = icm
-    rndphi = RNDPhi(dim=cfg.trunk_dim, hidden=cfg.rnd_hidden, out=cfg.rnd_feature_dim,
+        rnd_dim = cfg.trunk_dim
+    rndphi = RNDPhi(dim=rnd_dim, hidden=cfg.rnd_hidden, out=cfg.rnd_feature_dim,
                     leak=cfg.leak).to(device)
 
     if getattr(cfg, "mask_timer", False):
@@ -259,13 +329,19 @@ def train(cfg, smoke: bool = False) -> dict:
     print(f"[exp013_1]   phi_mode={cfg.phi_mode}  freeze_metric={cfg.freeze_metric}  "
           f"holdout={holdout[0].shape[0] if holdout else 0}  reward_clip_k={cfg.reward_clip_k}")
 
+    # ICM φ warm-up on random-policy data (icm mode only). Warm-up env steps are counted
+    # into the budget so the head-start is not free vs the no-encoder ablations.
+    warmup_env_steps = 0
+    if icm is not None and cfg.icm_warmup_episodes > 0:
+        warmup_env_steps = _warmup_icm(icm, icm_opt, cfg, device)
+
     phi_frozen = False
     inv_streak = 0
     freeze_step: int | None = None
     last_inv_acc = float("nan")            # on-policy inverse_acc (logged)
     last_holdout_inv = float("nan")        # held-out inverse_acc (φ's TRUE quality)
     raw_mean_ema: float | None = None      # for the raw-novelty clip
-    global_step = 0
+    global_step = warmup_env_steps
     first_reward_step: int | None = None
     t_start = time.time()
     stop_now = False
@@ -417,6 +493,7 @@ def train(cfg, smoke: bool = False) -> dict:
         "env_steps_to_first_reward": first_reward_step,
         "solved": solved, "censored": not solved,
         "total_env_steps": global_step, "max_env_steps": cfg.max_env_steps,
+        "warmup_env_steps": warmup_env_steps, "phi_mode": cfg.phi_mode,
         "phi_freeze_step": freeze_step, "leak": cfg.leak,
         "freeze_metric": cfg.freeze_metric,
         "holdout_inv_acc_final": last_holdout_inv,   # φ's TRUE controllability at the end

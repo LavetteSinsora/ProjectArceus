@@ -62,6 +62,13 @@ class Config:
     icm_lr: float = 1e-3
     icm_hidden: int = 256
     icm_epochs: int = 1
+    # ICM warm-up: BEFORE the PPO loop, pretrain φ (inverse+forward) on N episodes of
+    # uniform-RANDOM transitions so the RND ruler starts on an already-controllable φ
+    # instead of a noise encoder (only used when phi_mode == "icm"). Warm-up env steps
+    # are COUNTED into the budget / first-reward metric and recorded as warmup_env_steps.
+    icm_warmup_episodes: int = 20
+    icm_warmup_epochs: int = 4
+    icm_warmup_batch: int = 256
 
     # φ-freeze: freeze the ICM encoder once it separates states (inverse_acc high),
     # giving RND a STATIONARY ruler. Adaptive trigger + a hard fallback.
@@ -85,6 +92,9 @@ class Config:
     # φ source for the RND ruler:
     #   "icm"    = ICM inverse-dynamics features (learned, controllable; the default).
     #   "frozen" = a fixed RANDOM encoder (no ICM training/freeze) — "plain RND+leak".
+    #   "pixel"  = NO encoder: φ = flattened, normalised (timer-masked) frame, so RND
+    #              counts novelty directly in raw-PIXEL space (the encoder-axis ablation
+    #              floor — task-irrelevant pixel variation reads as novelty).
     phi_mode: str = "icm"
     # Optional: initialise the ICM φ-encoder from a saved checkpoint's "icm" state
     # (e.g. an L1-trained run) → cross-level representation TRANSFER. None = random init.
@@ -143,4 +153,5 @@ class Config:
             max_env_steps=16 * 2 * 8, minibatches=2, epochs=1,
             norm_warmup_updates=1, phi_freeze_max_updates=2, phi_freeze_patience=1,
             stop_on_first_reward=False, eval_every=0, save_every=0, holdout_size=64,
+            icm_warmup_episodes=2, icm_warmup_epochs=1,
         )
