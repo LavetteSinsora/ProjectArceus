@@ -1,0 +1,20 @@
+{
+  "exp_name": "exp013_1_rndicm_pixel_g50t_L1_seed1",
+  "method": "rnd_icm",
+  "game": "g50t",
+  "level_index": 0,
+  "seed": 1,
+  "env_steps_to_first_reward": null,
+  "solved": false,
+  "censored": true,
+  "total_env_steps": 299008,
+  "max_env_steps": 300000,
+  "warmup_env_steps": 0,
+  "phi_mode": "pixel",
+  "phi_freeze_step": null,
+  "leak": 0.05,
+  "freeze_metric": "holdout",
+  "holdout_inv_acc_final": NaN,
+  "onpolicy_inv_acc_final": NaN,
+  "wall_seconds": 1543.6328701972961
+}

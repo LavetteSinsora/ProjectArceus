@@ -1,0 +1,20 @@
+{
+  "exp_name": "exp013_1_rndicm_frozen_tu93_L1_seed2",
+  "method": "rnd_icm",
+  "game": "tu93",
+  "level_index": 0,
+  "seed": 2,
+  "env_steps_to_first_reward": 4736,
+  "solved": true,
+  "censored": false,
+  "total_env_steps": 6144,
+  "max_env_steps": 600000,
+  "warmup_env_steps": 0,
+  "phi_mode": "frozen",
+  "phi_freeze_step": null,
+  "leak": 0.05,
+  "freeze_metric": "holdout",
+  "holdout_inv_acc_final": NaN,
+  "onpolicy_inv_acc_final": NaN,
+  "wall_seconds": 4.987016201019287
+}
