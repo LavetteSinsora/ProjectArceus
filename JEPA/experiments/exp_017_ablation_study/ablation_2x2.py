@@ -64,6 +64,13 @@ def main():
     ap.add_argument("--n-envs", type=int, default=None)
     ap.add_argument("--warmup-episodes", type=int, default=None,
                     help="override ICM warm-up episodes (icm rows only)")
+    # ── leak-sweep mode ──────────────────────────────────────────────────────
+    ap.add_argument("--leaks", type=float, nargs="+", default=None,
+                    help="LEAK-SWEEP mode: ignore --rows; run --sweep-phi at each μ here")
+    ap.add_argument("--sweep-phi", choices=["icm", "frozen", "pixel"], default="icm",
+                    help="encoder for the leak sweep (default icm = the method's φ)")
+    ap.add_argument("--leak-per", choices=["minibatch", "update"], default="minibatch",
+                    help="when the leak fires (passed through to the harness)")
     ap.add_argument("--concurrency", type=int, default=1)
     ap.add_argument("--logdir", default="/tmp/exp013_ablation_logs")
     args = ap.parse_args()
@@ -72,25 +79,46 @@ def main():
     def cap_for(g, l):
         return args.cap if args.cap is not None else CAPS.get((g, l), DEFAULT_CAP)
 
-    # Build the job list. Priority rows first, then by (game, level, seed).
+    # Build the job list.
     jobs = []
-    for row in args.rows:
-        phi, leak = ROWS[row]
-        for g in args.games:
-            for l in args.levels:
-                for s in args.seeds:
-                    extra = ["--game", g, "--level", str(l), "--seed", str(s),
-                             "--phi-mode", phi, "--leak", str(leak),
-                             "--max-env-steps", str(cap_for(g, l))]
-                    if args.n_envs:
-                        extra += ["--n-envs", str(args.n_envs)]
-                    if args.warmup_episodes is not None and phi == "icm":
-                        extra += ["--warmup-episodes", str(args.warmup_episodes)]
-                    name = f"{row}_{phi}_leak{leak}_{g}_L{l+1}_s{s}"
-                    jobs.append((name, extra))
-
-    print(f"ablation: rows={args.rows} games={args.games} levels={args.levels} "
-          f"seeds={args.seeds} → {len(jobs)} runs, concurrency={args.concurrency}", flush=True)
+    if args.leaks is not None:
+        # LEAK SWEEP: one encoder, many μ × cadence. Used by exp_017 leak_sweep.
+        phi = args.sweep_phi
+        for leak in args.leaks:
+            for g in args.games:
+                for l in args.levels:
+                    for s in args.seeds:
+                        extra = ["--game", g, "--level", str(l), "--seed", str(s),
+                                 "--phi-mode", phi, "--leak", str(leak),
+                                 "--leak-per", args.leak_per,
+                                 "--max-env-steps", str(cap_for(g, l))]
+                        if args.n_envs:
+                            extra += ["--n-envs", str(args.n_envs)]
+                        if args.warmup_episodes is not None and phi == "icm":
+                            extra += ["--warmup-episodes", str(args.warmup_episodes)]
+                        name = f"LK_{phi}_{args.leak_per}_mu{leak}_{g}_L{l+1}_s{s}"
+                        jobs.append((name, extra))
+        print(f"LEAK SWEEP: phi={phi} leaks={args.leaks} leak_per={args.leak_per} "
+              f"games={args.games} seeds={args.seeds} → {len(jobs)} runs", flush=True)
+    else:
+        # standard ROWS ablation. Priority rows first, then by (game, level, seed).
+        for row in args.rows:
+            phi, leak = ROWS[row]
+            for g in args.games:
+                for l in args.levels:
+                    for s in args.seeds:
+                        extra = ["--game", g, "--level", str(l), "--seed", str(s),
+                                 "--phi-mode", phi, "--leak", str(leak),
+                                 "--leak-per", args.leak_per,
+                                 "--max-env-steps", str(cap_for(g, l))]
+                        if args.n_envs:
+                            extra += ["--n-envs", str(args.n_envs)]
+                        if args.warmup_episodes is not None and phi == "icm":
+                            extra += ["--warmup-episodes", str(args.warmup_episodes)]
+                        name = f"{row}_{phi}_leak{leak}_{g}_L{l+1}_s{s}"
+                        jobs.append((name, extra))
+        print(f"ablation: rows={args.rows} games={args.games} levels={args.levels} "
+              f"seeds={args.seeds} → {len(jobs)} runs, concurrency={args.concurrency}", flush=True)
     t0 = time.time()
 
     def run_proc(name, extra):

@@ -23,17 +23,15 @@ DATA = HERE / "data"
 HARNESS_RUNS = (HERE.parents[0] / "exp_013_headline_experiment"
                 / "exp_013_1b_leaky_rnd_on_icm_phi" / "runs")
 
-# (phi_mode, leak) -> row label. leak compared with tolerance.
+# (phi_mode, leak) -> 2x2 row label. EXACT μ ∈ {0, 0.05} only: off-nominal μ (0.01,
+# 0.02, …) are leak-SWEEP runs and must NOT land in the clean 2x2 table (use leak_sweep.py).
 def classify(phi_mode: str, leak: float) -> str | None:
-    leaky = leak > 1e-9
-    return {
-        ("icm", True): "R1_icm_leak0.05",
-        ("icm", False): "R2_icm_leak0.0",
-        ("frozen", True): "R3_frozen_leak0.05",
-        ("frozen", False): "R4_frozen_leak0.0",
-        ("pixel", True): "R5_pixel_leak0.05",
-        ("pixel", False): "R5b_pixel_leak0.0",   # not in the plan, but classify if seen
-    }.get((phi_mode, leaky))
+    if abs(leak) < 1e-9:
+        return {"icm": "R2_icm_leak0.0", "frozen": "R4_frozen_leak0.0"}.get(phi_mode)
+    if abs(leak - 0.05) < 1e-9:
+        return {"icm": "R1_icm_leak0.05", "frozen": "R3_frozen_leak0.05",
+                "pixel": "R5_pixel_leak0.05"}.get(phi_mode)
+    return None                                      # off-nominal μ → leak sweep, not the 2x2
 
 
 def main():
@@ -66,6 +64,8 @@ def main():
                 continue
             if r.get("total_env_steps", 0) < args.min_steps:
                 continue
+            if r.get("leak_per", "minibatch") != "minibatch":
+                continue                            # per-update runs are leak-sweep, not the 2x2
             row = classify(r["phi_mode"], float(r.get("leak", 0.0)))
             if row is None:
                 continue

@@ -29,6 +29,8 @@ def main():
                         "(frozen), or raw flattened pixels (pixel, no encoder)")
     p.add_argument("--warmup-episodes", type=int, default=None,
                    help="ICM φ warm-up on N random-policy episodes before PPO (icm mode only; 0=off)")
+    p.add_argument("--leak-per", choices=["minibatch", "update"], default=None,
+                   help="when the shrink-to-init leak fires: per minibatch step (default) or once per PPO update")
     p.add_argument("--init-phi-ckpt", type=str, default=None,
                    help="init φ from a saved run's checkpoint (cross-level transfer)")
     p.add_argument("--no-stop-on-first-reward", action="store_true")
@@ -46,6 +48,8 @@ def main():
         cfg.phi_mode = args.phi_mode
     if args.warmup_episodes is not None:
         cfg.icm_warmup_episodes = args.warmup_episodes
+    if args.leak_per is not None:
+        cfg.leak_per = args.leak_per
     if args.init_phi_ckpt is not None:
         cfg.init_phi_ckpt = args.init_phi_ckpt
     if args.no_stop_on_first_reward:

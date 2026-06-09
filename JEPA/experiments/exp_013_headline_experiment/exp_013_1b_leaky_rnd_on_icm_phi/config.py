@@ -117,6 +117,11 @@ class Config:
                                         # 0.01→0.05: at 0.01 the novelty floor saturates on long runs
                                         # (exp_014_1 + the 999k frozen_re86 flat floor); 0.05 holds a
                                         # live, μ-dependent floor so the signal isn't spent by ~80k steps.
+    # WHEN the leak fires. "minibatch" = after every predictor optimiser step (the
+    # original cadence → effective forget ≈ minibatches×epochs×μ per PPO update);
+    # "update" = once per PPO update (effective rate exactly μ, decoupled from the
+    # minibatch count). The leak-cadence ablation (exp_017 leak_sweep) tests both.
+    leak_per: str = "minibatch"         # "minibatch" | "update"
 
     # Intrinsic-reward normalisation (warm-up + EMA std of returns, no centring)
     int_norm_decay: float = 0.99

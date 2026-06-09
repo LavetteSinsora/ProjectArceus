@@ -112,6 +112,7 @@ def _rnd_update(rndphi: RNDPhi, opt, phi_cached: torch.Tensor, dones: torch.Tens
     idx = np.arange(n)
     tot = 0.0
     steps = 0
+    per_mb = getattr(cfg, "leak_per", "minibatch") == "minibatch"
     for _ in range(cfg.rnd_epochs):
         np.random.shuffle(idx)
         for s in range(0, n, mb):
@@ -121,9 +122,12 @@ def _rnd_update(rndphi: RNDPhi, opt, phi_cached: torch.Tensor, dones: torch.Tens
             loss.backward()
             nn.utils.clip_grad_norm_(rndphi.predictor.parameters(), cfg.grad_clip)
             opt.step()
-            rndphi.apply_leak()                   # forget AFTER the step
+            if per_mb:
+                rndphi.apply_leak()               # forget AFTER each minibatch step
             tot += loss.item()
             steps += 1
+    if not per_mb:
+        rndphi.apply_leak()                       # forget ONCE per PPO update
     return tot / max(1, steps)
 
 
@@ -494,6 +498,7 @@ def train(cfg, smoke: bool = False) -> dict:
         "solved": solved, "censored": not solved,
         "total_env_steps": global_step, "max_env_steps": cfg.max_env_steps,
         "warmup_env_steps": warmup_env_steps, "phi_mode": cfg.phi_mode,
+        "leak_per": getattr(cfg, "leak_per", "minibatch"),
         "phi_freeze_step": freeze_step, "leak": cfg.leak,
         "freeze_metric": cfg.freeze_metric,
         "holdout_inv_acc_final": last_holdout_inv,   # φ's TRUE controllability at the end
