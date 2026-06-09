@@ -1,0 +1,6 @@
+row,ls20,tu93,re86,g50t
+R1_icm_leak0.05,,,,
+R2_icm_leak0.0,91872,225344,268704,27720
+R3_frozen_leak0.05,,,,
+R4_frozen_leak0.0,,,,
+R5_pixel_leak0.05,36448,112000,inf,95328

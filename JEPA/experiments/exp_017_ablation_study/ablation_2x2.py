@@ -12,9 +12,11 @@ PRIORITY: R2 + R5 (the cells we have zero data for). Sequential by default (MPS 
 GPU-bound → one proc saturates it; raise --concurrency only if you measure headroom).
 
     # priority pass, L1 × 4 games × 3 seeds, locally:
-    uv run python -m JEPA.experiments.exp_013_headline_experiment.ablation_2x2 \
+    uv run python -m JEPA.experiments.exp_017_ablation_study.ablation_2x2 \
         --rows R2 R5 --games ls20 tu93 re86 g50t --seeds 0 1 2
 
+Runs land in the exp_013_1b harness `runs/` dir; pull them into this study's curated
+`data/` archive with `collect.py`, then build the §4.4 table with `aggregate.py`.
 Aggregates from result.json by (phi_mode, leak) — robust to identical exp_name prefixes.
 """
 
