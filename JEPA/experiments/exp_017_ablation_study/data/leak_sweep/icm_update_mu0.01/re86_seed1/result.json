@@ -1,0 +1,21 @@
+{
+  "exp_name": "exp013_1_rndicm_icm_re86_L1_seed1",
+  "method": "rnd_icm",
+  "game": "re86",
+  "level_index": 0,
+  "seed": 1,
+  "env_steps_to_first_reward": 165536,
+  "solved": true,
+  "censored": false,
+  "total_env_steps": 167040,
+  "max_env_steps": 1000000,
+  "warmup_env_steps": 3200,
+  "phi_mode": "icm",
+  "leak_per": "update",
+  "phi_freeze_step": null,
+  "leak": 0.01,
+  "freeze_metric": "holdout",
+  "holdout_inv_acc_final": 0.447,
+  "onpolicy_inv_acc_final": 0.7563976347446442,
+  "wall_seconds": 142.46974325180054
+}
