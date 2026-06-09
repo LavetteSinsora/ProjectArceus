@@ -38,6 +38,7 @@ RANDOM_E = {"ls20": 49_843, "tu93": 500_000, "re86": inf, "g50t": inf}
 
 
 def cell(glob_dir: str, game: str):
+    """median env-steps among solved (inf if none solved), or None if no runs (TBD)."""
     rs = []
     for f in glob.glob(str(DATA / glob_dir / f"{game}_*seed*" / "result.json")):
         r = json.load(open(f))
@@ -46,37 +47,57 @@ def cell(glob_dir: str, game: str):
     if not rs:
         return None
     sv = np.array([r["env_steps_to_first_reward"] for r in rs if r["solved"]], float)
-    return (float(np.median(sv)) if sv.size else inf, int(sv.size), len(rs))
+    return float(np.median(sv)) if sv.size else inf
 
 
-def tex(c, ref=False):
-    if ref:                                   # random-policy reference: just E[steps]
-        return r"$\infty$" if c == inf else f"{c/1000:.0f}k"
-    if c is None:
-        return r"\TBD"
-    md, ns, n = c
-    return f"$\\infty$\\,({ns}/{n})" if ns == 0 else f"{md/1000:.0f}k\\,({ns}/{n})"
+def fmt(v, is_min, tex_mode):
+    """Format one numeric cell; bold (LaTeX) / *star* (console) if it's the column best."""
+    if v is None:
+        return r"\TBD" if tex_mode else "TBD"
+    s = r"$\infty$" if v == inf else f"{v/1000:.0f}k"
+    if v == inf:
+        return s
+    if is_min:
+        return (r"\textbf{" + s + "}") if tex_mode else f"*{s}*"
+    return s
 
 
 def plain(s):
     return (s.replace(r"\mu{=}", "μ=").replace(r"\phi^w", "φʷ").replace(r"\phi", "φ")
              .replace(r"\textbf{", "").replace(r"\quad ", "  ").replace("}", "")
-             .replace(r"\,", " ").replace("$", "").replace(r"\infty", "∞")
+             .replace(r"\,", "").replace("$", "").replace(r"\infty", "∞")
              .replace(r"\TBD", "TBD").replace("---", "—"))
 
 
 def main():
-    # console
-    print(f"{'variant':<34}{'setting':<16}" + "".join(f"{GAME_TEX[g]:>14}" for g in GAMES))
-    print("-" * (34 + 16 + 14 * 4))
-    body = []
+    # numeric grid: per-row values per game (median, inf, or None=TBD)
+    grid = []   # (label, setting, [vals], is_ref)
     for label, setting, src in ROWS:
-        cells = ([cell(src, g) for g in GAMES] if src is not None
-                 else [RANDOM_E[g] for g in GAMES])
-        ref = src is None
+        if src is None:
+            grid.append((label, setting, [RANDOM_E[g] for g in GAMES], True))
+        else:
+            grid.append((label, setting, [cell(src, g) for g in GAMES], False))
+    # per-column minimum over the METHOD rows only (the random reference is not "best")
+    col_min = []
+    for j in range(len(GAMES)):
+        finite = [row[2][j] for row in grid if not row[3]
+                  and row[2][j] not in (None, inf)]
+        col_min.append(min(finite) if finite else None)
+
+    def is_min(v, j, ref):
+        return (not ref and v is not None and col_min[j] is not None
+                and abs(v - col_min[j]) < 1e-9)
+
+    # console
+    print(f"{'variant':<34}{'setting':<16}" + "".join(f"{GAME_TEX[g]:>12}" for g in GAMES))
+    print("-" * (34 + 16 + 12 * 4))
+    for label, setting, vals, ref in grid:
         print(f"{plain(label):<34}{plain(setting):<16}"
-              + "".join(f"{plain(tex(c, ref)):>14}" for c in cells))
-        body.append((label, setting, [tex(c, ref) for c in cells], ref))
+              + "".join(f"{plain(fmt(v, is_min(v, j, ref), False)):>12}"
+                        for j, v in enumerate(vals)))
+    body = [(label, setting, [fmt(v, is_min(v, j, ref), True)
+                              for j, v in enumerate(vals)], ref)
+            for label, setting, vals, ref in grid]
 
     # LaTeX
     L = [
@@ -84,10 +105,10 @@ def main():
         r"\begin{table}[t]",
         r"  \centering",
         r"  \caption{\textbf{Component ablation} on four ARC-AGI-3 games (L1). Cells are the "
-        r"median environment steps to first reward (lower is better) with seeds solved "
-        r"($k/N$); $\infty$ = never solved. Agent (CNN\,+\,PPO) and all hyperparameters are "
-        r"fixed; only the novelty representation $\phi$ and leak $\mu$ change. $-$ harness "
-        r"replaces the intrinsic bonus with an undirected policy.}",
+        r"median environment steps to first reward over $N$ seeds (lower is better); "
+        r"\textbf{bold} = fastest in each column, $\infty$ = never solved. Agent (CNN\,+\,PPO) "
+        r"and all hyperparameters are fixed; only the novelty representation $\phi$ and leak "
+        r"$\mu$ change. $-$ harness replaces the intrinsic bonus with an undirected policy.}",
         r"  \label{tab:ablation}",
         r"  \begin{tabular}{llcccc}",
         r"    \toprule",
