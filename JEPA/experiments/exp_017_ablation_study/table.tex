@@ -1,0 +1,18 @@
+\newcommand{\TBD}{\textcolor{gray}{--}}  % put once in preamble
+\begin{table}[t]
+  \centering
+  \caption{\textbf{Component ablation} on four ARC-AGI-3 games (L1). Cells are the median environment steps to first reward (lower is better) with seeds solved ($k/N$); $\infty$ = never solved. Agent (CNN\,+\,PPO) and all hyperparameters are fixed; only the novelty representation $\phi$ and leak $\mu$ change. $-$ harness replaces the intrinsic bonus with an undirected policy.}
+  \label{tab:ablation}
+  \begin{tabular}{llcccc}
+    \toprule
+    Variant & Setting & LS20 & TU93 & RE86 & G50T \\
+    \midrule
+    \textbf{Full} (Leaky RND on $\phi^w$) & icm, $\mu{=}.01$ & 32k\,(3/4) & 132k\,(2/8) & 70k\,(3/4) & 56k\,(4/4) \\
+    \quad $-$ leak & icm, $\mu{=}0$ & 92k\,(3/3) & 292k\,(8/8) & 269k\,(3/3) & 28k\,(2/3) \\
+    \quad $-\,\phi$ (random enc.) & frozen, $\mu{=}.01$ & 43k\,(4/4) & 70k\,(7/8) & 474k\,(3/4) & 68k\,(3/4) \\
+    \quad $-\,\phi$ (raw pixels) & pixel, $\mu{=}.01$ & 61k\,(4/4) & 149k\,(8/8) & 356k\,(4/4) & 98k\,(3/4) \\
+    \midrule
+    $-$ harness (random policy) & --- & 50k & 500k & $\infty$ & $\infty$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}

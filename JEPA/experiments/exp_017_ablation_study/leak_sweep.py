@@ -41,6 +41,8 @@ def main():
     roots = [r for r in dict.fromkeys(roots) if Path(r).exists()]
 
     # best run per (leak, per, game, seed)
+    # Scan ALL encoders (icm/frozen/pixel) so one pass archives every sweep cell; the
+    # --phi flag only selects which encoder's pivot is PRINTED.
     best: dict[tuple, tuple[int, Path, dict]] = {}
     for root in roots:
         for rj in glob.glob(f"{root}/**/result.json", recursive=True):
@@ -48,25 +50,24 @@ def main():
                 r = json.load(open(rj))
             except Exception:
                 continue
-            if r.get("phi_mode") != args.phi:
+            if "phi_mode" not in r or r.get("total_env_steps", 0) < args.min_steps:
                 continue
-            if r.get("total_env_steps", 0) < args.min_steps:
-                continue
-            key = (float(r.get("leak", 0.0)), r.get("leak_per", "minibatch"),
-                   r["game"], r["seed"])
+            key = (r["phi_mode"], float(r.get("leak", 0.0)),
+                   r.get("leak_per", "minibatch"), r["game"], r["seed"])
             steps = r.get("total_env_steps", 0)
             if key not in best or steps > best[key][0]:
                 best[key] = (steps, Path(rj).parent, r)
 
-    # archive + aggregate
+    # archive ALL encoders; aggregate only the selected --phi for the printed pivot
     cells = defaultdict(list)
-    for (leak, per, game, seed), (_s, src, r) in best.items():
-        dst = DATA / f"{args.phi}_{per}_mu{leak}" / f"{game}_seed{seed}"
+    for (phi, leak, per, game, seed), (_s, src, r) in best.items():
+        dst = DATA / f"{phi}_{per}_mu{leak}" / f"{game}_seed{seed}"
         dst.mkdir(parents=True, exist_ok=True)
         for fn in ("result.json", "config.json", "metrics.jsonl"):
             if (src / fn).exists():
                 shutil.copy2(src / fn, dst / fn)
-        cells[(leak, per, game)].append(r)
+        if phi == args.phi:
+            cells[(leak, per, game)].append(r)
 
     games = sorted({g for (_l, _p, g) in cells})
     conds = sorted({(l, p) for (l, p, _g) in cells})

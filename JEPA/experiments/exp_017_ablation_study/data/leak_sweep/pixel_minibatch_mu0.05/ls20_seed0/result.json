@@ -1,0 +1,20 @@
+{
+  "exp_name": "exp013_1_rndicm_pixel_ls20_L1_seed0",
+  "method": "rnd_icm",
+  "game": "ls20",
+  "level_index": 0,
+  "seed": 0,
+  "env_steps_to_first_reward": 36448,
+  "solved": true,
+  "censored": false,
+  "total_env_steps": 36864,
+  "max_env_steps": 200000,
+  "warmup_env_steps": 0,
+  "phi_mode": "pixel",
+  "phi_freeze_step": null,
+  "leak": 0.05,
+  "freeze_metric": "holdout",
+  "holdout_inv_acc_final": NaN,
+  "onpolicy_inv_acc_final": NaN,
+  "wall_seconds": 148.65929293632507
+}

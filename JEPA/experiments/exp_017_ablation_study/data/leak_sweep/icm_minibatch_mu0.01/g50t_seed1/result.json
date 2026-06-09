@@ -1,0 +1,21 @@
+{
+  "exp_name": "exp013_1_rndicm_icm_g50t_L1_seed1",
+  "method": "rnd_icm",
+  "game": "g50t",
+  "level_index": 0,
+  "seed": 1,
+  "env_steps_to_first_reward": 174112,
+  "solved": true,
+  "censored": false,
+  "total_env_steps": 174144,
+  "max_env_steps": 300000,
+  "warmup_env_steps": 4160,
+  "phi_mode": "icm",
+  "leak_per": "minibatch",
+  "phi_freeze_step": null,
+  "leak": 0.01,
+  "freeze_metric": "holdout",
+  "holdout_inv_acc_final": 0.6565,
+  "onpolicy_inv_acc_final": 0.600394481420517,
+  "wall_seconds": 204.0265486240387
+}
