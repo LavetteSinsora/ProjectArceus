@@ -1,18 +1,18 @@
 \newcommand{\TBD}{\textcolor{gray}{--}}  % put once in preamble
 \begin{table}[t]
   \centering
-  \caption{\textbf{Component ablation} on four ARC-AGI-3 games (L1). Cells are the median environment steps to first reward over $N$ seeds (lower is better); \textbf{bold} = fastest in each column, $\infty$ = never solved. Agent (CNN\,+\,PPO) and all hyperparameters are fixed; only the novelty representation $\phi$ and leak $\mu$ change. $-$ harness replaces the intrinsic bonus with an undirected policy.}
+  \caption{\textbf{Component ablation} on four ARC-AGI-3 games (L1). Cells are the median environment steps to first reward over $N$ seeds (lower is better); \textbf{bold} = fastest in each column, $\infty$ = never solved. Agent (CNN\,+\,PPO) and all hyperparameters are fixed; we vary only the novelty representation $\phi$ and the leak $\mu$. $-$ harness replaces the intrinsic bonus with an undirected policy.}
   \label{tab:ablation}
-  \begin{tabular}{llcccc}
+  \begin{tabular}{lcccc}
     \toprule
-    Variant & Setting & LS20 & TU93 & RE86 & G50T \\
+    Variant & LS20 & TU93 & RE86 & G50T \\
     \midrule
-    \textbf{Full} (Leaky RND on $\phi^w$) & icm, $\mu{=}.01$ & \textbf{32k} & 132k & \textbf{70k} & 56k \\
-    \quad $-$ leak & icm, $\mu{=}0$ & 92k & 292k & 269k & \textbf{28k} \\
-    \quad $-\,\phi$ (random enc.) & frozen, $\mu{=}.01$ & 43k & \textbf{70k} & 474k & 68k \\
-    \quad $-\,\phi$ (raw pixels) & pixel, $\mu{=}.01$ & 61k & 149k & 356k & 98k \\
+    \textbf{Full} (Leaky RND on $\phi^w$) & \textbf{32k} & 132k & \textbf{70k} & 56k \\
+    \quad $-$ leak (vanilla RND) & 92k & 292k & 269k & \textbf{28k} \\
+    \quad $-\,\phi^w$ (random $\phi$) & 43k & \textbf{70k} & 474k & 68k \\
+    \quad $-\,\phi^w$ (pixel $\phi$) & 61k & 149k & 356k & 98k \\
     \midrule
-    $-$ harness (random policy) & --- & 50k & 500k & $\infty$ & $\infty$ \\
+    $-$ harness (random policy) & 50k & 500k & $\infty$ & $\infty$ \\
     \bottomrule
   \end{tabular}
 \end{table}

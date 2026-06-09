@@ -24,15 +24,11 @@ LEVEL = 0
 
 # row: (LaTeX label, setting, data glob under data/ ; None=random-policy reference)
 ROWS = [
-    (r"\textbf{Full} (Leaky RND on $\phi^w$)", r"icm, $\mu{=}.01$",
-     "leak_sweep/icm_minibatch_mu0.01"),
-    (r"\quad $-$ leak",                         r"icm, $\mu{=}0$",
-     "R2_icm_leak0.0"),
-    (r"\quad $-\,\phi$ (random enc.)",          r"frozen, $\mu{=}.01$",
-     "leak_sweep/frozen_minibatch_mu0.01"),
-    (r"\quad $-\,\phi$ (raw pixels)",           r"pixel, $\mu{=}.01$",
-     "leak_sweep/pixel_minibatch_mu0.01"),
-    (r"$-$ harness (random policy)",            r"---", None),
+    (r"\textbf{Full} (Leaky RND on $\phi^w$)", "leak_sweep/icm_minibatch_mu0.01"),
+    (r"\quad $-$ leak (vanilla RND)",          "R2_icm_leak0.0"),
+    (r"\quad $-\,\phi^w$ (random $\phi$)",     "leak_sweep/frozen_minibatch_mu0.01"),
+    (r"\quad $-\,\phi^w$ (pixel $\phi$)",      "leak_sweep/pixel_minibatch_mu0.01"),
+    (r"$-$ harness (random policy)",           None),
 ]
 RANDOM_E = {"ls20": 49_843, "tu93": 500_000, "re86": inf, "g50t": inf}
 
@@ -71,17 +67,17 @@ def plain(s):
 
 def main():
     # numeric grid: per-row values per game (median, inf, or None=TBD)
-    grid = []   # (label, setting, [vals], is_ref)
-    for label, setting, src in ROWS:
+    grid = []   # (label, [vals], is_ref)
+    for label, src in ROWS:
         if src is None:
-            grid.append((label, setting, [RANDOM_E[g] for g in GAMES], True))
+            grid.append((label, [RANDOM_E[g] for g in GAMES], True))
         else:
-            grid.append((label, setting, [cell(src, g) for g in GAMES], False))
+            grid.append((label, [cell(src, g) for g in GAMES], False))
     # per-column minimum over the METHOD rows only (the random reference is not "best")
     col_min = []
     for j in range(len(GAMES)):
-        finite = [row[2][j] for row in grid if not row[3]
-                  and row[2][j] not in (None, inf)]
+        finite = [row[1][j] for row in grid if not row[2]
+                  and row[1][j] not in (None, inf)]
         col_min.append(min(finite) if finite else None)
 
     def is_min(v, j, ref):
@@ -89,15 +85,15 @@ def main():
                 and abs(v - col_min[j]) < 1e-9)
 
     # console
-    print(f"{'variant':<34}{'setting':<16}" + "".join(f"{GAME_TEX[g]:>12}" for g in GAMES))
-    print("-" * (34 + 16 + 12 * 4))
-    for label, setting, vals, ref in grid:
-        print(f"{plain(label):<34}{plain(setting):<16}"
+    print(f"{'variant':<36}" + "".join(f"{GAME_TEX[g]:>12}" for g in GAMES))
+    print("-" * (36 + 12 * 4))
+    for label, vals, ref in grid:
+        print(f"{plain(label):<36}"
               + "".join(f"{plain(fmt(v, is_min(v, j, ref), False)):>12}"
                         for j, v in enumerate(vals)))
-    body = [(label, setting, [fmt(v, is_min(v, j, ref), True)
-                              for j, v in enumerate(vals)], ref)
-            for label, setting, vals, ref in grid]
+    body = [(label, [fmt(v, is_min(v, j, ref), True)
+                     for j, v in enumerate(vals)], ref)
+            for label, vals, ref in grid]
 
     # LaTeX
     L = [
@@ -107,18 +103,18 @@ def main():
         r"  \caption{\textbf{Component ablation} on four ARC-AGI-3 games (L1). Cells are the "
         r"median environment steps to first reward over $N$ seeds (lower is better); "
         r"\textbf{bold} = fastest in each column, $\infty$ = never solved. Agent (CNN\,+\,PPO) "
-        r"and all hyperparameters are fixed; only the novelty representation $\phi$ and leak "
-        r"$\mu$ change. $-$ harness replaces the intrinsic bonus with an undirected policy.}",
+        r"and all hyperparameters are fixed; we vary only the novelty representation $\phi$ and "
+        r"the leak $\mu$. $-$ harness replaces the intrinsic bonus with an undirected policy.}",
         r"  \label{tab:ablation}",
-        r"  \begin{tabular}{llcccc}",
+        r"  \begin{tabular}{lcccc}",
         r"    \toprule",
-        r"    Variant & Setting & LS20 & TU93 & RE86 & G50T \\",
+        r"    Variant & LS20 & TU93 & RE86 & G50T \\",
         r"    \midrule",
     ]
-    for i, (label, setting, cells, ref) in enumerate(body):
+    for label, cells, ref in body:
         if ref:
             L.append(r"    \midrule")
-        L.append(f"    {label} & {setting} & " + " & ".join(cells) + r" \\")
+        L.append(f"    {label} & " + " & ".join(cells) + r" \\")
     L += [r"    \bottomrule", r"  \end{tabular}", r"\end{table}"]
     out = HERE / "table.tex"
     out.write_text("\n".join(L) + "\n")
