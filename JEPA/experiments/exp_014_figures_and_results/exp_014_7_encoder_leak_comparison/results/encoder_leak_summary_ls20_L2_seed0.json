@@ -1,0 +1,105 @@
+{
+  "timestamp": "2026-06-08T12:03:42",
+  "game": "ls20",
+  "level_index": 1,
+  "level_tag": "ls20_L2_seed0",
+  "encoder_names": [
+    "pixel",
+    "linproj",
+    "random",
+    "idm"
+  ],
+  "encoder_dims": {
+    "pixel": 4096,
+    "linproj": 256,
+    "random": 256,
+    "idm": 256
+  },
+  "n_drivers": 3,
+  "n_probes": 2,
+  "is_probe": [
+    0,
+    0,
+    0,
+    1,
+    1
+  ],
+  "monitor_first_step": [
+    1,
+    1,
+    2,
+    3,
+    5
+  ],
+  "harvest_visits": [
+    2413,
+    2412,
+    1770,
+    878,
+    512
+  ],
+  "updates_free": 30,
+  "updates_masked": 0,
+  "rollout_env_steps_per_update": 2048,
+  "minibatches": 4,
+  "rnd_epochs": 4,
+  "rnd_lr": 0.001,
+  "mu": 0.0,
+  "icm_lr": 0.001,
+  "icm_epochs": 4,
+  "beta": 0.2,
+  "linproj_dim": 256,
+  "pixel_onehot": false,
+  "influence_every": 0,
+  "influence_steps": 20,
+  "idm_warmup_episodes": 40,
+  "idm_warmup_epochs": 30,
+  "idm_frozen_during_probe": true,
+  "idm_warmup_inv_acc": 0.5513141053418319,
+  "idm_warmup_transitions": 3120,
+  "seed": 0,
+  "final_cum_visits": [
+    15043,
+    15858,
+    11027,
+    0,
+    0
+  ],
+  "final_mean_l2_unit": {
+    "pixel": 0.21177232489140946,
+    "linproj": 0.14152233325505337,
+    "random": 0.12343514976447376,
+    "idm": 0.791363232800761
+  },
+  "final_mean_cos": {
+    "pixel": 0.9775762412050435,
+    "linproj": 0.9899647684342409,
+    "random": 0.9923254931565813,
+    "idm": 0.6595620450143744
+  },
+  "final_novelty": {
+    "pixel": 0.0008337268882314675,
+    "linproj": 0.0004628219068990802,
+    "random": 0.00036059929625480435,
+    "idm": 0.018521127849825136
+  },
+  "npz": "/Users/chrishe/Desktop/\u540c\u6b65\u7a7a\u95f4/Chris/Chris/Obsidian Vault/UCSD/Course Notes/CSE 190 Deep RL/Group Project/Code Repo/JEPA/experiments/exp_014_figures_and_results/exp_014_7_encoder_leak_comparison/results/encoder_leak_series_ls20_L2_seed0.npz",
+  "final_leak_offdiag_mean": {
+    "pixel": 0.9232973128557205,
+    "linproj": 0.9658810466527938,
+    "random": 0.9688468217849732,
+    "idm": 0.5809679925441742
+  },
+  "final_leak_diag_mean": {
+    "pixel": 0.9449293971061706,
+    "linproj": 0.9807848691940307,
+    "random": 0.979913341999054,
+    "idm": 0.9809124588966369
+  },
+  "final_leak_driver_to_probe": {
+    "pixel": 0.9307005703449249,
+    "linproj": 0.9645898938179016,
+    "random": 0.9694748222827911,
+    "idm": 0.6209677954514822
+  }
+}

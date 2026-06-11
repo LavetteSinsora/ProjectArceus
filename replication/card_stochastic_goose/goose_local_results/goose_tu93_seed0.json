@@ -1,0 +1,13 @@
+{
+  "agent": "stochastic_goose",
+  "game": "tu93",
+  "game_id": "tu93-0768757b",
+  "seed": 0,
+  "levels_completed": 0,
+  "total_actions": 55999,
+  "level_steps": {},
+  "max_actions_per_level": 600000,
+  "censored_level": null,
+  "wall_seconds": 6900.5149466991425,
+  "done": true
+}

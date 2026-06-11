@@ -35,3 +35,6 @@ JEPA/checkpoints/
 
 # macOS metadata
 .DS_Store
+
+# claude_automate framework (local dev only)
+claude_automate/

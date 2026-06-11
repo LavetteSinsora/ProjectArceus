@@ -1,0 +1,14 @@
+{
+  "exp_name": "goose_tu93_seed1_L1",
+  "method": "goose",
+  "game": "tu93",
+  "level_index": 0,
+  "seed": 1,
+  "env_steps_to_first_reward": null,
+  "solved": false,
+  "censored": true,
+  "total_env_steps": 55999,
+  "max_env_steps": 600000,
+  "agent": "stochastic_goose",
+  "game_id": "tu93-0768757b"
+}

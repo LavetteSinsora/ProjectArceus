@@ -54,17 +54,27 @@ def main():
     p.add_argument("--save-secs", type=float, default=120.0)
     p.add_argument("--torch-threads", type=int, default=0,
                    help="cap intra-op CPU threads (>0) to avoid oversubscription when running in parallel")
+    p.add_argument("--device", default="auto",
+                   help="torch device: auto|cpu|mps|cuda. 'auto' = cuda>mps>cpu. MPS is ~9x faster "
+                        "than CPU here (the train step dominates) and matches the original GPU run.")
     a = p.parse_args()
     os.makedirs(a.out, exist_ok=True)
     if a.torch_threads > 0:
         torch.set_num_threads(a.torch_threads)
+
+    if a.device == "auto":
+        dev = ("cuda" if torch.cuda.is_available()
+               else "mps" if torch.backends.mps.is_available() else "cpu")
+    else:
+        dev = a.device
+    device = torch.device(dev)
 
     arc = Arcade(operation_mode=OperationMode.OFFLINE)
     gid = next((e.game_id for e in arc.get_environments() if e.game_id.startswith(a.game)), a.game)
     env = arc.make(gid)
     frame = env.observation_space or env.step(GameAction.RESET)
     torch.manual_seed(a.seed)
-    ag = Action(game_id=gid, max_minutes=a.max_minutes)
+    ag = Action(game_id=gid, max_minutes=a.max_minutes, device=device)
 
     NLEV = 3
     budget = a.max_actions_per_level or a.max_actions

@@ -1,0 +1,14 @@
+{
+  "exp_name": "goose_g50t_seed1_L1",
+  "method": "goose",
+  "game": "g50t",
+  "level_index": 0,
+  "seed": 1,
+  "env_steps_to_first_reward": null,
+  "solved": false,
+  "censored": true,
+  "total_env_steps": 55610,
+  "max_env_steps": 600000,
+  "agent": "stochastic_goose",
+  "game_id": "g50t-5849a774"
+}

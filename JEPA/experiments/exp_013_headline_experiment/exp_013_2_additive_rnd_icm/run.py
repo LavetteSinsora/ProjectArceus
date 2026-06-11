@@ -22,6 +22,9 @@ def main():
     p.add_argument("--level", type=int, default=1, help="0-indexed level (1 = L2)")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--w-icm", type=float, default=None, help="ICM weight in [0,1] (default 0.5)")
+    p.add_argument("--no-phi-freeze", action="store_true",
+                   help="never freeze φ → keeps the ICM forward-error a LIVE curiosity signal "
+                        "(Route-1 test for recovering tu93-L3; frozen φ collapses the forward error)")
     p.add_argument("--max-env-steps", type=int, default=None)
     p.add_argument("--n-envs", type=int, default=None)
     p.add_argument("--no-stop-on-first-reward", action="store_true")
@@ -31,6 +34,9 @@ def main():
     cfg = Config(game=args.game, level_index=args.level, seed=args.seed)
     if args.w_icm is not None:
         cfg.w_icm = args.w_icm
+    if args.no_phi_freeze:
+        cfg.phi_freeze_inverse_acc = 1.01      # gate can never fire
+        cfg.phi_freeze_max_updates = 10**9     # fallback can never fire → φ trains throughout
     if args.max_env_steps is not None:
         cfg.max_env_steps = args.max_env_steps
     if args.n_envs is not None:

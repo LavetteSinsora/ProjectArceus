@@ -1,147 +1,170 @@
-# Project Arceus — JEPA World Model for LS20
+# Leaky RND: Regenerating Novelty in Sparse-Reward Environments
 
-CSE 190 Deep RL group project. A JEPA-based world model + policy that learns to play the ARC-AGI LS20 environment.
+**CSE 190 Deep Reinforcement Learning — UCSD, Spring 2026**
 
----
+This repository contains the full code, experiments, and writeup for *Leaky RND*, a method that prevents curiosity saturation in Random Network Distillation (RND) by introducing a small, controlled amount of forgetting into the distillation network. We test it on four ARC-AGI card-game environments and show that it consistently reaches first reward faster than standard RND.
 
-## Quick start (zero setup)
-
-This guide walks you from a fresh machine to a running dashboard in ~5 minutes.
-
-### 1. Install `uv` (Python package manager)
-
-`uv` manages both the Python version and all dependencies for you — no manual `pip install` or virtual environment setup needed.
-
-**macOS / Linux:**
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-**Windows (PowerShell):**
-```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-After installing, restart your terminal so the `uv` command is available.
-
-> `uv` will automatically download Python 3.13 the first time you run `uv sync` — you do not need to install Python separately.
-
-### 2. Clone the repo
-
-```bash
-git clone https://github.com/LavetteSinsora/ProjectArceus.git
-cd ProjectArceus
-```
-
-### 3. Install dependencies
-
-```bash
-uv sync
-```
-
-This creates a `.venv/` folder and installs every package listed below. Takes ~1–2 minutes on first run.
-
-### 4. Add your ARC API key
-
-Create a file named `.env` in the repo root:
-
-```
-ARC_API_KEY=your_key_here
-```
-
-You can get a key from the [ARC Prize platform](https://arcprize.org). The key is needed for the `arc-agi` SDK to communicate with the ARC-AGI game server.
-
-### 5. Launch the dashboard
-
-```bash
-uv run python JEPA/dashboard/server.py
-```
-
-Open **[http://localhost:8787](http://localhost:8787)** in your browser.
-
-- Select a checkpoint from the dropdown (e.g. `step_1055000.pt`)
-- Set `max_steps` (default 200)
-- Click **Run Episode**
-
-The dashboard visualizes: grid frames, patch embeddings, encoder attention maps, policy attention weights, per-patch JEPA prediction error, action probabilities, and the reasoning token over each timestep.
-
-**No browser needed — standalone episode runner:**
-```bash
-uv run python JEPA/dashboard/debug_runner.py JEPA/checkpoints/step_1055000.pt
-```
-Prints a JSON summary of the episode to stdout.
+**Paper:** [`Final Writeup/LeakyRND_Paper.pdf`](Final%20Writeup/LeakyRND_Paper.pdf)
 
 ---
 
-## Package reference
+## The core idea in one paragraph
 
-These are installed automatically by `uv sync`. Here's what each one does:
-
-| Package | Purpose |
-|---|---|
-| `torch` | PyTorch — the core deep learning framework. Used for all neural network layers (encoder, predictor, policy), training, and inference. |
-| `numpy` | Numerical arrays. Used for all non-gradient computations in the dashboard (statistics, attention maps, embedding summaries). |
-| `arc-agi` | Official ARC-AGI Python SDK. Provides `Arcade` and `OperationMode` to load and run ARC-AGI levels offline from `environment_files/`. |
-| `arcengine` | Low-level ARC game engine that `arc-agi` builds on. Handles grid logic, action dispatch, and level loading. |
-| `fastapi` | Web framework for the dashboard server. Serves the UI and exposes `/api/checkpoints` and `/api/run_episode` endpoints. |
-| `uvicorn[standard]` | ASGI server that runs the FastAPI app. The `[standard]` extra adds WebSocket and HTTP/2 support. |
-| `pydantic` | Data validation (pulled in by `arc-agi` and `fastapi`). Used to validate the `/api/run_episode` request body. |
-| `python-dotenv` | Loads `ARC_API_KEY` from your `.env` file into the environment at startup (pulled in by `arc-agi`). |
-| `flask`, `matplotlib`, `pillow`, `requests` | Pulled in by `arc-agi` for its own rendering and HTTP utilities. Not used directly by this project. |
-
-**Dev-only** (installed with `uv sync --extra dev`):
-
-| Package | Purpose |
-|---|---|
-| `pytest` | Test runner for the dashboard unit and integration tests in `JEPA/dashboard/tests/`. |
-| `httpx` | HTTP client required by FastAPI's `TestClient` for integration tests. |
+Standard RND saturates: once the predictor network has seen a state, its error on that state drops to near zero and never recovers — even if the agent hasn't visited that region in thousands of steps. Leaky RND adds a small weight-decay (leak) to the **predictor** network only, so old states gradually become novel again. The result is that the curiosity signal regenerates over time instead of collapsing, which helps on hard-exploration tasks where the agent must revisit areas many times to make progress.
 
 ---
 
-## Training from scratch
-
-```bash
-uv run python JEPA/train.py
-```
-
-Checkpoints are saved to `JEPA/checkpoints/` every 5 000 steps. Training runs on MPS (Apple Silicon), CUDA, or CPU automatically.
-
-## Evaluation
-
-```bash
-uv run python JEPA/eval.py
-```
-
----
-
-## Project layout
+## Repository layout
 
 ```
-JEPA/
-  train.py            # JEPA + policy training loop
-  encoder.py          # patch encoder (ViT-style transformer)
-  predictor.py        # latent-space transition predictor
-  policy.py           # cross-attention recurrent policy network
-  action_embed.py     # learned action embedding
-  buffer.py           # replay buffer
-  env_wrapper.py      # LS20Env wrapper around arc-agi
-  reward_shaping.py   # auxiliary reward utilities
-  ema.py              # exponential moving average for target encoder
-  config.py           # hyperparameter dataclass
-  eval.py             # evaluation script
-  run_online.py       # online rollout runner
-  inspect_policy.py   # policy weight inspector
-  dashboard/          # debug visualization server (FastAPI + HTML)
-    server.py         #   FastAPI app — launch this
-    debug_runner.py   #   runs one episode and returns serialized data
-    static/index.html #   single-page dashboard UI
-    tests/            #   pytest suite
-  checkpoints/        # saved model weights (step_*.pt)
-    step_1055000.pt   # latest checkpoint
+Final Writeup/           # LaTeX source + compiled PDF of the paper
+  LeakyRND_Paper.pdf     #   compiled paper (start here)
+  main.tex               #   LaTeX source
+  figures/               #   paper figures (PDFs + PNGs)
+
+JEPA/experiments/
+  exp_013_headline_experiment/   # Main result: steps-to-first-reward across 4 games
+    exp_013_0_rnd_baseline/      #   Vanilla RND baseline
+    exp_013_1_leaky_rnd/         #   Leaky RND (our method)
+    exp_013_2_additive_rnd_icm/  #   Leaky RND + ICM combo
+    ablation_2x2.py              #   Local driver for encoder × leak ablation (exp_017)
+
+  exp_014_figures_and_results/   # Diagnostic experiments supporting the paper
+    exp_014_0_main_result_plot/  #   Main results figure (4-game grid)
+    exp_014_1_rnd_saturation/    #   Single-state saturation probe
+    exp_014_2_leak_recency/      #   Leak cadence analysis
+    exp_014_3_unique_states/     #   Unique-state visitation curves
+    exp_014_4_mechanism_diagnosis/   # Why leak works: causal diagram
+    exp_014_5_rnd_forget/        #   Controlled forget probe (std vs. leaky RND)
+    exp_014_6_organic_forget/    #   Organic forget probe (real rollouts)
+    exp_014_7_encoder_leak_comparison/  # Encoder choice × leak interaction
+
+  exp_015_kaggle_submission/     # Kaggle competition submission (Go-Explore + Leaky RND)
+  exp_016_organic_leaky_rnd_icm/ # Organic ICM + Leaky RND integration runs
+  exp_019_exact_delta_wm/        # Exact-delta world model exploration
 
 replication/
-  card_stochastic_goose/   # baseline replication agent
+  card_stochastic_goose/         # Stochastic Goose baseline replication
 
 environment_files/
-  ls20/               # offline ARC-AGI environment bundle
+  ls20/ g50t/ re86/ tu93/        # Offline ARC-AGI environment bundles
 ```
+
+---
+
+## Setup
+
+We use [`uv`](https://docs.astral.sh/uv/) for hermetic dependency management (auto-installs Python 3.13, no manual venv needed).
+
+```bash
+# 1. Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh   # macOS/Linux
+# Windows: powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# 2. Clone
+git clone https://github.com/LavetteSinsora/ProjectArceus.git
+cd ProjectArceus
+
+# 3. Install all dependencies
+uv sync
+
+# 4. Add ARC API key (needed to talk to the ARC-AGI game server)
+echo "ARC_API_KEY=your_key_here" > .env
+#  Get a key at https://arcprize.org
+```
+
+---
+
+## Reproducing the main results (exp_013)
+
+The headline result is **steps to first reward** on four ARC-AGI card games, comparing vanilla RND, Leaky RND, and Leaky RND + ICM.
+
+**Run on Colab (recommended):** open `JEPA/experiments/exp_013_headline_experiment/colab_exp013.ipynb` in Google Colab. The notebook installs dependencies, runs all three agents in parallel across all four games, and saves results + figures to Google Drive.
+
+**Run locally (single game):**
+```bash
+# Leaky RND on LS20 Level 1, seed 0
+uv run python JEPA/experiments/exp_013_headline_experiment/exp_013_1_leaky_rnd/run.py \
+    --env ls20 --level 1 --seed 0
+
+# Vanilla RND baseline
+uv run python JEPA/experiments/exp_013_headline_experiment/exp_013_0_rnd_baseline/run.py \
+    --env ls20 --level 1 --seed 0
+```
+
+Results are written to `results/metrics.jsonl` under each experiment directory.
+
+**Ablation table (encoder × leak):**
+```bash
+uv run python JEPA/experiments/exp_013_headline_experiment/ablation_2x2.py
+```
+
+---
+
+## Reproducing the diagnostic figures (exp_014)
+
+Each `exp_014_*` sub-directory is self-contained. Run its `probe.py` or `diagnose.py` script to regenerate the figure:
+
+```bash
+# Example: single-state saturation probe (Figure 3 in the paper)
+uv run python JEPA/experiments/exp_014_figures_and_results/exp_014_1_rnd_saturation/single_state_recency_probe/probe.py
+
+# Controlled forget probe (Figure 4)
+uv run python JEPA/experiments/exp_014_figures_and_results/exp_014_5_rnd_forget/probe.py
+
+# Organic forget probe (Figure 5)
+uv run python JEPA/experiments/exp_014_figures_and_results/exp_014_6_organic_forget/probe.py
+```
+
+Output PNGs land in each directory's `figures/` subfolder.
+
+---
+
+## Environments
+
+We use four ARC-AGI card-game environments from the [ARC Prize](https://arcprize.org) platform, accessed via the official `arc-agi` Python SDK:
+
+| ID | Game | Levels used |
+|----|------|-------------|
+| `ls20` | LevelScript 20 | L1–L4 |
+| `g50t` | Game 50T | L1 |
+| `re86` | Reorder 86 | L1 |
+| `tu93` | TU-93 | L1, L3 |
+
+Environment bundles are in `environment_files/` and are loaded offline — no internet connection required after setup.
+
+---
+
+## Key hyperparameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `leak_alpha` | 0.01 | Weight-decay coefficient on the RND predictor (the core Leaky RND parameter) |
+| `rnd_lr` | 1e-4 | RND predictor learning rate |
+| `ppo_lr` | 2.5e-4 | PPO policy learning rate |
+| `n_envs` | 8 | Parallel environments |
+| `rollout_steps` | 128 | Steps per rollout before a PPO update |
+| `intrinsic_coef` | auto-calibrated | η is set so the first-batch intrinsic reward matches the extrinsic scale |
+
+Setting `leak_alpha=0` recovers standard RND exactly.
+
+---
+
+## Citation
+
+If you use this code or build on this work, please cite:
+
+```
+@techreport{leakyrnd2026,
+  title  = {Leaky RND: Regenerating Novelty in Sparse-Reward Environments},
+  author = {[authors]},
+  year   = {2026},
+  institution = {UC San Diego, CSE 190},
+}
+```
+
+---
+
+## Contact
+
+Questions about the code? Open an issue on GitHub.

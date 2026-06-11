@@ -1,0 +1,13 @@
+{
+  "agent": "stochastic_goose",
+  "game": "g50t",
+  "game_id": "g50t-5849a774",
+  "seed": 0,
+  "levels_completed": 0,
+  "total_actions": 55605,
+  "level_steps": {},
+  "max_actions_per_level": 600000,
+  "censored_level": null,
+  "wall_seconds": 6900.578933000565,
+  "done": true
+}

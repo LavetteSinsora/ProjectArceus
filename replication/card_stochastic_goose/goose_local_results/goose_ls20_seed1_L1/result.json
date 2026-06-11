@@ -1,0 +1,14 @@
+{
+  "exp_name": "goose_ls20_seed1_L1",
+  "method": "goose",
+  "game": "ls20",
+  "level_index": 0,
+  "seed": 1,
+  "env_steps_to_first_reward": null,
+  "solved": false,
+  "censored": true,
+  "total_env_steps": 55399,
+  "max_env_steps": 600000,
+  "agent": "stochastic_goose",
+  "game_id": "ls20-9607627b"
+}

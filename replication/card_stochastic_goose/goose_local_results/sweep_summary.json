@@ -1,0 +1,50 @@
+[
+  {
+    "game": "ls20",
+    "seed": 0,
+    "status": "ok",
+    "elapsed_min": 115.1
+  },
+  {
+    "game": "ls20",
+    "seed": 1,
+    "status": "ok",
+    "elapsed_min": 115.1
+  },
+  {
+    "game": "tu93",
+    "seed": 0,
+    "status": "ok",
+    "elapsed_min": 115.1
+  },
+  {
+    "game": "tu93",
+    "seed": 1,
+    "status": "ok",
+    "elapsed_min": 115.1
+  },
+  {
+    "game": "re86",
+    "seed": 0,
+    "status": "ok",
+    "elapsed_min": 115.1
+  },
+  {
+    "game": "re86",
+    "seed": 1,
+    "status": "ok",
+    "elapsed_min": 115.1
+  },
+  {
+    "game": "g50t",
+    "seed": 0,
+    "status": "ok",
+    "elapsed_min": 115.1
+  },
+  {
+    "game": "g50t",
+    "seed": 1,
+    "status": "ok",
+    "elapsed_min": 115.1
+  }
+]

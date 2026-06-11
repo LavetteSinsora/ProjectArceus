@@ -1,0 +1,13 @@
+{
+  "agent": "stochastic_goose",
+  "game": "ls20",
+  "game_id": "ls20-9607627b",
+  "seed": 1,
+  "levels_completed": 0,
+  "total_actions": 55399,
+  "level_steps": {},
+  "max_actions_per_level": 600000,
+  "censored_level": null,
+  "wall_seconds": 6900.0144419670105,
+  "done": true
+}

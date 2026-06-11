@@ -1,0 +1,69 @@
+{
+  "tag": "ls20_L2",
+  "n_seeds": 5,
+  "seeds_used": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "encoders": [
+    "pixel",
+    "linproj",
+    "random",
+    "idm"
+  ],
+  "final_chord_l2_median": {
+    "pixel": 0.21177232489140946,
+    "linproj": 0.1504379743312662,
+    "random": 0.12343514976447376,
+    "idm": 0.791363232800761
+  },
+  "final_cosine_median": {
+    "pixel": 0.9775762412050435,
+    "linproj": 0.988672413639381,
+    "random": 0.9923254931565813,
+    "idm": 0.63879875305509
+  },
+  "final_probe_novelty_median": {
+    "pixel": 0.0019743000739254057,
+    "linproj": 0.0011873483308590949,
+    "random": 0.0007961232040543109,
+    "idm": 0.014427094720304012
+  },
+  "leak": {
+    "pixel": {
+      "leak_offdiag_median": 0.9295974969863892,
+      "leak_offdiag_iqr": [
+        0.9087250530719757,
+        0.9307005703449249
+      ],
+      "self_diag_median": 0.9449293971061706
+    },
+    "linproj": {
+      "leak_offdiag_median": 0.9685615400473276,
+      "leak_offdiag_iqr": [
+        0.9645898938179016,
+        0.9689488510290781
+      ],
+      "self_diag_median": 0.9807848691940307
+    },
+    "random": {
+      "leak_offdiag_median": 0.9694748222827911,
+      "leak_offdiag_iqr": [
+        0.9631292819976807,
+        0.9696010450522105
+      ],
+      "self_diag_median": 0.979913341999054
+    },
+    "idm": {
+      "leak_offdiag_median": 0.6209677954514822,
+      "leak_offdiag_iqr": [
+        0.5943218270937601,
+        0.6748966773351034
+      ],
+      "self_diag_median": 0.9786835551261902
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "exp_name": "goose_re86_seed1_L1",
+  "method": "goose",
+  "game": "re86",
+  "level_index": 0,
+  "seed": 1,
+  "env_steps_to_first_reward": null,
+  "solved": false,
+  "censored": true,
+  "total_env_steps": 55788,
+  "max_env_steps": 1000000,
+  "agent": "stochastic_goose",
+  "game_id": "re86-8af5384d"
+}
